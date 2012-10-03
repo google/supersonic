@@ -1,0 +1,8 @@
+Supersonic Query Engine 0.9.0:
+
+This is a beta version of the Supersonic Query Engine library. While it should
+be operational, it has not been tested fully and there are only a few exemplary
+tests in the package.
+
+For more details on how to get started see the test/guide directory and the wiki
+on https://code.google.com/p/supersonic .

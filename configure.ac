@@ -1,5 +1,5 @@
-m4_define([supersonic_major], [1])
-m4_define([supersonic_minor], [0])
+m4_define([supersonic_major], [0])
+m4_define([supersonic_minor], [9])
 m4_define([supersonic_patch], [0])
 
 AC_PREREQ([2.65])
@@ -42,13 +42,13 @@ AX_BOOST_BASE
 AC_CHECK_HEADERS([limits.h stddef.h stdint.h stdlib.h string.h string \
                   sys/stat.h sys/time.h])
 AC_CHECK_HEADERS([glog/logging.h], [],
-                 AC_MSG_ERROR([google-glog is required]))
+                 AC_MSG_ERROR([google-glog is required. See INSTALL file.]))
 AC_CHECK_HEADERS([google/protobuf/text_format.h], [],
-                 AC_MSG_ERROR([protobuf is required]))
+                 AC_MSG_ERROR([protobuf is required. See INSTALL file.]))
 AC_CHECK_HEADERS([gflags/gflags.h], [],
-                 AC_MSG_ERROR([gflags library is required]))
+                 AC_MSG_ERROR([gflags library is required. See INSTALL file.]))
 AC_CHECK_HEADERS([re2/re2.h], [],
-                 AC_MSG_ERROR([re2 library is required]))
+                 AC_MSG_ERROR([re2 library is required. See INSTALL file.]))
 
 # A lot of the code in this directory depends on pthreads
 ACX_PTHREAD
@@ -63,9 +63,12 @@ AC_RWLOCK
 # unclear, so it's best just to check.
 AC_INTERLOCKED_EXCHANGE_NONVOLATILE
 
-# Check for programs
-AC_PATH_PROG(PROTOC, protoc,
-             [AC_MSG_ERROR([protoc was not found in your path])])
+# Check for protobuf compiler, but only if the path has not been specified
+# manually.
+if test -z $PROTOC;
+then
+  AC_PATH_PROG(PROTOC, protoc, [AC_MSG_ERROR([protoc was not found])])
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

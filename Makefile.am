@@ -21,6 +21,10 @@ lib_LTLIBRARIES = libsupersonic.la
 
 libsupersonic_la_CXXFLAGS = $(PTHREAD_CFLAGS) \
     $(AM_CXXFLAGS) \
+    $(GFLAGS_CFLAGS) \
+    $(GLOG_CFLAGS) \
+    $(PROTO_CFLAGS) \
+    $(RE2_CFLAGS) \
     $(BOOST_CPPFLAGS)
 libsupersonic_la_LDFLAGS =
 libsupersonic_la_LIBADD =
@@ -30,6 +34,9 @@ supersonic_unittest_CPPFLAGS = $(AM_CPPFLAGS) \
     $(PTHREAD_CFLAGS) \
     -I$(top_srcdir)/gtest/include -I$(top_srcdir)/gtest \
     $(GFLAGS_CFLAGS) \
+    $(GLOG_CFLAGS) \
+    $(PROTO_CFLAGS) \
+    $(RE2_CFLAGS) \
     $(BOOST_CPPFLAGS)
 supersonic_unittest_LDFLAGS =
 supersonic_unittest_LDADD = libsupersonic.la \
@@ -266,7 +273,7 @@ supersonic_S =
 
 # cpp sources
 # protoc output
-supersonic_S += \
+protos_S = \
     supersonic/utils/exception/stack_trace.pb.cc \
     supersonic/utils/proto/expressions.pb.cc \
     supersonic/utils/proto/types.pb.cc \
@@ -274,6 +281,8 @@ supersonic_S += \
     supersonic/expression/proto/operators.pb.cc \
     supersonic/proto/specification.pb.cc \
     supersonic/proto/supersonic.pb.cc
+
+supersonic_S += $(protos_S)
 
 supersonic_S += \
     supersonic/utils/atomicops-internals-x86.cc \
@@ -427,3 +436,6 @@ supersonic/utils/proto/expressions.pb.h supersonic/utils/proto/expressions.pb.cc
 
 # Proto header dependencies
 $(supersonic_S) $(sources_H): | $(protos_H)
+
+# Remove all proto-generated source and header files.
+CLEANFILES = $(protos_H) $(protos_S)

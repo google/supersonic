@@ -317,8 +317,7 @@ void SplitStringIntoNPiecesAllowEmpty(const string& full,
 // ----------------------------------------------------------------------
 void SplitStringAllowEmpty(const string& full, const char* delim,
                            vector<string>* result) {
-  std::back_insert_iterator<vector<string> > it(*result);
-  SplitStringToIteratorAllowEmpty(full, delim, 0, it);
+  AppendTo(result, strings::Split(full, AnyOf(delim)));
 }
 
 // If we know how much to allocate for a vector of strings, we can
