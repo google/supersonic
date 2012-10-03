@@ -1,0 +1,303 @@
+// Copyright 2010 Google Inc. All Rights Reserved.
+//
+// Contains description of expresions.
+
+option java_package = "com.google.datawarehouse.common.proto";
+option java_outer_classname = "ExpressionDescriptionProto";
+
+package common;
+
+import "supersonic/utils/proto/types.proto";
+
+// Possible expression types.
+enum ExpressionType {
+  CONSTANT = 0;
+  VARIABLE = 1;
+  OPERATION = 2;
+  CUSTOM_FUNCTION_CALL = 3;
+  TUPLE = 4;
+  PATH = 5;
+}
+
+message Constant {
+  // Defines a type of the value.
+  required DataType type = 1;
+  // Which value is set is determined by the type. If the corresponding value is
+  // not set, the Constant is assumed to be NULL.
+  optional int32 int32_value = 2;
+  optional int64 int64_value = 3;
+  optional uint32 uint32_value = 4;
+  optional uint64 uint64_value = 5;
+  optional float float_value = 6;
+  optional double double_value = 7;
+  optional bool bool_value = 8;
+  optional int32 date_value = 9;
+  optional int64 datetime_value = 10;
+  optional bytes binary_value = 11;
+  optional string string_value = 12;
+  optional DataType data_type_value = 13;
+}
+
+// Possible operation types.
+enum OperationType {
+  // Arithmetic operations:
+  // Binary:
+  ADD = 0;
+  MULTIPLY = 1;
+  SUBTRACT = 2;
+  // Divide has SQL semantics, i.e. 5/2 = 2.5. For divide behaving as in C++
+  // see CPP_DIVIDE = 30. For the failing/nulling/etc. versions see
+  // DIVIDE_* at 35.
+  DIVIDE = 36;  // Deprecated. Use the policy specifying versions instead.
+  // Division of integers rounds instead of casting to double. If any argument
+  // is floating point, the result will be floating point.
+  CPP_DIVIDE = 30;
+
+  // A divide operator with SQL semantics (i.e. 7 / 2 = 3.5).
+  // An attempt to divide by zero fails (results in an evaluation error).
+  DIVIDE_SIGNALING = 35;
+  // An attempt to divide by zero gives NULL (like in SQL).
+  DIVIDE_NULLING = 3;
+  // An attempt to divide by zero behaves as in C++ double division (gives
+  // inf, -inf or NaN).
+  DIVIDE_QUIET = 37;
+
+  // Unary:
+  NEGATE = 4;
+
+  // Logical operations:
+  // Binary:
+  AND = 5;
+  OR = 6;
+  // AND_NOT = 24; (defined later)
+
+  // Unary:
+  NOT = 7;
+
+  // Binary comparison operations:
+  EQUAL = 8;
+  NOT_EQUAL = 9;
+  GREATER = 10;
+  GREATER_OR_EQUAL = 11;
+  LESS = 12;
+  LESS_OR_EQUAL = 13;
+
+  // Unary:
+  IS_NULL = 14;
+
+  // Binary:
+  // Regexp(haystack, needle). Full expects a full match, Partial expects
+  // a needle to match a substring of haystack. The haystack is any string
+  // expression, we expect the needle to be a constant string expression.
+  REGEXP_PARTIAL = 15;
+  REGEXP_FULL = 25;
+  REGEXP_EXTRACT = 221;
+  REGEXP_REPLACE = 222;
+
+  // Meaning of arguments:
+  // arg0 IN (arg1, arg2, arg3, ...)
+  IN = 16;
+
+  // Meaning of arguments:
+  // CASE arg0 WHEN arg2 THEN arg3 WHEN arg4 THEN arg5 ELSE arg1
+  // If there is no CASE value true constant should be passed.
+  // If there is no ELSE value, null constant should be passed.
+  CASE = 17;
+
+  // Meaning of arguments:
+  // IF(arg0, arg1, arg2)
+  IF = 18;
+
+  CAST = 19;
+
+  // IFNULL(expression, substitute) returns expression if it is not null or
+  // substitute if expression is null.
+  IFNULL = 20;
+
+  MODULUS = 21;
+  IS_ODD = 22;
+  IS_EVEN = 23;
+  AND_NOT = 24;
+  XOR = 26;
+
+  // Bitwise operations:
+  BITWISE_AND = 50;
+  BITWISE_OR = 51;
+  BITWISE_NOT = 52;
+  BITWISE_XOR = 53;
+  SHIFT_LEFT = 54;
+  SHIFT_RIGHT = 55;
+
+  // Operations for internal use.
+  // Exact copy of orginal value.
+  COPY = 60;
+
+  // All functions compiled into evaluator (so called built-in) go here.
+  // Math functions.
+  ROUND_TO_INT = 100;
+  ROUND = 113;
+  TRUNC = 101;
+  CEIL_TO_INT = 102;
+  CEIL = 114;
+  FLOOR_TO_INT = 104;
+  FLOOR = 115;
+  EXP = 103;
+  LN = 105;
+  LOG = 108;
+  LOG10 = 106;
+  // Three versions of the SQRT operator, differing in their treatment of
+  // negative arguments - they respectively fail the evaluation with an error,
+  // return NULL, and return NaN. The policy-less SQRT is kept for backwards
+  // compatibility, is deprecated, and is going to be removed sooner or later.
+  SQRT_SIGNALING = 120;
+  SQRT_NULLING = 121;
+  SQRT_QUIET = 107;
+  SQRT = 122;  // Deprecated. Use the explicit policy specifying versions.
+
+  IS_FINITE = 109;
+  IS_INF = 110;
+  IS_NAN = 111;
+  IS_NORMAL = 112;
+  // Trigonometric functions.
+  SIN = 117;
+  COS = 118;
+  TAN = 119;
+  // The pi constant.
+  PI = 123;
+  // Three versions of the powering, see notes for SQRT for description of the
+  // SIGNALING, NULLING and QUIET versions.
+  POWER_SIGNALING = 124;
+  POWER_NULLING = 125;
+  POWER_QUIET = 126;
+
+  // String functions.
+  LENGTH = 150;
+  LTRIM = 151;
+  RTRIM = 152;
+  TRIM = 153;
+  TOUPPER = 154;
+  TOLOWER = 155;
+  SUBSTRING = 156;
+  // The name "CONCAT" is used up by supersonic.proto.
+  CONCATENATE = 157;
+  TOSTRING = 158;
+  STRING_OFFSET = 159;  // Find string arg2 in string arg1.
+  // Replace all occurences of second argument by third in first.
+  REPLACE = 160;
+  // Parses the second argument (a string) to the type given by the first.
+  PARSE_STRING = 226;
+
+  // Datetime functions.
+  UNIXTIMESTAMP = 170;
+  FROMUNIXTIME = 171;
+  // Make an internal DATETIME from three ints: year (1970+), month (1-12)
+  // and day of month, in that order.
+  MAKEDATE = 172;
+  // Currently do not take timezones, operate in the local timezone.
+  YEAR_LOCAL = 173;
+  MONTH_LOCAL = 174;    // 1-12.
+  DAY_LOCAL = 175;      // Day of the month, 1-31.
+  WEEKDAY_LOCAL = 176;  // Day of the week, 0-6, Monday = 0.
+  YEARDAY_LOCAL = 177;  // Day of the year, 1-366.
+  HOUR_LOCAL = 178;     // Hour, 0-23.
+  MINUTE_LOCAL = 179;   // Minute, 0-59.
+  SECOND = 180;         // 0-59.
+  MICROSECOND = 181;    // 0-999999.
+  QUARTER_LOCAL = 182;  // Quarter of the year (Jan-Mar = 1, Apr-Jun = 2, etc.).
+
+  // The same, but operate in UTC. Strongly preferred to the local versions.
+  YEAR_UTC = 228;
+  MONTH_UTC = 229;
+  DAY_UTC = 230;
+  WEEKDAY_UTC = 231;
+  YEARDAY_UTC = 232;
+  HOUR_UTC = 233;
+  MINUTE_UTC = 234;
+  QUARTER_UTC = 235;
+
+  MAKEDATETIME = 183;
+  DATEDIFF = 184;
+  DATETIMEDIFF = 185;
+
+  ADD_MINUTE = 223;
+  ADD_DAY = 201;
+  ADD_WEEK = 202;
+  ADD_MONTH = 203;
+  ADD_YEAR = 204;
+
+  TRUNC_TO_SECOND = 205;
+  TRUNC_TO_MINUTE = 206;
+  TRUNC_TO_HOUR = 207;
+  TRUNC_TO_DAY = 208;
+  TRUNC_TO_MONTH = 209;
+  TRUNC_TO_QUARTER = 210;
+  TRUNC_TO_YEAR = 211;
+
+  DATE_FORMAT_LOCAL = 189;
+  DATE_FORMAT_UTC = 227;
+
+  // Various others.
+  FORMAT = 190;
+  RANDOM_INT32 = 224;
+  SEQUENCE = 225;
+
+
+  // 'Growth buffer' for gradual evolution.
+  UNIMPLEMENTED_OPERATOR_0 = 236;
+  UNIMPLEMENTED_OPERATOR_1 = 237;
+  UNIMPLEMENTED_OPERATOR_2 = 238;
+  UNIMPLEMENTED_OPERATOR_3 = 239;
+  UNIMPLEMENTED_OPERATOR_4 = 240;
+  UNIMPLEMENTED_OPERATOR_5 = 241;
+}
+
+message CustomFunctionCall {
+  required string function_name = 1;
+  repeated ExpressionDescription argument = 2;
+}
+
+message Variable {
+  required string name = 1;
+}
+
+// Defines operation.
+message OperationDescription {
+  required OperationType type = 1;
+  repeated ExpressionDescription argument = 2;
+}
+
+// Defines compound tuple, consisting of 1..N expressions and
+// their (optional) aliases. If aliases are not provided default names
+// will be used, which may cause the expression to be invalid because
+// names will not be unique in the result schema.
+message Tuple {
+  message TupleExpression {
+    required ExpressionDescription expression = 1;
+    // This list should be empty or contain one element for each attribute
+    // produced by expression.
+    repeated string alias = 2;
+  }
+  repeated TupleExpression expression = 1;
+}
+
+// Note: metadata about column cardinality, types, subcolumns, etc.
+// are taken from a database schema, which presumably is a
+// non-protobuf-based data structure.
+
+// An absolute path to a data column.
+message Path {
+  repeated string node = 1;
+}
+
+message ExpressionDescription {
+  required ExpressionType type = 1;
+  // Only one of below is set depending on the type.
+  optional Constant constant = 2;
+  optional Variable variable = 3;
+  optional OperationDescription operation = 4;
+  optional CustomFunctionCall function_call = 5;
+  optional Tuple tuple = 6;
+  // Name does not identify nested columns uniquely. Therefore
+  // in the structured world we use absolute paths to columns.
+  optional Path path = 7;
+}

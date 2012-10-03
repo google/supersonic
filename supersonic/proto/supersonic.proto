@@ -1,0 +1,120 @@
+// Copyright 2010 Google Inc. All Rights Reserved.
+//
+// Core enums and serializations.
+
+
+option java_package = "com.google.datawarehouse.supersonic.proto";
+option java_outer_classname = "CommonEnums";
+
+package supersonic;
+
+import "supersonic/utils/exception/stack_trace.proto";
+
+// Supported types.
+// Subset of datawarehouse/common/proto/types.proto.
+enum DataType {
+  INT32    = 1;
+  INT64    = 2;
+  UINT32   = 8;
+  UINT64   = 3;
+  FLOAT    = 9;
+  DOUBLE   = 5;
+  BOOL     = 6;
+  DATE     = 10; // Fixed-precision, daily granularity.
+  DATETIME = 4;  // Fixed-precision, microsecond granularity.
+
+  STRING   = 0;
+  BINARY   = 7;
+
+  // A special metatype.
+  DATA_TYPE = 11;
+
+  // Note: next available: 12
+}
+
+// Possible return values from cursor repositioning methods and related
+// functions.
+enum ReturnCode {
+  // Success codes: 0-99
+  OK                                  = 0;  // Positioned at an existing row.
+  END_OF_INPUT                        = 1;  // Positioned past the last row.
+  BEFORE_INPUT                        = 2;  // Positioned before the first row.
+  WAITING_ON_BARRIER                  = 3;  // To implement source splitting.
+
+  // Error codes: 100+
+  ERROR_UNKNOWN_ERROR                 = 100;
+  ERROR_GENERAL_IO_ERROR              = 101;
+  ERROR_MEMORY_EXCEEDED               = 102;
+  ERROR_NOT_IMPLEMENTED               = 103;
+  ERROR_EVALUATION_ERROR              = 104;
+  ERROR_BAD_PROTO                     = 105;
+  ERROR_TEMP_FILE_CREATION_ERROR      = 106;
+
+  ERROR_TOO_FEW_ROWS                  = 301;
+  ERROR_TOO_MANY_ROWS                 = 302;
+  ERROR_TOO_FEW_COLUMNS               = 303;
+  ERROR_TOO_MANY_COLUMNS              = 304;
+  ERROR_DUPLICATED_UNIQUE_KEY         = 305;
+
+  ERROR_GENERIC_SCHEMA_ERROR          = 400;
+
+  ERROR_ATTRIBUTE_COUNT_MISMATCH      = 401;
+  ERROR_ATTRIBUTE_TYPE_MISMATCH       = 402;  // Type different than expected.
+  ERROR_ATTRIBUTE_MISSING             = 403;  // No attribute with given name.
+  ERROR_ATTRIBUTE_EXISTS              = 404;  // Can't add attribute.
+  ERROR_INVALID_ARGUMENT_TYPE         = 405;  // Behavior undefined for type.
+  ERROR_ATTRIBUTE_IS_NULLABLE         = 406;  // While expecting not-nullable.
+  ERROR_INVALID_ARGUMENT_VALUE        = 407;  // Outside function domain.
+  ERROR_ATTRIBUTE_AMBIGUOUS           = 408;  // Many attributes match name.
+
+  // Referential integrity errors.
+  ERROR_FOREIGN_KEY_INVALID           = 501;
+
+  INTERRUPTED                         = 1000; // Interrupted by the caller.
+}
+
+// Specifies if an attribute can be NULL.
+enum Nullability {
+  NOT_NULLABLE  = 0;
+  NULLABLE      = 1;
+};
+
+// Aggregations supported by group by.
+enum Aggregation {
+  SUM    = 0;
+  MIN    = 1;
+  MAX    = 2;
+  COUNT  = 3;
+  CONCAT = 4;
+  FIRST  = 5;
+  LAST   = 6;
+};
+
+// For Sort, MergeUnion, MergeJoin, etc.
+enum ColumnOrder {
+  ASCENDING  = 0;
+  DESCENDING = 1;
+}
+
+// Join types.
+enum JoinType {
+  INNER       = 0;  // Take only the rows that match on both sides.
+  LEFT_OUTER  = 1;  // All rows from the left cursor.
+  RIGHT_OUTER = 2;  // All rows from the right cursor.
+  FULL_OUTER  = 3;  // All rows from both cursors.
+};
+
+enum KeyUniqueness {
+  NOT_UNIQUE = 0;
+  UNIQUE     = 1;
+};
+
+// NOTE(user): if you delete this, make sure that there's at least one
+// message definition left in this file, or that b/3287297 is resolved.
+message SerializedException {
+  required int64 timestamp         = 1;  // Microseconds since Epoch.
+  required ReturnCode return_code  = 2;
+  required string message          = 3;
+
+  required common.StackTrace stack_trace  = 4;
+}

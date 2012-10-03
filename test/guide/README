@@ -1,0 +1,57 @@
+# Copyright 2012 Google Inc. All Rights Reserved.
+# Author: tkaftal@google.com (Tomasz Kaftal)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+The test/guide directory contains test cases grouped into several introductory
+tutorial files. They cover some core Supersonic functionalities and it is
+recommended to read them, compile separately and have a stab at modifying
+them to see how the library works before using it in one's own project. All
+tests make use of the Googletest framework.
+
+The current contents include:
+
+1) primer.cc
+  Test contains examples on expression evaluation and simple aggregation.
+  Its main aim is to get the user acquainted with ubiquitous Supersonic
+  utility objects.
+
+2) group_sort.cc
+  The guide further explores aggregation and does an introdution to sorting.
+  Simple memory management techniques are also presented.
+
+3) join.cc
+  An example on how to use hash joins is provided with an alternative
+  approach to feeding data to the engine. Sinks and tables are also
+  explained, as well as some other expression types.
+
+The above list matches the recommended order of visiting.
+
+The guide is by no means complete, its aim is to provide insight into
+how the database query engine works. After its completion the users
+should feel confident enough to either go to further documentation,
+which will eventually be available at code.google.com on the project's website,
+or attempt to investigate functionalities in the code source themselves.
+
+Several suggestions of what to look for next are:
+
+* The supersonic/cursor/core directory is where operations live, the guides
+do not speak of using filters, limits, unions and splitting, which are all
+useful features.
+
+* Go to supersonic/expression/core and supersonic/expression/infrastructure
+for lists of available expressions.
+
+* Protocol buffer files contain lots of enums with data types and option values
+used to describe operations; most importantly visit supersonic/proto/*.proto .
+

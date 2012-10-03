@@ -1,0 +1,37 @@
+// Copyright 2011 Google Inc. All Rights Reserved.
+//
+// Specifications for cursors.
+
+
+package supersonic;
+
+import "supersonic/proto/supersonic.proto";
+
+// Parametrization of extended sort (which is a sort that supports case
+// insensitive matching and limiting the number of rows returned.
+message ExtendedSortSpecification {
+  // A key specifies how to sort a particular field.
+  message Key {
+    // The name of the attribute to be sorted.
+    required string attribute_name = 1;
+    // This specifies how the elements of the attribute to be sorted, for
+    // example, ascending or descending.
+    required ColumnOrder column_order = 2;
+    // Relevant only if the field is a string, this determines whether the
+    // comparisons are case sensitive.
+    optional bool case_sensitive =3;
+  }
+  // List of keys on how to order the fields. The first key is the most
+  // significant key and the last one is the least significant key.
+  // Can be empty.
+  repeated Key keys = 1;
+  // The maximum number of rows to be returned.
+  optional uint64 limit = 2;
+}
+
+// Specifies distinctness of aggregations.
+message Distinctness {
+  optional bool is_not_distinct = 1;
+  optional bool is_exact_distinct = 2;
+  optional int32 estimated_distinct_threshold = 3;
+}

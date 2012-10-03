@@ -1,0 +1,5 @@
+<<PACKAGE>> (<<VERSION>>-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Google Inc. <opensource@google.com>  <<DATE (try date -R)>>

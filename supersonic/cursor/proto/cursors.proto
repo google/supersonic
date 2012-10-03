@@ -1,0 +1,62 @@
+// Copyright 2012 Google Inc. All Rights Reserved.
+// Author: tkaftal@google.com (Tomasz Kaftal)
+// Enum describing cursors for internal usage.
+//
+// A proto enum provides several convenient utility functions out of the box,
+// which is why it is used here instead of a plain C++ enum, even though
+// the proto is not intended for serialisation.
+
+
+package supersonic;
+
+// List of cursor types available in Supersonic.
+enum CursorId {
+  // Cursors reading input from sources other than child cursors.
+  FILE_INPUT = 3;
+  GENERATE = 4;
+  REPEATING_BLOCK = 5;
+  SELECTION_VECTOR_VIEW = 6;
+  VIEW = 7;
+
+  // Cursors that perform some data-processing computation on the output of
+  // other cursors.
+  AGGREGATE_CLUSTERS = 8;
+  BARRIER_SPLIT_READER = 9;
+  BEST_EFFORT_GROUP_AGGREGATE = 10;
+  BUFFERED_SPLIT_READER = 11;
+  CANCELLATION_WATCH = 12;
+  COALESCE = 13;
+  COMPUTE = 15;
+  FILTER = 16;
+  FOREIGN_FILTER = 17;
+  GROUP_AGGREGATE = 18;
+  HASH_JOIN = 19;
+  HYBRID_GROUP_FINAL_AGGREGATION = 20;
+  HYBRID_GROUP_TRANSFORM = 21;
+  LIMIT = 22;
+  LOOKUP_JOIN = 23;
+  MERGE_UNION_ALL = 24;
+  PARALLEL_UNION = 25;
+  PROJECT = 26;
+  ROWID_MERGE_JOIN = 28;
+  SCALAR_AGGREGATE = 29;
+  SORT = 30;
+
+  // Cursor utilities used for facilitating the implementation and use of other
+  // cursors.
+  DECORATOR = 32;
+  OWNERSHIP_TAKER = 33;
+  READ_STATISTICS = 34;
+
+  // Cursors used for testing and benchmarking purposes.
+  BARRIER_INJECTOR = 35;
+  BARRIER_SWALLOWER = 36;
+  BENCHMARK = 37;
+  DEEP_COPYING = 38;
+  INTERRUPTION_COUNTER = 39;
+  TEST_DECORATOR = 40;
+  VIEW_LIMITER = 41;
+
+  // Unknown cursor type.
+  UNKNOWN_ID = 42;
+}
