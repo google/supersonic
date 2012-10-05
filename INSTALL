@@ -33,90 +33,91 @@ There are two instruction sets below, a quick-n-dirty, copy-paste one
 and a shorter description of what actually needs to be done with an example.
 Instruction Set 1 should at some point be turned into an automatic script.
 
-Instruction set 1:
+Instruction Set 1:
 (Don't care about the specifics, please make it just work.)
 
 
-1) We have Supersonic downloaded and extracted in the "supersonic" directory.
-Step out of the directory using:
-
-  cd ..
-
-
-2) Execute the following commands, if the corresponding library is not available
-in your environment.
-
-a) glog
-
+# 1) Let's assume you have downloaded and untarred the Supersonic package
+# and also stripped the folder name of the version suffix. Now the library
+# resides in the "supersonic" folder (directly in which you have this INSTALL
+# file). Position yourself one step outside that folder.
+#
+# 2) Execute the following commands, if the corresponding library is not
+# available in your environment.
+#
+# a) glog
+#
   wget https://google-glog.googlecode.com/files/glog-0.3.2.tar.gz && \
   tar zxf glog-0.3.2.tar.gz && \
   mv glog-0.3.2 glog && \
   rm glog-0.3.2.tar.gz && \
   (cd glog && ./configure && make)
-
-b) gflags
-
+#
+# b) gflags
+#
   wget http://gflags.googlecode.com/files/gflags-2.0.tar.gz && \
   tar zxf gflags-2.0.tar.gz && \
   mv gflags-2.0 gflags && \
   rm gflags-2.0.tar.gz && \
   (cd gflags && ./configure && make)
-
-c) protobuf
-
+#
+# c) protobuf
+#
   wget http://protobuf.googlecode.com/files/protobuf-2.4.1.tar.gz && \
   tar zxf protobuf-2.4.1.tar.gz && \
   mv protobuf-2.4.1 protobuf && \
   rm protobuf-2.4.1.tar.gz && \
   (cd protobuf && ./configure && make)
-
-d) re2 - If you don't have mercurial installed on your system, this won't work.
-   In that case you'll have to fetch the libary in some other way.
-
+#
+# d) re2 - If you don't have mercurial installed on your system, this won't
+#    work.
+#    In that case you'll have to fetch the libary in some other way.
+#
   hg clone https://re2.googlecode.com/hg re2 && \
   (cd re2 && make)
-
-
-3) Go back to supersonic
-
+#
+#
+# 3) Go back to supersonic
+#
   cd supersonic
-
-
-4) Export environment variables before configuring the package (only for
-downloaded packages).
-
-a) glog
-
+#
+#
+# 4) Export environment variables before configuring the package (only for
+# downloaded packages).
+#
+# a) glog
+#
   export GLOG_CFLAGS='-I../glog/src' && \
   export GLOG_LIBS='-L../glog -lglog' && \
   export CPPFLAGS=$CPPFLAGS' -I../glog/src'
-
-b) gflags
-
+#
+# b) gflags
+#
   export GFLAGS_CFLAGS='-I../gflags/src' && \
   export GFLAGS_LIBS='-L../gflags -lgflags' && \
   export CPPFLAGS=$CPPFLAGS' -I../gflags/src'
-
-c) protobuf
-
+#
+# c) protobuf
+#
   export PROTO_CFLAGS='-I../protobuf/src' && \
   export PROTO_LIBS='-L../protobuf/src -lprotobuf' && \
   export CPPFLAGS=$CPPFLAGS' -I../protobuf/src' && \
   export PROTOC=$(readlink -f ../protobuf/src/protoc)
-
-d) re2
-
+#
+# d) re2
+#
   export LDFLAGS=$LDFLAGS' -L../re2/obj/so -R'$(readlink -f ../re2/obj/so) && \
   export CPPFLAGS=$CPPFLAGS' -I../re2'
-
-
-5) And finally...
-
+#
+#
+# 5) And finally...
+#
   ./configure && make && make check
 
 If you see an "X tests passed." message, you've made it!
 
-Instruction set 2:
+
+Instruction Set 2:
 (Describing the rationale behind the process, also useful if Instruction Set 1
 actually didn't just work.)
 
@@ -144,7 +145,7 @@ GFLAGS_LIBS='-L{gflags-dir} -lgflags' \
 Comment: in this approach we override the compilation flags to make them point
 to our gflags sources. The -I flag tells the compiler where to look for include
 headers, which are in this case located in the src subdirectory of the gflags
-project. We do the same for library files - libtool will create a .la file
+project. We do the same for library files - libtool will create an .la file
 in the gflags directory. This is just one option, it is also possible to set
 the general include and linker paths, but this is usually deprecated.
 

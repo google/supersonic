@@ -20,73 +20,71 @@
 #define SUPERSONIC_CURSOR_INFRASTRUCTURE_HISTORY_TRANSFORMER_H_
 
 #include "supersonic/cursor/base/cursor_transformer.h"
+#include "supersonic/cursor/infrastructure/ownership_revoker.h"
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
+#include "supersonic/utils/pointer_vector.h"
 
 namespace supersonic {
 
-// A specialised CursorTransformer-based interface which stores a history
-// of entries for transformed cursors and can be used, for instance,
-// to traverse a cursor tree.
-//
-// An implementation of this class may use its own type of entry and provide
-// custom memory management for entries.
+// An abstract class providing implementation for history utilities using
+// a PointerVector. The T-class objects are stored in a PointerVector
+// and cleaned when the transformer is destroyed, or when a call
+// to CleanHistory() is made. The caller may take ownership of the entire
+// history vector by calling the ReleaseHistory() method.
 template<typename T>
-class CursorTransformerWithHistory : public CursorTransformer {
+class CursorTransformerWithVectorHistory : public CursorTransformer {
  public:
-  // Returns the number of entries stored in the transformer's memory. A
-  // transformation entry is stored once for each call to Run().
-  virtual size_t GetHistoryLength() const = 0;
+  CursorTransformerWithVectorHistory()
+      : CursorTransformer(),
+        run_history_(new util::gtl::PointerVector<T>) {}
 
-  // Retrieves the entry at position.
-  virtual T GetEntryAt(size_t position) const = 0;
-
-  // Retrieves the first entry currently in memory.
-  virtual T GetFirstEntry() const = 0;
-
-  // Retrieves the last entry currently in memory.
-  virtual T GetLastEntry() const = 0;
-
-  // Cleans the history. Does not clean the history objects, so it should only
-  // be called when all history entries have been retrieved and have owners.
-  virtual void CleanHistory() = 0;
-};
-
-typedef CursorTransformerWithHistory<Cursor*>
-CursorTransformerWithSimpleHistory;
-
-// An abstract class providing implementation for history utilities using an STL
-// vector. The T class has to define a copy constructor.
-template<typename T>
-class CursorTransformerWithVectorHistory
-    : public CursorTransformerWithHistory<T> {
- public:
-  virtual size_t GetHistoryLength() const {
-    return run_history_.size();
+  size_t GetHistoryLength() const {
+    return run_history_->size();
   }
 
-  virtual T GetEntryAt(size_t position) const {
-    CHECK_LT(position, run_history_.size());
-    return run_history_[position];
+  // Ownership is not transferred.
+  T* GetEntryAt(size_t position) const {
+    CHECK_LT(position, run_history_->size());
+    return (*run_history_)[position].get();
   }
 
-  virtual T GetFirstEntry() const {
-    return GetEntryAt(0);
+  // Ownership is not transferred.
+  T* GetFirstEntry() const {
+    CHECK_GT(run_history_->size(), 0);
+    return run_history_->front().get();
   }
 
-  virtual T GetLastEntry() const {
-    CHECK_GT(run_history_.size(), 0);
-    return run_history_.back();
+  // Ownership is not transferred.
+  T* GetLastEntry() const {
+    CHECK_GT(run_history_->size(), 0);
+    return run_history_->back().get();
   }
 
-  virtual void CleanHistory() {
-    run_history_.clear();
+  // Cleans the history and takes care of cleaning up the entries.
+  void CleanHistory() {
+    run_history_->clear();
+  }
+
+  // Returns the disembodied history vector and replaces it internally with
+  // a new empty one.
+  util::gtl::PointerVector<T>* ReleaseHistory() {
+    using util::gtl::PointerVector;
+    scoped_ptr<PointerVector<T> > internal(new PointerVector<T>);
+    internal.swap(run_history_);
+    return internal.release();
   }
 
  protected:
-  std::vector<T> run_history_;
+  scoped_ptr<util::gtl::PointerVector<T> > run_history_;
 };
+
+typedef OwnershipRevoker<Cursor> CursorOwnershipRevoker;
+
+typedef CursorTransformerWithVectorHistory<CursorOwnershipRevoker>
+CursorTransformerWithSimpleHistory;
 
 }  // namespace supersonic
 #endif  // SUPERSONIC_CURSOR_INFRASTRUCTURE_HISTORY_TRANSFORMER_H_

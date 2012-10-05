@@ -146,6 +146,7 @@ sources_H = supersonic/utils/algorithm.h \
     supersonic/utils/strings/memutil.h \
     supersonic/utils/strings/numbers.h \
     supersonic/utils/strings/split_internal.h \
+    supersonic/utils/strings/strcat.h \
     supersonic/utils/strings/stringpiece.h \
     supersonic/utils/strings/substitute.h \
     supersonic/utils/strings/strip.h \
@@ -310,6 +311,7 @@ supersonic_S += \
     supersonic/utils/strings/numbers.cc \
     supersonic/utils/strings/serialize.cc \
     supersonic/utils/strings/split.cc \
+    supersonic/utils/strings/strcat.cc \
     supersonic/utils/strings/substitute.cc \
     supersonic/utils/strings/strip.cc \
     supersonic/utils/strings/util.cc \

@@ -32,14 +32,14 @@ namespace {
 
 // This GenericFind() template function encapsulates the finding algorithm
 // shared between the Literal and AnyOf delimiters. The FindPolicy template
-// parameter allows each delimiter to customize the actual find function to use.
-// For example, the Literal delimiter will ultimately use StringPiece::find(),
-// and the AnyOf delimiter will use StringPiece::find_first_of().
+// parameter allows each delimiter to customize the actual find function to use
+// and the length of the found delimiter. For example, the Literal delimiter
+// will ultimately use StringPiece::find(), and the AnyOf delimiter will use
+// StringPiece::find_first_of().
 template <typename FindPolicy>
 StringPiece GenericFind(
     StringPiece text,
     StringPiece delimiter,
-    int increment_by,
     FindPolicy find_policy) {
   if (delimiter.empty() && text.length() > 0) {
     // Special case for empty string delimiters: always return a zero-length
@@ -50,20 +50,30 @@ StringPiece GenericFind(
   StringPiece found(text.end(), 0);  // By default, not found
   found_pos = find_policy.Find(text, delimiter);
   if (found_pos != StringPiece::npos) {
-    found.set(text.data() + found_pos, increment_by);
+    found.set(text.data() + found_pos, find_policy.Length(delimiter));
   }
   return found;
 }
 
+// Finds using StringPiece::find(), therefore the length of the found delimiter
+// is delimiter.length().
 struct LiteralPolicy {
   int Find(StringPiece text, StringPiece delimiter) {
     return text.find(delimiter);
   }
+  int Length(StringPiece delimiter) {
+    return delimiter.length();
+  }
 };
 
+// Finds using StringPiece::find_first_of(), therefore the length of the found
+// delimiter is 1.
 struct AnyOfPolicy {
   int Find(StringPiece text, StringPiece delimiter) {
     return text.find_first_of(delimiter);
+  }
+  int Length(StringPiece delimiter) {
+    return 1;
   }
 };
 
@@ -77,7 +87,7 @@ Literal::Literal(StringPiece sp) : delimiter_(sp.ToString()) {
 }
 
 StringPiece Literal::Find(StringPiece text) const {
-  return GenericFind(text, delimiter_, delimiter_.length(), LiteralPolicy());
+  return GenericFind(text, delimiter_, LiteralPolicy());
 }
 
 //
@@ -88,7 +98,7 @@ AnyOf::AnyOf(StringPiece sp) : delimiters_(sp.ToString()) {
 }
 
 StringPiece AnyOf::Find(StringPiece text) const {
-  return GenericFind(text, delimiters_, 1, AnyOfPolicy());
+  return GenericFind(text, delimiters_, AnyOfPolicy());
 }
 
 }  // namespace delimiter

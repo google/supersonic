@@ -125,21 +125,25 @@ class SpySink : public Sink {
 // the argument cursor into a spy cursor. Spy cursor's id is derived
 // from the wrapped cursor's debug description. Cursors passed to Transform
 // are stored in history.
+//
+// The ownership revoker wrapper is used in order to avoid double destruction
+// of the stored cursors as the history objects take ownership of their entries.
 class SpyCursorSimpleTransformer
-    : public CursorTransformerWithVectorHistory<Cursor*> {
+    : public CursorTransformerWithVectorHistory<CursorOwnershipRevoker> {
  public:
   explicit SpyCursorSimpleTransformer(SpyListener* listener)
-      : CursorTransformerWithVectorHistory<Cursor*>(),
+      : CursorTransformerWithVectorHistory<CursorOwnershipRevoker>(),
         listener_(listener) {}
 
-  // Does not take ownership of cursor, but the created SpyCursor does. Should
-  // not be used once the transformed cursors have been destroyed.
+  // Does not take ownership of the argument cursor, but the created
+  // SpyCursor does. Should not be used once the transformed cursors have been
+  // destroyed.
   //
   // Uses the spy listener stored on construction.
   virtual Cursor* Transform(Cursor* cursor) {
     string id;
     cursor->AppendDebugDescription(&id);
-    run_history_.push_back(cursor);
+    run_history_->push_back(new CursorOwnershipRevoker(cursor));
     return new SpyCursor(id, listener_, cursor);
   }
  private:

@@ -711,6 +711,9 @@ struct kernel_io_event {
 #endif
 
 #if defined(__i386__)
+#ifndef __NR_mount
+#define __NR_mount               21
+#endif
 #ifndef __NR_setgroups32
 #define __NR_setgroups32         81
 #endif
@@ -832,6 +835,9 @@ struct kernel_io_event {
 #ifndef __NR_unlinkat
 #define __NR_unlinkat           301
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            310
+#endif
 #ifndef __NR_move_pages
 #define __NR_move_pages         317
 #endif
@@ -846,6 +852,9 @@ struct kernel_io_event {
 #endif
 #ifndef __NR_pwritev
 #define __NR_pwritev            334
+#endif
+#ifndef __NR_setns
+#define __NR_setns              346
 #endif
 /* End of i386 definitions                                                   */
 #elif defined(__arm__)
@@ -865,6 +874,9 @@ struct kernel_io_event {
 #define __syscall(name) "swi\t" __sys1(__NR_##name) ""
 #define __syscall_safe(name) __syscall(name)
 #endif
+#endif
+#ifndef __NR_mount
+#define __NR_mount              (__NR_SYSCALL_BASE + 21)
 #endif
 #ifndef __NR_setresuid
 #define __NR_setresuid          (__NR_SYSCALL_BASE + 164)
@@ -968,8 +980,14 @@ struct kernel_io_event {
 #ifndef __NR_ioprio_get
 #define __NR_ioprio_get         (__NR_SYSCALL_BASE + 315)
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            (__NR_SYSCALL_BASE + 337)
+#endif
 #ifndef __NR_move_pages
 #define __NR_move_pages         (__NR_SYSCALL_BASE + 344)
+#endif
+#ifndef __NR_setns
+#define __NR_setns              (__NR_SYSCALL_BASE + 375)
 #endif
 /* End of ARM definitions                                                  */
 #elif defined(__x86_64__)
@@ -984,6 +1002,9 @@ struct kernel_io_event {
 #define __NR_getresuid          118
 #define __NR_setresgid          119
 #define __NR_getresgid          120
+#endif
+#ifndef __NR_mount
+#define __NR_mount              165
 #endif
 #ifndef __NR_quotactl
 #define __NR_quotactl           179
@@ -1059,6 +1080,9 @@ struct kernel_io_event {
 #ifndef __NR_unlinkat
 #define __NR_unlinkat           263
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            272
+#endif
 #ifndef __NR_move_pages
 #define __NR_move_pages         279
 #endif
@@ -1071,9 +1095,15 @@ struct kernel_io_event {
 #ifndef __NR_pwritev
 #define __NR_pwritev            296
 #endif
+#ifndef __NR_setns
+#define __NR_setns              308
+#endif
 /* End of x86-64 definitions                                                 */
 #elif defined(__mips__)
 #if _MIPS_SIM == _MIPS_SIM_ABI32
+#ifndef __NR_mount
+#define __NR_mount              (__NR_Linux + 21)
+#endif
 #ifndef __NR_setresuid
 #define __NR_setresuid          (__NR_Linux + 185)
 #define __NR_getresuid          (__NR_Linux + 186)
@@ -1163,6 +1193,9 @@ struct kernel_io_event {
 #ifndef __NR_unlinkat
 #define __NR_unlinkat           (__NR_Linux + 294)
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            (__NR_Linux + 303)
+#endif
 #ifndef __NR_move_pages
 #define __NR_move_pages         (__NR_Linux + 308)
 #endif
@@ -1174,6 +1207,9 @@ struct kernel_io_event {
 #endif
 #ifndef __NR_ioprio_get
 #define __NR_ioprio_get         (__NR_Linux + 315)
+#endif
+#ifndef __NR_setns
+#define __NR_setns              (__NR_Linux + 344)
 #endif
 /* End of MIPS (old 32bit API) definitions */
 #elif  _MIPS_SIM == _MIPS_SIM_ABI64
@@ -1191,6 +1227,9 @@ struct kernel_io_event {
 #endif
 #ifndef __NR_capset
 #define __NR_capset             (__NR_Linux + 124)
+#endif
+#ifndef __NR_mount
+#define __NR_mount              (__NR_Linux + 160)
 #endif
 #ifndef __NR_gettid
 #define __NR_gettid             (__NR_Linux + 178)
@@ -1244,6 +1283,9 @@ struct kernel_io_event {
 #ifndef __NR_unlinkat
 #define __NR_unlinkat           (__NR_Linux + 253)
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            (__NR_Linux + 262)
+#endif
 #ifndef __NR_move_pages
 #define __NR_move_pages         (__NR_Linux + 267)
 #endif
@@ -1256,8 +1298,14 @@ struct kernel_io_event {
 #ifndef __NR_ioprio_get
 #define __NR_ioprio_get         (__NR_Linux + 274)
 #endif
+#ifndef __NR_setns
+#define __NR_setns              (__NR_Linux + 303)
+#endif
 /* End of MIPS (64bit API) definitions */
 #else
+#ifndef __NR_mount
+#define __NR_mount              (__NR_Linux + 160)
+#endif
 #ifndef __NR_setresuid
 #define __NR_setresuid          (__NR_Linux + 115)
 #define __NR_getresuid          (__NR_Linux + 116)
@@ -1325,6 +1373,9 @@ struct kernel_io_event {
 #ifndef __NR_unlinkat
 #define __NR_unlinkat           (__NR_Linux + 257)
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            (__NR_Linux + 266)
+#endif
 #ifndef __NR_move_pages
 #define __NR_move_pages         (__NR_Linux + 271)
 #endif
@@ -1337,10 +1388,16 @@ struct kernel_io_event {
 #ifndef __NR_ioprio_get
 #define __NR_ioprio_get         (__NR_Linux + 278)
 #endif
+#ifndef __NR_setns
+#define __NR_setns              (__NR_Linux + 308)
+#endif
 /* End of MIPS (new 32bit API) definitions                                   */
 #endif
 /* End of MIPS definitions                                                   */
 #elif defined(__PPC__)
+#ifndef __NR_mount
+#define __NR_mount              21
+#endif
 #ifndef __NR_setfsuid
 #define __NR_setfsuid           138
 #define __NR_setfsgid           139
@@ -1441,6 +1498,9 @@ struct kernel_io_event {
 #ifndef __NR_ioprio_get
 #define __NR_ioprio_get         274
 #endif
+#ifndef __NR_unshare
+#define __NR_unshare            282
+#endif
 #ifndef __NR_openat
 #define __NR_openat             286
 #endif
@@ -1457,6 +1517,9 @@ struct kernel_io_event {
 #endif
 #ifndef __NR_getcpu
 #define __NR_getcpu             302
+#endif
+#ifndef __NR_setns
+#define __NR_setns              350
 #endif
 /* End of powerpc defininitions                                              */
 #endif
@@ -2714,6 +2777,11 @@ struct kernel_io_event {
                        unsigned int,   n, int,    t)
   LSS_INLINE _syscall2(int,     prctl,           int,         o,
                        long,           a)
+  LSS_INLINE _syscall5(int, mount, const char *, source, const char *, target,
+                       const char *, filesystemtype, unsigned long, mountflags,
+                       const void *, data)
+  LSS_INLINE _syscall1(int, unshare, int, flags)
+  LSS_INLINE _syscall2(int, setns, int, fd, int, nstype)
   #if defined(__NR_preadv)
     // Defined on x86_64 / i386 only
   LSS_INLINE _syscall5(ssize_t, preadv, unsigned long, fd,
