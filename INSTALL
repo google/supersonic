@@ -22,6 +22,14 @@ http://www.boost.org/doc/libs/1_50_0/libs/timer/doc/cpu_timers.html
 Testing has been done on Boost version 1.50.0, but other versions should
 be acceptable, provided that they include version 2 timers (CPU Timers).
 
+If you have downloaded a release package, the configure script will already
+be there. If, on the other hand, you've pulled the code directly from
+the Git repo, generate the script by running:
+
+./autogen.sh
+
+You need to have autotools installed on your system.
+
 It is definitely easiest to compile and install Supersonic when the required
 packages are already installed on your machine in the /usr/local/lib and
 /usr/local/include folders (or the like).
@@ -87,26 +95,27 @@ Instruction Set 1:
 #
 # a) glog
 #
-  export GLOG_CFLAGS='-I../glog/src' && \
-  export GLOG_LIBS='-L../glog -lglog' && \
+  export GLOG_CFLAGS='-I../glog/src'
+  export GLOG_LIBS='-L../glog -lglog'
   export CPPFLAGS=$CPPFLAGS' -I../glog/src'
 #
 # b) gflags
 #
-  export GFLAGS_CFLAGS='-I../gflags/src' && \
-  export GFLAGS_LIBS='-L../gflags -lgflags' && \
+  export GFLAGS_CFLAGS='-I../gflags/src'
+  export GFLAGS_LIBS='-L../gflags -lgflags'
   export CPPFLAGS=$CPPFLAGS' -I../gflags/src'
 #
 # c) protobuf
 #
-  export PROTO_CFLAGS='-I../protobuf/src' && \
-  export PROTO_LIBS='-L../protobuf/src -lprotobuf' && \
-  export CPPFLAGS=$CPPFLAGS' -I../protobuf/src' && \
+  export PROTO_CFLAGS='-I../protobuf/src'
+  export PROTO_LIBS='-L../protobuf/src -lprotobuf'
+  export CPPFLAGS=$CPPFLAGS' -I../protobuf/src'
   export PROTOC=$(readlink -f ../protobuf/src/protoc)
 #
 # d) re2
 #
-  export LDFLAGS=$LDFLAGS' -L../re2/obj/so -R'$(readlink -f ../re2/obj/so) && \
+  SO_PATH=$(readlink -f ../re2/obj/so) && \
+  export LDFLAGS=$LDFLAGS' -L../re2/obj/so -Wl,-rpath -Wl,'$SO_PATH
   export CPPFLAGS=$CPPFLAGS' -I../re2'
 #
 #

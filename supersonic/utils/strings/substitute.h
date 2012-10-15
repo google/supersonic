@@ -32,6 +32,7 @@ namespace strings {
 //   * Substitutions in the format string are identified by a '$'
 //     followed by a digit.  So, you can use arguments out-of-order and
 //     use the same argument multiple times.
+//   * '$$' in the format string means output a literal '$' character.
 //   * It's much faster than StringPrintf.
 //
 //   Supported types:

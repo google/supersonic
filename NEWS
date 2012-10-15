@@ -1,0 +1,16 @@
+News for version 0.9.1:
+
+Several build bug fixes:
+ - BUG ID: 1 [https://code.google.com/p/supersonic/issues/detail?id=1]
+   gcc4.6 doesn't support "-R" linker flag; FIXED
+
+ - BUG ID: 2 [https://code.google.com/p/supersonic/issues/detail?id=2]
+   no .gitignore; ADDED
+
+ - BUG ID: 3 [https://code.google.com/p/supersonic/issues/detail?id=3]
+   string_bound_expressions: gcc4.6 reports a "taking address of temporary"
+   error; FIXED
+
+Other fixes:
+ - added conditional Automake flag for determining the archiver - flag is
+   required in AM1.12, and not supported by older AM's

@@ -346,7 +346,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 
 // GCC-specific features
 
-#if (defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__APPLE__)) && !defined(SWIG)
+#if (defined(__GNUC__) || defined(__APPLE__)) && !defined(SWIG)
 
 //
 // Tell the compiler to do printf format string checking if the
@@ -530,7 +530,7 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 #define MUST_USE_RESULT
 #endif
 
-#if (defined(__INTEL_COMPILER) || defined(__GNUC__))
+#if defined(__GNUC__)
 // Defined behavior on some of the uarchs:
 // PREFETCH_HINT_T0:
 //   prefetch to all levels of the hierarchy (except on p4: prefetch to L2)
@@ -549,18 +549,17 @@ enum PrefetchHint {
 #endif
 
 extern inline void prefetch(const char *x, int hint) {
-#if defined(__INTEL_COMPILER) || defined(__llvm__)
+#if defined(__llvm__)
   // In the gcc version of prefetch(), hint is only a constant _after_ inlining
-  // (assumed to have been successful).  icc views things differently, and
+  // (assumed to have been successful).  llvm views things differently, and
   // checks constant-ness _before_ inlining.  This leads to compilation errors
-  // with the gcc version in icc.
+  // with using the other version of this code with llvm.
   //
   // One way round this is to use a switch statement to explicitly match
   // prefetch hint enumerations, and invoke __builtin_prefetch for each valid
-  // value.  icc's optimization removes the switch and unused case statements
+  // value.  llvm's optimization removes the switch and unused case statements
   // after inlining, so that this boils down in the end to the same as for gcc;
-  // that is, a single inlined prefetchX instruction.  Demonstrate by compiling
-  // with icc options -xK -O2 and viewing assembly language output.
+  // that is, a single inlined prefetchX instruction.
   //
   // Note that this version of prefetch() cannot verify constant-ness of hint.
   // If client code calls prefetch() with a variable value for hint, it will
@@ -727,7 +726,7 @@ template<int size> struct AlignType<0, size> { typedef char result[size]; };
 #if defined(_MSC_VER)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __declspec(align(X))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof(T)
-#elif defined(__GNUC__) || defined(__INTEL_COMPILER)
+#elif defined(__GNUC__)
 #define BASE_PORT_H_ALIGN_ATTRIBUTE(X) __attribute__((aligned(X)))
 #define BASE_PORT_H_ALIGN_OF(T) __alignof__(T)
 #endif
@@ -1055,11 +1054,11 @@ struct PortableHashBase { };
 #endif
 
 // Our STL-like classes use __STD.
-#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__APPLE__) || defined(_MSC_VER)
+#if defined(__GNUC__) || defined(__APPLE__) || defined(_MSC_VER)
 #define __STD std
 #endif
 
-#if defined __GNUC__ || defined __INTEL_COMPILER
+#if defined __GNUC__
 #define STREAM_SET(s, bit) (s).setstate(ios_base::bit)
 #define STREAM_SETF(s, flag) (s).setf(ios_base::flag)
 #else

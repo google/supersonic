@@ -12,9 +12,6 @@
 
 #include "supersonic/utils/integral_types.h"
 
-// TODO(user): Remove this include once all users of jenkins.h are updated.
-#include "supersonic/utils/hash/builtin_type_hash.h"
-
 // ----------------------------------------------------------------------
 // Hash32StringWithSeed()
 // Hash64StringWithSeed()

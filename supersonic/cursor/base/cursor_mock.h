@@ -30,6 +30,7 @@ class MockCursor : public Cursor {
  public:
   MOCK_METHOD0(Interrupt, void());
   MOCK_CONST_METHOD0(schema, const TupleSchema&());
+  MOCK_CONST_METHOD0(GetCursorId, CursorId());
   MOCK_METHOD1(Next, ResultView(rowcount_t max_row_count));
   MOCK_CONST_METHOD1(AppendDebugDescription, void(string* target));
 };

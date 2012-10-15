@@ -248,12 +248,13 @@ class BoundRegexpExtractExpression : public BoundUnaryExpression {
 
     for (int i = 0; i < input.row_count(); ++i) {
       if (!*skip_vector) {
-        // TODO(tkaftal): Try to avoid memory copying during the .ToString()
-        // calls.
+        re2::StringPiece re2_source(source[i].data(), source[i].length());
+        re2::StringPiece re2_destination;
         *skip_vector |=
-            !RE2::PartialMatch(source[i].ToString(),
-              *pattern_,
-              &destination[i].ToString());
+            !RE2::PartialMatch(re2_source,
+                               *pattern_,
+                               &re2_destination);
+        destination[i].set(re2_destination.data(), re2_destination.length());
       }
       ++skip_vector;
     }

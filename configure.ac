@@ -1,6 +1,6 @@
 m4_define([supersonic_major], [0])
 m4_define([supersonic_minor], [9])
-m4_define([supersonic_patch], [0])
+m4_define([supersonic_patch], [1])
 
 AC_PREREQ([2.65])
 AC_INIT([supersonic], [supersonic.major.supersonic_minor.supersonic_patch])
@@ -17,6 +17,10 @@ AX_PREFIX_CONFIG_H(supersonic/supersonic-config.h, SUPERSONIC)
 
 # The gflags are used for automake, not GCC!
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+
+# Required by Automake 1.12, but not recognised in older versions.
+m4_pattern_allow([AM_PROG_AR])
+AM_PROG_AR
 
 # Adding libtool support
 LT_INIT

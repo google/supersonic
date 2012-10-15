@@ -1,0 +1,34 @@
+# Libraries and dependencies
+.deps/
+.libs/
+*.o
+*.lo
+*.la
+
+# Binaries
+supersonic_unittest
+
+# Autotools generated files
+Makefile
+Makefile.in
+_configs.sed
+config.h
+config.h.in
+config.log
+config.status
+configure
+install-sh
+libtool
+ltmain.sh
+stamp-h1
+supersonic/supersonic-config.h
+
+# Generated M4 macro
+aclocal.m4
+
+# Googletest
+gtest/
+
+# Protobuf generated files
+*.pb.h
+*.pb.cc
