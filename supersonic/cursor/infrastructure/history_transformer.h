@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // File contains a class for cursor transformers which maintain a history of
 // transformations.

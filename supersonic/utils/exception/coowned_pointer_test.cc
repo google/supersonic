@@ -15,8 +15,8 @@
 
 #include "supersonic/utils/exception/coowned_pointer.h"
 
-#include "testing/base/public/googletest.h"
-#include "testing/base/public/gunit.h"
+#include "gtest/gtest.h"
+#include "gtest/gtest.h"
 
 namespace common {
 

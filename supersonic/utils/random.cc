@@ -16,6 +16,7 @@
 //
 #include "supersonic/utils/random.h"
 
+#include <ieee754.h>
 #include <sys/time.h>
 
 #include <string.h>
@@ -92,6 +93,31 @@ static inline uint32 twist(uint32 a, uint32 b) {
 static inline uint32 mix30(uint32 a) {
   // Mix the high bits back in with the low bits.
   return a ^ (a >> 30);
+}
+
+double RandomBase::RandDouble() {
+#ifdef OS_CYGWIN
+  __ieee_double_shape_type v;
+  v.number.sign = 0;
+  v.number.fraction0 = Rand32();  // Lower 20 bits
+  v.number.fraction1 = Rand32();  // 32 bits
+#ifdef __SMALL_BITFIELDS
+  // Previous two were actually 4 and 16 respectively; these are the last 32.
+  v.number.fraction2 = Rand16();
+  v.number.fraction3 = Rand16();
+#endif
+  // Exponent is 11 bits wide, using an excess 1023 representation.
+  v.number.exponent = 1023;
+  return v.value - static_cast<double>(1.0);
+#else
+  union ieee754_double v;
+  v.ieee.negative = 0;
+  v.ieee.mantissa0 = Rand32();  // lower 20 bits
+  v.ieee.mantissa1 = Rand32();  // 32 bits
+  // Exponent is 11 bits wide, using an excess 1023 representation.
+  v.ieee.exponent = 1023;
+  return v.d - static_cast<double>(1.0);
+#endif
 }
 
 // Implements all of step 2 and step 3.
@@ -210,6 +236,10 @@ uint32 MTRandom::Rand32() {
   y ^= (y << 15) & 0xefc60000;
   y ^= (y >> 18);
   return y;
+}
+
+int32 MTRandom::Next() {
+  return Rand32();
 }
 
 uint64 MTRandom::Rand64() {

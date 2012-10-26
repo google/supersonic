@@ -177,7 +177,10 @@ make
 The following library is required for testing only, it will be included with
 the package, compiled locally and NOT installed.
 
-1. Googletest
+1. Googlemock
+http://code.google.com/p/googlemock/
+
+The package will contain Googletest which is available at
 http://code.google.com/p/googletest/
 
 Below are generic autotools installation instructions.

@@ -306,6 +306,15 @@ const SingleSourceProjector* ProjectAttributeAt(const int position) {
   return new PositionedAttributeProjector(position);
 }
 
+const SingleSourceProjector* ProjectAttributesAt(const vector<int>& positions) {
+  scoped_ptr<CompoundSingleSourceProjector> projector(
+      new CompoundSingleSourceProjector);
+  for (int i = 0; i < positions.size(); ++i) {
+    projector->add(ProjectAttributeAt(positions[i]));
+  }
+  return projector.release();
+}
+
 const SingleSourceProjector* ProjectNamedAttributes(
     const vector<string>& names) {
   CompoundSingleSourceProjector* projector = new CompoundSingleSourceProjector;

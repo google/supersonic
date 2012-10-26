@@ -22,6 +22,7 @@
 #include <ext/hash_set>
 using __gnu_cxx::hash;
 using __gnu_cxx::hash_set;
+using __gnu_cxx::hash_multiset;
 #include <map>
 using std::map;
 using std::multimap;

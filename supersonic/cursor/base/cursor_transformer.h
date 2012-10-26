@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // A cursor transformer interface providing a method to transform input cursors
 // into possibly different output cursors.

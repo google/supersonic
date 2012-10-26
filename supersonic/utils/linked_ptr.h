@@ -96,9 +96,19 @@ class linked_ptr {
   explicit linked_ptr(T* ptr = NULL) { capture(ptr); }
   ~linked_ptr() { depart(); }
 
-  // Copy an existing linked_ptr<>, adding ourselves to the list of references.
-  // TODO(user): explicit?
-  template <typename U> linked_ptr(linked_ptr<U> const& ptr) { copy(&ptr); }
+  // Constuctors that copy an existing linked_ptr<>, adding ourselves to the
+  // list of references.
+
+  // The following isn't a copy constructor. It is, by design, a non-explicit
+  // constructor, which implicitly constructs one kind of linked_ptr from
+  // another. (The two linked_ptr instances are kept in the same list.)
+  // make_linked_ptr (below) depends on this conversion behavior. This is mostly
+  // used to construct a linked_ptr<Base> from a linked_ptr<Derived>.
+  template <typename U> linked_ptr(linked_ptr<U> const& ptr) {
+    copy(&ptr);
+  }
+
+  // Copy constructor (compare with above).
   linked_ptr(linked_ptr const& ptr) { DCHECK_NE(&ptr, this); copy(&ptr); }
 
   // Assignment releases the old value and acquires the new.

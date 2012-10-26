@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // The file provides various timer extensions based on the boost CPU timer
 // library.
@@ -21,6 +21,8 @@
 
 #include <boost/timer/timer.hpp>
 
+
+#include <time.h>
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/macros.h"
@@ -31,6 +33,7 @@ namespace bt = boost::timer;
 inline static double toSeconds(const bt::nanosecond_type& nano) {
   return nano / static_cast<double>(1e9);
 }
+
 // Converts time from boost nanoseconds into int64 microsecond format.
 inline static int64 toUSeconds(const bt::nanosecond_type& nano) {
   return static_cast<int64>(nano / 1e3);
@@ -56,6 +59,7 @@ class TimerBase {
 
   virtual double Get() const ABSTRACT;        // get the value in seconds
   virtual int64 GetInUsec() const ABSTRACT;   // get the value in microseconds
+  virtual int64 GetInNanos() const ABSTRACT;   // get the value in cycles
 
  protected:
   // Underlying boost timer.
@@ -103,6 +107,7 @@ class WallTimer : public TimerBase {
  public:
   virtual double Get() const;
   virtual int64 GetInUsec() const;
+  virtual int64 GetInNanos() const;
 };
 
 inline double WallTimer::Get() const {
@@ -113,12 +118,17 @@ inline int64 WallTimer::GetInUsec() const {
   return toUSeconds(timer_.elapsed().wall);
 }
 
+inline int64 WallTimer::GetInNanos() const {
+  return timer_.elapsed().wall;
+}
+
 // Class for user-time measurements.
 // TODO(tkaftal): Add more precise info on accuracy, based on boost doc.
 class UserTimer : public TimerBase {
  public:
   virtual double Get() const;
   virtual int64 GetInUsec() const;
+  virtual int64 GetInNanos() const;
 };
 
 inline double UserTimer::Get() const {
@@ -129,12 +139,17 @@ inline int64 UserTimer::GetInUsec() const {
   return toUSeconds(timer_.elapsed().user);
 }
 
+inline int64 UserTimer::GetInNanos() const {
+  return timer_.elapsed().user;
+}
+
 // Class for measuring time spent in kernel.
 // TODO(tkaftal): Add more precise info on accuracy, based on boost doc.
 class SystemTimer : public TimerBase {
  public:
   virtual double Get() const;
   virtual int64 GetInUsec() const;
+  virtual int64 GetInNanos() const;
 };
 
 inline double SystemTimer::Get() const {
@@ -144,4 +159,9 @@ inline double SystemTimer::Get() const {
 inline int64 SystemTimer::GetInUsec() const {
   return toUSeconds(timer_.elapsed().system);
 }
+
+inline int64 SystemTimer::GetInNanos() const {
+  return timer_.elapsed().system;
+}
+
 #endif  // SUPERSONIC_OPENSOURCE_TIMER_TIMER_H_

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // The file provides simple file functionalities.
 // TODO(tkaftal): Tests needed.
@@ -46,6 +46,10 @@ class File {
   static File* Create(const std::string& file_name,
                       const std::string& mode);
 
+  // Tries to open the file under file_name in the given mode. Will fail if
+  // there are any errors on the way.
+  static File* OpenOrDie(const std::string& file_name, const std::string& mode);
+
   // Utility static method for checking file existence.
   static bool Exists(const string& file);
 
@@ -70,6 +74,10 @@ class File {
   // Reads data and returns it in OUTPUT. Returns a value < 0 on error,
   // or the of bytes read otherwise. Returns zero on end-of-file.
   virtual int64 Read(void* OUTPUT, uint64 length) ABSTRACT;
+
+  // Reads one line, or max_length characters if the line is longer, into
+  // the buffer.
+  virtual char* ReadLine(char* buffer, uint64 max_length) ABSTRACT;
 
   // Try to write 'length' bytes from 'buffer', returning
   // the number of bytes that were actually written.

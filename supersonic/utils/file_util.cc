@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // File management utilities' implementation.
 #include "supersonic/utils/file_util.h"
@@ -51,7 +51,7 @@ File* TempFile::Create(const char *directory_prefix) {
   // If directory_prefix is not provided an already-existing temp directory
   // will be used
   if (!(directory_prefix && *directory_prefix)) {
-    TryCreate(NULL);
+    return TryCreate(NULL);
   }
 
   struct stat st;
@@ -107,4 +107,12 @@ bool TempFile::TempFilename(const char *directory_prefix, string *filename) {
   LOG(ERROR) << "Couldn't find a suitable TempFile anywhere. Tried "
              << dirs.size() << " directories";
   return false;
+}
+
+/* static */
+string TempFile::TempFilename(const char *directory_prefix) {
+  string file_name;
+  CHECK(TempFilename(directory_prefix, &file_name))
+      << "Could not create temporary file with prefix: " << directory_prefix;
+  return file_name;
 }

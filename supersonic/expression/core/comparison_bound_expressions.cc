@@ -27,6 +27,7 @@ using std::swap;
 #include <ext/hash_set>
 using __gnu_cxx::hash;
 using __gnu_cxx::hash_set;
+using __gnu_cxx::hash_multiset;
 #include <set>
 using std::multiset;
 using std::set;

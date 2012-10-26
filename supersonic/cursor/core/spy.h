@@ -44,7 +44,7 @@ class SpyListener {
   virtual void AfterNext(const string& id,
                          rowcount_t max_row_count,
                          const ResultView& result_view,
-                         int64 time_usec) = 0;
+                         int64 time_cycles) = 0;
 };
 
 // Returns a spy listener which will print the measured information and view

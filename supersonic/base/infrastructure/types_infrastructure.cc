@@ -111,10 +111,12 @@ template<> void PrintTyped<DATE>(const int32& value, string* const target) {
 template<>
 void PrintTyped<BINARY>(const StringPiece& value, string* const target) {
   StringAppendF(target, "<0x");
-  const char* p = value.data();
+  // This is to enforce uniform printing as the signed-ness of the char type is
+  // platform dependent.
+  const unsigned char* p = reinterpret_cast<const unsigned char*>(value.data());
   for (int i = 0; i < value.size(); ++i) {
     if (i % 4 == 0) StringAppendF(target, " ");
-    StringAppendF(target, "%02x", static_cast<unsigned int>(*p++));
+    StringAppendF(target, "%02x", *p++);
   }
   StringAppendF(target, ">");
 }

@@ -386,6 +386,10 @@ inline const SingleSourceProjector* ProjectAttributeAtAs(
   return ProjectRenameSingle(alias, ProjectAttributeAt(position));
 }
 
+// A utility shortcut for building a compound projector for those columns, whose
+// positions are specified.
+const SingleSourceProjector* ProjectAttributesAt(const vector<int>& positions);
+
 // A convenience shourtcut to build a compound projector for the list of
 // specific named attributes. Useful for specifying join keys, sort keys, etc.
 // Ownership of the projector is transferred to the caller.

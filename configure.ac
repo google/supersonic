@@ -1,6 +1,6 @@
 m4_define([supersonic_major], [0])
 m4_define([supersonic_minor], [9])
-m4_define([supersonic_patch], [1])
+m4_define([supersonic_patch], [2])
 
 AC_PREREQ([2.65])
 AC_INIT([supersonic], [supersonic.major.supersonic_minor.supersonic_patch])

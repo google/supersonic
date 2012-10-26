@@ -155,17 +155,18 @@ void StripBrackets(char left, char right, string* s) {
 }
 
 void StripMarkupTags(string* s) {
-  string::iterator openbracket = find(s->begin(), s->end(), '<');
-  while (openbracket != s->end()) {
-    string::iterator closebracket = find(openbracket, s->end(), '>');
-    if (closebracket == s->end()) {
-      s->erase(openbracket, closebracket);
-      return;
+  string::iterator output = find(s->begin(), s->end(), '<');
+  string::iterator input = output;
+  while (input != s->end()) {
+    if (*input == '<') {
+      input = find(input, s->end(), '>');
+      if (input == s->end()) break;
+      ++input;
+    } else {
+      *output++ = *input++;
     }
-
-    openbracket = s->erase(openbracket, closebracket + 1);
-    openbracket = find(openbracket, s->end(), '<');
   }
+  s->resize(output - s->begin());
 }
 
 string OutputWithMarkupTagsStripped(const string& s) {

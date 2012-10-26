@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 // All rights reserved.
+// Author: Tomasz Kaftal <tomasz.kaftal@gmail.com>
 //
 // Additional constants from logging.h and its dependencies which are
 // not exported by glog.

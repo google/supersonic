@@ -12,52 +12,287 @@ AM_CPPFLAGS = -Wno-deprecated \
               -DNDEBUG \
               -DSUPERSONIC_FORCE_FAILURE_CHECK=1
 
+BOOST_SYSTEM_LIB = -lboost_system
 BOOST_TIMER_LIB = -lboost_timer
 
 RE2_LIBS = -lre2
 
-# Library
-lib_LTLIBRARIES = libsupersonic.la
+TEST_FLAGS = -I$(top_srcdir)/gmock/include -I$(top_srcdir)/gmock \
+    -I$(top_srcdir)/gmock/gtest/include -I$(top_srcdir)/gmock/gtest
 
-libsupersonic_la_CXXFLAGS = $(PTHREAD_CFLAGS) \
+COMPILER_FLAGS = $(PTHREAD_CFLAGS) \
     $(AM_CXXFLAGS) \
     $(GFLAGS_CFLAGS) \
     $(GLOG_CFLAGS) \
     $(PROTO_CFLAGS) \
     $(RE2_CFLAGS) \
     $(BOOST_CPPFLAGS)
-libsupersonic_la_LDFLAGS =
-libsupersonic_la_LIBADD =
 
-# Unit tests and benchmarks.
-supersonic_unittest_CPPFLAGS = $(AM_CPPFLAGS) \
-    $(PTHREAD_CFLAGS) \
-    -I$(top_srcdir)/gtest/include -I$(top_srcdir)/gtest \
-    $(GFLAGS_CFLAGS) \
-    $(GLOG_CFLAGS) \
-    $(PROTO_CFLAGS) \
-    $(RE2_CFLAGS) \
-    $(BOOST_CPPFLAGS)
-supersonic_unittest_LDFLAGS =
-supersonic_unittest_LDADD = libsupersonic.la \
+EXEC_LIB_FLAGS = libsupersonic.la \
+    $(BOOST_SYSTEM_LIB) \
     $(BOOST_TIMER_LIB) \
     $(GFLAGS_LIBS) \
     $(GLOG_LIBS) \
     $(PROTO_LIBS) \
     $(RE2_LIBS)
 
-supersonic_unittest_SOURCES = gtest/src/gtest-all.cc \
-    test_utils/supersonic_test_main.cc \
+EXEC_TEST_FLAGS = $(EXEC_LIB_FLAGS) libtestutils.la
+
+TEST_FILES = gmock/gtest/src/gtest-all.cc \
+    gmock/src/gmock-all.cc \
+    test_utils/supersonic_test_main.cc
+
+# Library
+lib_LTLIBRARIES = libsupersonic.la
+
+libsupersonic_la_CXXFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+libsupersonic_la_LDFLAGS =
+libsupersonic_la_LIBADD = libbenchmark.la
+
+# Testing utils
+noinst_LTLIBRARIES = libtestutils.la
+
+libtestutils_la_CXXFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+libtestutils_la_LDFLAGS =
+libtestutils_la_LIBADD =
+
+libtestutils_ladir = $(includedir)
+libtestutils_la_HEADERS = \
+    supersonic/testing/block_builder.h \
+    supersonic/testing/comparable_cursor.h \
+    supersonic/testing/comparable_tuple_schema.h \
+    supersonic/testing/comparable_view.h \
+    supersonic/testing/comparators.h \
+    supersonic/testing/expression_test_helper.h \
+    supersonic/testing/operation_testing.h \
+    supersonic/testing/proto_matcher.h \
+    supersonic/testing/repeating_block.h \
+    supersonic/testing/row.h \
+    supersonic/testing/short_circuit_tester.h \
+    supersonic/testing/streamable.h \
+    supersonic/testing/view_comparator.h
+
+libtestutils_la_SOURCES = \
+    supersonic/testing/block_builder.cc \
+    supersonic/testing/comparable_cursor.cc \
+    supersonic/testing/comparable_tuple_schema.cc \
+    supersonic/testing/comparable_view.cc \
+    supersonic/testing/expression_test_helper.cc \
+    supersonic/testing/operation_testing.cc \
+    supersonic/testing/repeating_block.cc \
+    supersonic/testing/row.cc \
+    supersonic/testing/short_circuit_tester.cc \
+    supersonic/testing/streamable.cc \
+    supersonic/testing/view_comparator.cc
+
+# Unit tests
+supersonic_guidetest_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+supersonic_guidetest_LDFLAGS =
+supersonic_guidetest_LDADD = $(EXEC_LIB_FLAGS)
+
+supersonic_guidetest_SOURCES = $(TEST_FILES) \
     test/smoke_test.cc \
     test/guide/group_sort.cc \
     test/guide/join.cc \
     test/guide/primer.cc
 
-TESTS = supersonic_unittest
-check_PROGRAMS = $(TESTS)
-noinst_PROGRAMS = $(TESTS)
+TESTS = supersonic_guidetest
 
-EXTRA_DIST = $(TESTS)
+# Unit Tests
+#
+## base
+test_base_exception_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_base_exception_LDADD = $(EXEC_TEST_FLAGS)
+test_base_exception_SOURCES = $(TEST_FILES) \
+    supersonic/base/exception/exception_test.cc \
+    supersonic/base/exception/result_test.cc
+TESTS += test_base_exception
+
+test_base_infrastructure_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_base_infrastructure_LDADD = $(EXEC_TEST_FLAGS)
+test_base_infrastructure_SOURCES = $(TEST_FILES) \
+    supersonic/base/infrastructure/aggregation_operators_test.cc \
+    supersonic/base/infrastructure/bit_pointers_test.cc \
+    supersonic/base/infrastructure/block_test.cc \
+    supersonic/base/infrastructure/copy_column_test.cc \
+    supersonic/base/infrastructure/double_buffered_block_test.cc \
+    supersonic/base/infrastructure/operators_test.cc \
+    supersonic/base/infrastructure/projector_test.cc \
+    supersonic/base/infrastructure/types_infrastructure_test.cc \
+    supersonic/base/infrastructure/types_test.cc \
+    supersonic/base/infrastructure/variant_pointer_test.cc \
+    supersonic/base/infrastructure/view_copier_test.cc
+TESTS += test_base_infrastructure
+
+test_base_memory_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_base_memory_LDADD = $(EXEC_TEST_FLAGS)
+test_base_memory_SOURCES = $(TEST_FILES) \
+    supersonic/base/memory/arena_test.cc \
+    supersonic/base/memory/memory_mocks.cc \
+    supersonic/base/memory/memory_test.cc
+TESTS += test_base_memory
+
+## benchmark
+test_benchmark_dot_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS) -std=c++0x
+test_benchmark_dot_LDADD = $(EXEC_TEST_FLAGS)
+test_benchmark_dot_SOURCES = $(TEST_FILES) \
+    supersonic/benchmark/dot/dot_drawer_test.cc
+TESTS += test_benchmark_dot
+
+test_benchmark_infrastructure_CPPFLAGS = $(COMPILER_FLAGS) \
+                                         $(TEST_FLAGS) \
+                                         -std=c++0x
+test_benchmark_infrastructure_LDADD = $(EXEC_TEST_FLAGS)
+test_benchmark_infrastructure_SOURCES = $(TEST_FILES) \
+    supersonic/benchmark/infrastructure/benchmark_listener_test.cc \
+    supersonic/benchmark/infrastructure/benchmark_transformer_test.cc \
+    supersonic/benchmark/infrastructure/node_test.cc
+TESTS += test_benchmark_infrastructure
+
+test_benchmark_manager_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS) -std=c++0x
+test_benchmark_manager_LDADD = $(EXEC_TEST_FLAGS)
+test_benchmark_manager_SOURCES = $(TEST_FILES) \
+    supersonic/benchmark/manager/benchmark_manager_test.cc
+TESTS += test_benchmark_manager
+
+## cursor
+test_cursor_base_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_cursor_base_LDADD = $(EXEC_TEST_FLAGS)
+test_cursor_base_SOURCES = $(TEST_FILES) \
+    supersonic/cursor/base/lookup_index_test.cc
+TESTS += test_cursor_base
+
+test_cursor_core_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_cursor_core_LDADD = $(EXEC_TEST_FLAGS)
+test_cursor_core_SOURCES = $(TEST_FILES) \
+    supersonic/cursor/core/aggregate_clusters_test.cc \
+    supersonic/cursor/core/aggregate_groups_test.cc \
+    supersonic/cursor/core/aggregate_scalar_test.cc \
+    supersonic/cursor/core/coalesce_test.cc \
+    supersonic/cursor/core/column_aggregator_test.cc \
+    supersonic/cursor/core/compute_test.cc \
+    supersonic/cursor/core/filter_test.cc \
+    supersonic/cursor/core/foreign_filter_test.cc \
+    supersonic/cursor/core/generate_test.cc \
+    supersonic/cursor/core/hash_join_test.cc \
+    supersonic/cursor/core/hybrid_aggregate_test.cc \
+    supersonic/cursor/core/hybrid_aggregate_large_test.cc \
+    supersonic/cursor/core/hybrid_group_utils_test.cc \
+    supersonic/cursor/core/limit_test.cc \
+    supersonic/cursor/core/merge_union_all_test.cc \
+    supersonic/cursor/core/project_test.cc \
+    supersonic/cursor/core/rowid_merge_join_test.cc \
+    supersonic/cursor/core/scan_view_test.cc \
+    supersonic/cursor/core/sort_test.cc \
+    supersonic/cursor/core/specification_builder_test.cc \
+    supersonic/cursor/core/splitter_test.cc
+TESTS += test_cursor_core
+
+test_cursor_infrastructure_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_cursor_infrastructure_LDADD = $(EXEC_TEST_FLAGS)
+test_cursor_infrastructure_SOURCES = $(TEST_FILES) \
+    supersonic/cursor/infrastructure/basic_operation_test.cc \
+    supersonic/cursor/infrastructure/iterators_test.cc \
+    supersonic/cursor/infrastructure/row_copier_test.cc \
+    supersonic/cursor/infrastructure/row_hash_set_test.cc \
+    supersonic/cursor/infrastructure/row_test.cc \
+    supersonic/cursor/infrastructure/table_test.cc \
+    supersonic/cursor/infrastructure/view_cursor_test.cc \
+    supersonic/cursor/infrastructure/writer_test.cc
+TESTS += test_cursor_infrastructure
+
+## expression
+test_expression_core_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_expression_core_LDADD = $(EXEC_TEST_FLAGS)
+test_expression_core_SOURCES = $(TEST_FILES) \
+    supersonic/expression/core/arithmetic_bound_expressions_test.cc \
+    supersonic/expression/core/arithmetic_expressions_test.cc \
+    supersonic/expression/core/case_expression_test.cc \
+    supersonic/expression/core/comparison_bound_expressions_test.cc \
+    supersonic/expression/core/date_bound_expressions_test.cc \
+    supersonic/expression/core/date_expressions_test.cc \
+    supersonic/expression/core/elementary_bound_expressions_test.cc \
+    supersonic/expression/core/elementary_expressions_test.cc \
+    supersonic/expression/core/math_bound_expressions_test.cc \
+    supersonic/expression/core/math_expressions_test.cc \
+    supersonic/expression/core/projecting_bound_expressions_test.cc \
+    supersonic/expression/core/projecting_expressions_test.cc \
+    supersonic/expression/core/stateful_bound_expressions_test.cc \
+    supersonic/expression/core/stateful_expressions_test.cc \
+    supersonic/expression/core/string_bound_expressions_test.cc \
+    supersonic/expression/core/string_expressions_test.cc
+TESTS += test_expression_core
+
+test_expression_infrastructure_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_expression_infrastructure_LDADD = $(EXEC_TEST_FLAGS)
+test_expression_infrastructure_SOURCES = $(TEST_FILES) \
+    supersonic/expression/infrastructure/basic_bound_expression_test.cc \
+    supersonic/expression/infrastructure/expression_utils_test.cc \
+    supersonic/expression/infrastructure/terminal_expressions_test.cc
+TESTS += test_expression_infrastructure
+
+test_expression_templated_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_expression_templated_LDADD = $(EXEC_TEST_FLAGS)
+test_expression_templated_SOURCES = $(TEST_FILES) \
+    supersonic/expression/templated/cast_bound_expression_test.cc \
+    supersonic/expression/templated/cast_expression_test.cc
+TESTS += test_expression_templated
+
+test_expression_vector_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS)
+test_expression_vector_LDADD = $(EXEC_TEST_FLAGS)
+test_expression_vector_SOURCES = $(TEST_FILES) \
+    supersonic/expression/vector/binary_column_computers_test.cc \
+    supersonic/expression/vector/column_validity_checkers_test.cc \
+    supersonic/expression/vector/ternary_column_computers_test.cc \
+    supersonic/expression/vector/unary_column_computers_test.cc \
+    supersonic/expression/vector/vector_logic_test.cc \
+    supersonic/expression/vector/vector_primitives_test.cc
+TESTS += test_expression_vector
+
+# Benchmark utilities
+noinst_LTLIBRARIES += libbenchmark.la
+
+libbenchmark_la_CXXFLAGS = $(COMPILER_FLAGS) -std=c++0x
+libbenchmark_la_LDFLAGS =
+libbenchmark_la_LIBADD =
+
+libbenchmark_ladir = $(includedir)
+libbenchmark_la_HEADERS = \
+    supersonic/benchmark/base/benchmark_types.h \
+    supersonic/benchmark/dot/dot_drawer.h \
+    supersonic/benchmark/examples/common_utils.h \
+    supersonic/benchmark/infrastructure/benchmark_listener.h \
+    supersonic/benchmark/infrastructure/benchmark_listener_mock.h \
+    supersonic/benchmark/infrastructure/benchmark_transformer.h \
+    supersonic/benchmark/infrastructure/cursor_statistics.h \
+    supersonic/benchmark/infrastructure/cursor_statistics_mock.h \
+    supersonic/benchmark/infrastructure/node.h \
+    supersonic/benchmark/infrastructure/tree_builder.h \
+    supersonic/benchmark/manager/benchmark_manager.h
+
+libbenchmark_la_SOURCES = \
+    supersonic/benchmark/dot/dot_drawer.cc \
+    supersonic/benchmark/examples/common_utils.cc \
+    supersonic/benchmark/infrastructure/benchmark_listener.cc \
+    supersonic/benchmark/infrastructure/benchmark_transformer.cc \
+    supersonic/benchmark/infrastructure/cursor_statistics.cc \
+    supersonic/benchmark/infrastructure/node.cc \
+    supersonic/benchmark/infrastructure/tree_builder.cc \
+    supersonic/benchmark/manager/benchmark_manager.cc
+
+# Benchmark examples
+BENCHMARK_EXAMPLES = operation_example
+
+## simple operation example
+operation_example_CPPFLAGS = $(COMPILER_FLAGS) $(TEST_FLAGS) -std=c++0x
+operation_example_LDADD = $(EXEC_LIB_FLAGS) libtestutils.la
+operation_example_SOURCES = supersonic/benchmark/examples/operation_example.cc
+
+
+check_PROGRAMS = $(TESTS)
+noinst_PROGRAMS = $(TESTS) $(BENCHMARK_EXAMPLES)
+
+EXTRA_DIST = $(TESTS) $(BENCHMARK_EXAMPLES)
 
 # Headers exported from the library.
 supersonic_includedir = $(includedir)
@@ -66,6 +301,7 @@ protos_H = \
     supersonic/utils/exception/stack_trace.pb.h \
     supersonic/utils/proto/expressions.pb.h \
     supersonic/utils/proto/types.pb.h \
+    supersonic/benchmark/proto/benchmark.pb.h \
     supersonic/cursor/proto/cursors.pb.h \
     supersonic/expression/proto/operators.pb.h \
     supersonic/proto/specification.pb.h \
@@ -136,6 +372,7 @@ sources_H = supersonic/utils/algorithm.h \
     supersonic/utils/hash/jenkins.h \
     supersonic/utils/hash/jenkins_lookup2.h \
     supersonic/utils/hash/legacy_hash.h \
+    supersonic/utils/hash/murmur.h \
     supersonic/utils/hash/string_hash.h \
     supersonic/utils/exception/coowned_pointer.h \
     supersonic/utils/exception/failureor.h \
@@ -143,6 +380,7 @@ sources_H = supersonic/utils/algorithm.h \
     supersonic/utils/strings/fastmem.h \
     supersonic/utils/strings/join.h \
     supersonic/utils/strings/escaping.h \
+    supersonic/utils/strings/human_readable.h \
     supersonic/utils/strings/memutil.h \
     supersonic/utils/strings/numbers.h \
     supersonic/utils/strings/split_internal.h \
@@ -278,6 +516,7 @@ protos_S = \
     supersonic/utils/exception/stack_trace.pb.cc \
     supersonic/utils/proto/expressions.pb.cc \
     supersonic/utils/proto/types.pb.cc \
+    supersonic/benchmark/proto/benchmark.pb.cc \
     supersonic/cursor/proto/cursors.pb.cc \
     supersonic/expression/proto/operators.pb.cc \
     supersonic/proto/specification.pb.cc \
@@ -301,12 +540,14 @@ supersonic_S += \
     supersonic/utils/hash/city.cc \
     supersonic/utils/hash/hash.cc \
     supersonic/utils/hash/jenkins.cc \
+    supersonic/utils/hash/murmur.cc \
     supersonic/utils/exception/stack_trace.cc \
     supersonic/utils/strings/join.cc \
     supersonic/utils/strings/stringpiece.cc \
     supersonic/utils/strings/ascii_ctype.cc \
     supersonic/utils/strings/charset.cc \
     supersonic/utils/strings/escaping.cc \
+    supersonic/utils/strings/human_readable.cc \
     supersonic/utils/strings/memutil.cc \
     supersonic/utils/strings/numbers.cc \
     supersonic/utils/strings/serialize.cc \
@@ -434,6 +675,9 @@ supersonic/utils/proto/types.pb.h supersonic/utils/proto/types.pb.cc: supersonic
 	$(PROTOC) --proto_path=$(srcdir) --cpp_out=$(srcdir) $<
 
 supersonic/utils/proto/expressions.pb.h supersonic/utils/proto/expressions.pb.cc: supersonic/utils/proto/expressions.proto
+	$(PROTOC) --proto_path=$(srcdir) --cpp_out=$(srcdir) $<
+
+supersonic/benchmark/proto/benchmark.pb.h supersonic/benchmark/proto/benchmark.pb.cc: supersonic/benchmark/proto/benchmark.proto
 	$(PROTOC) --proto_path=$(srcdir) --cpp_out=$(srcdir) $<
 
 # Proto header dependencies

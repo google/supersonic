@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // The file provides file management utilities.
 #ifndef SUPERSONIC_OPENSOURCE_FILE_FILE_UTIL_H_
@@ -43,6 +43,10 @@ class TempFile {
   // uniqueness. Returns: true if 'filename' contains a unique
   // filename, otherwise false (and 'filename' is left unspecified).
   static bool TempFilename(const char *directory_prefix, string *filename);
+
+  // Similar as above but returns the file name rather than writing it to
+  // an output argument.
+  static string TempFilename(const char *directory_prefix);
 };
 
 class FileDeleter {
@@ -73,5 +77,35 @@ class FileDeleter {
  private:
   File* fp_;
   DISALLOW_COPY_AND_ASSIGN(FileDeleter);
+};
+
+class FileCloser {
+ public:
+  // Takes ownership of 'fp' and deletes it upon going out of
+  // scope.
+  explicit FileCloser(File* fp) : fp_(fp) { }
+  File* get() const { return fp_; }
+  File& operator*() const { return *fp_; }
+  File* operator->() const { return fp_; }
+  File* release() {
+    File* fp = fp_;
+    fp_ = NULL;
+    return fp;
+  }
+  void reset(File* new_fp) {
+    if (fp_) {
+      fp_->Close();
+    }
+    fp_ = new_fp;
+  }
+  bool Close() {
+    return fp_ ? release()->Close() : true;
+  }
+  // Delete (unlink, remove) the underlying file.
+  ~FileCloser() { reset(NULL); }
+
+ private:
+  File* fp_;
+  DISALLOW_COPY_AND_ASSIGN(FileCloser);
 };
 #endif  // SUPERSONIC_OPENSOURCE_FILE_FILE_UTIL_H_

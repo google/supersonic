@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // Mock cursor class for use in testing.
 
@@ -22,7 +22,7 @@
 #include "supersonic/cursor/base/cursor.h"
 #include "supersonic/utils/macros.h"
 
-#include "testing/base/public/gmock.h"
+#include "gmock/gmock.h"
 
 namespace supersonic {
 

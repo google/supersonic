@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // The file provides an implementation of the RandomBase class used to generate
 // random numbers.
@@ -41,6 +41,9 @@ class RandomBase {
   virtual uint16 Rand16() ABSTRACT;
   virtual uint32 Rand32() ABSTRACT;
   virtual uint64 Rand64() ABSTRACT;
+  virtual double RandDouble();
+
+  virtual int32 Next() ABSTRACT;
 };
 
 // MTRandom: A __simplified__ implementation of the MT19937 RNG class.
@@ -75,6 +78,7 @@ class MTRandom : public RandomBase {
   virtual uint16 Rand16();
   virtual uint32 Rand32();
   virtual uint64 Rand64();
+  virtual int32 Next();
 
   static int SeedSize() { return kMTSizeBytes; }
 

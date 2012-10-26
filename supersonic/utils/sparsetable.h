@@ -645,8 +645,7 @@ class const_two_d_iterator {
   const_two_d_iterator()
     : row_begin(), row_end(), row_current(), col_current() {
   }
-  // Need this explicitly so we can convert normal iterators to const iterators
-  // TODO(user): explicit?
+  // Non-explicit ctor needed to convert normal iterators to const iterators
   const_two_d_iterator(const two_d_iterator<containertype>& it) :
     row_begin(it.row_begin), row_end(it.row_end), row_current(it.row_current),
     col_current(it.col_current) { }
@@ -1314,7 +1313,7 @@ class sparsegroup {
     typedef typename A::size_type size_type;
 
     // Convert a normal allocator to one that has realloc_or_die()
-    alloc_impl(const A& a) : A(a) {}  // TODO(user): explicit?
+    alloc_impl(const A& a) : A(a) {}
 
     // realloc_or_die should only be used when using the default
     // allocator (libc_allocator_with_realloc).

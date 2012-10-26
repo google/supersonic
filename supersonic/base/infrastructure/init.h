@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// Author: Tomasz Kaftal (tomasz.kaftal@gmail.com)
 //
 // The header contains one inline function, SupersonicInit(),
 // which initialises atomicops for x86 architecture and the Google logging
@@ -26,13 +27,17 @@ const bool archX86 = true;
 const bool archX86 = false;
 #endif
 
+#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 
 namespace supersonic {
 
-inline void SupersonicInit(const char* argv0) {
-  google::InitGoogleLogging(argv0);
+// The function will initialise Supersonic and  the utilities it makes use of.
+// It will strip the specified command line flags from argv and modify argc.
+inline void SupersonicInit(int* argc, char*** argv) {
+  google::ParseCommandLineFlags(argc, argv, true);
+  google::InitGoogleLogging(*argv[0]);
   if (archX86) {
     AtomicOps_x86CPUFeaturesInit();
   }

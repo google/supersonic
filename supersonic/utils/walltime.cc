@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // The implementation of walltime functionalities.
 #ifndef _GNU_SOURCE   // gcc3 at least defines it on the command line
@@ -20,6 +20,8 @@
 #endif
 
 #include "supersonic/utils/walltime.h"
+#include <glog/logging.h>
+#include "supersonic/utils/logging-inl.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -152,6 +154,14 @@ WallTime WallTime_Now() {
   timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
   return ts.tv_sec + ts.tv_nsec / static_cast<double>(1e9);
+}
+
+int32 GetDaysSinceEpoch(const char* date) {
+  struct tm time;
+  memset(&time, 0, sizeof(time));
+  CHECK(strptime(date, "%Y-%m-%d", &time)) << "Could not parse date: " << date;
+  int64 seconds_since_epoch = gmktime(&time);
+  return seconds_since_epoch > 0 ? seconds_since_epoch / (60 * 60 * 24) : -1;
 }
 
 void StringAppendStrftime(string* dst,

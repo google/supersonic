@@ -16,7 +16,7 @@ using std::swap;
 #include "supersonic/utils/logging-inl.h"
 #include "base/synchronization.h"
 #include "testing/base/public/benchmark.h"
-#include "testing/base/public/gunit.h"
+#include "gtest/gtest.h"
 #include "third_party/boost/allowed/ptr_container/ptr_vector.hpp"
 #include "thread/thread.h"
 

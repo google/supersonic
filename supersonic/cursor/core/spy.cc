@@ -45,6 +45,8 @@ namespace supersonic {
 
 namespace {
 
+const int64 kNumNanosPerMilli = kNumMicrosPerMilli * 1000;
+
 class SpyCursor : public BasicCursor {
  public:
   SpyCursor(const string& id, SpyListener* listener, Cursor* child)
@@ -59,7 +61,7 @@ class SpyCursor : public BasicCursor {
     timer_.Restart();
     ResultView result_view = child()->Next(max_row_count);
     timer_.Stop();
-    listener_->AfterNext(id_, max_row_count, result_view, timer_.GetInUsec());
+    listener_->AfterNext(id_, max_row_count, result_view, timer_.GetInNanos());
     return result_view;
   }
 
@@ -107,7 +109,7 @@ class SpySink : public Sink {
     FailureOr<rowcount_t> result = sink_->Write(data);
     timer_.Stop();
     listener_->AfterNext(id_, 0,
-                         ResultView::Success(&data), timer_.GetInUsec());
+                         ResultView::Success(&data), timer_.GetInNanos());
     return result;
   }
 
@@ -187,9 +189,10 @@ class PrintSpyListener : public SpyListener {
   virtual void AfterNext(const string& id,
                          rowcount_t max_row_count,
                          const ResultView& result_view,
-                         int64 time_usec) {
+                         int64 time_nanos) {
+    double time_ms = time_nanos / static_cast<double>(kNumNanosPerMilli);
     cout << "Next(" << max_row_count << ") on " << id
-         << " result in " << time_usec/1000.0 << " ms:";
+         << " result in " << time_ms << " ms:";
     view_printer_.AppendResultViewToStream(result_view, &cout);
   }
 

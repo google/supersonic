@@ -34,6 +34,7 @@ using __gnu_cxx::hash_map;
 #include <ext/hash_set>
 using __gnu_cxx::hash;
 using __gnu_cxx::hash_set;
+using __gnu_cxx::hash_multiset;
 #include <iterator>
 using std::back_insert_iterator;
 using std::iterator_traits;
@@ -179,6 +180,7 @@ namespace strings {
 //   - Literal (default)
 //   - AnyOf
 //   - Limit
+//   - FixedLength
 //
 // The following are examples of using some provided Delimiter objects:
 //
@@ -207,6 +209,14 @@ namespace strings {
 //   assert(v[0] == "a");
 //   assert(v[1] == "b,c");
 //
+// Example 4:
+//   // Splits into equal-length substrings.
+//   using ::strings::delimiter::FixedLength;
+//   vector<string> v = strings::Split("12345", FixedLength(2));
+//   assert(v.size() == 3);
+//   assert(v[0] == "12");
+//   assert(v[1] == "34");
+//   assert(v[2] == "5");
 //
 //                                  Predicates
 //
@@ -305,21 +315,25 @@ inline internal::Splitter<Delimiter, Predicate> Split(
 }
 
 namespace delimiter {
-// A Delimiter object represents a single separator, such as a character,
-// literal string, or regular expression. A Delimiter object must have the
-// following member:
+// A Delimiter object tells the splitter where a string should be broken. Some
+// examples are breaking a string wherever a given character or substring is
+// found, wherever a regular expression matches, or simply after a fixed length.
+// All Delimiter objects must have the following member:
 //
 //   StringPiece Find(StringPiece text);
 //
 // This Find() member function should return a StringPiece referring to the next
-// occurrence of the represented delimiter within the given string text. If no
-// delimiter is found in the given text, a zero-length StringPiece referring to
-// text.end() should be returned (e.g., StringPiece(text.end(), 0)). It is
-// important that the returned StringPiece always be within the bounds of the
-// StringPiece given as an argument--it must not refer to a string that is
-// physically located outside of the given string. The following example is a
-// simple Delimiter object that is created with a single char and will look for
-// that char in the text given to the Find() function:
+// occurrence of the represented delimiter, which is the location where the
+// input string should be broken. The returned StringPiece may be zero-length if
+// the Delimiter does not represent a part of the string (e.g., a fixed-length
+// delimiter). If no delimiter is found in the given text, a zero-length
+// StringPiece referring to text.end() should be returned (e.g.,
+// StringPiece(text.end(), 0)). It is important that the returned StringPiece
+// always be within the bounds of the StringPiece given as an argument--it must
+// not refer to a string that is physically located outside of the given string.
+// The following example is a simple Delimiter object that is created with a
+// single char and will look for that char in the text given to the Find()
+// function:
 //
 //   struct SimpleDelimiter {
 //     const char c_;
@@ -383,6 +397,37 @@ class AnyOf {
 
  private:
   const string delimiters_;
+};
+
+// A delimiter for splitting into equal-length strings. The length argument to
+// the constructor must be greater than 0. This delimiter works with ascii
+// string data, but does not work with variable-width encodings, such as UTF-8.
+// Examples:
+//
+//   using ::strings::delimiter::FixedLength;
+//   vector<string> v = strings::Split("123456789", FixedLength(3));
+//   assert(v.size() == 3);
+//   assert(v[0] == "123");
+//   assert(v[1] == "456");
+//   assert(v[2] == "789");
+//
+// Note that the string does not have to be a multiple of the fixed split
+// length. In such a case, the last substring will be shorter.
+//
+//   using ::strings::delimiter::FixedLength;
+//   vector<string> v = strings::Split("12345", FixedLength(2));
+//   assert(v.size() == 3);
+//   assert(v[0] == "12");
+//   assert(v[1] == "34");
+//   assert(v[2] == "5");
+//
+class FixedLength {
+ public:
+  explicit FixedLength(int length);
+  StringPiece Find(StringPiece text) const;
+
+ private:
+  const int length_;
 };
 
 // Wraps another delimiter and sets a max number of matches for that delimiter.

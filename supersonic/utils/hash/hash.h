@@ -89,6 +89,7 @@ using __gnu_cxx::hash_map;     // hacky way to make sure we import standard hash
 #include <ext/hash_set>
 using __gnu_cxx::hash;
 using __gnu_cxx::hash_set;
+using __gnu_cxx::hash_multiset;
 #include <string>
 using std::string;
 #include <utility>

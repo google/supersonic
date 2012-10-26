@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // The file provides walltime functionalities for the open source version
 // of Supersonic.
@@ -26,24 +26,30 @@ using std::string;
 
 #include "supersonic/utils/integral_types.h"
 
+// Time conversion utilities.
+static const int64 kNumMillisPerSecond = 1000LL;
+
+static const int64 kNumMicrosPerMilli = 1000LL;
+static const int64 kNumMicrosPerSecond = kNumMicrosPerMilli * 1000LL;
+
 typedef double WallTime;
 
 // Append result to a supplied string.
 // If an error occurs during conversion 'dst' is not modified.
 void StringAppendStrftime(std::string* dst,
-                                 const char* format,
-                                 time_t when,
-                                 bool local);
+                          const char* format,
+                          time_t when,
+                          bool local);
 
 // Similar to the WallTime_Parse, but it takes a boolean flag local as
 // argument specifying if the time_spec is in local time or UTC
 // time. If local is set to true, the same exact result as
 // WallTime_Parse is returned.
 bool WallTime_Parse_Timezone(const char* time_spec,
-                                    const char* format,
-                                    const struct tm* default_time,
-                                    bool local,
-                                    WallTime* result);
+                             const char* format,
+                             const struct tm* default_time,
+                             bool local,
+                             WallTime* result);
 
 // Return current time in seconds as a WallTime.
 WallTime WallTime_Now();
@@ -56,6 +62,11 @@ inline MicrosecondsInt64 GetCurrentTimeMicros() {
   clock_gettime(CLOCK_REALTIME, &ts);
   return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
+
+// Returns the number of days from epoch that elapsed until the specified date.
+// The date must be in year-month-day format. Returns -1 when the date argument
+// is invalid.
+int32 GetDaysSinceEpoch(const char* date);
 
 // A CycleClock yields the value of a cycle counter that increments at a rate
 // that is approximately constant.

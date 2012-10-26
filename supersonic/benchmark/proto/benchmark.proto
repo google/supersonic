@@ -1,0 +1,76 @@
+// Copyright 2012 Google Inc. All Rights Reserved.
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
+//
+// Protocol buffer for describing measured benchmark values. They are created by
+// the CursorStatistics objects and dispatched to a drawing utility for
+// benchmark graph/tree creation.
+
+
+package supersonic;
+
+message BenchmarkData {
+  enum CursorType {
+    BENCHMARKED = 0;
+    NOT_BENCHMARKED = 1;
+    UNRECOGNISED = 2;
+  }
+
+  // Cursor description.
+  required string cursor_name = 1;
+  required CursorType cursor_type = 2;
+
+  // Benchmarking values. All temporal values are in microseconds.
+
+  // Total computation time in the subtree of the current cursor, including
+  // itself. For the root cursor this is the total computation wall time.
+  optional int64 total_subtree_time = 3;
+
+  // Total computation time in a given cursor. For sequential cursors this is
+  // a simple difference between time spent waiting for the results to be ready
+  // and the total input fetching time. For concurrent computations this value
+  // will be equal to the total subtree time.
+  optional int64 processing_time = 4;
+
+  // Number of rows processed and sent forward as output.
+  optional int64 rows_processed = 5;
+
+  // Number of calls to the cursor's Next() function made to fetch the required
+  // data.
+  optional int64 next_calls = 6;
+
+  // Percentage relative computation time, which is the ratio of processing
+  // time in a given cursor to the total time spent by the root to carry out the
+  // whole computation including pulling the data and processing it.
+  optional double relative_time = 7;
+
+  // Number of rows processed per microsecond.
+  optional double throughput = 8;
+
+  // The percentage rate of the returned row count to the maximum row count
+  // among input cursors.
+  optional double return_rate = 9;
+
+  // The number of input rows processed per microsecond. This benchmark value
+  // is similar to throughput, with the difference that we are counting all
+  // input rows, rather than output rows. This is done to better characterise
+  // cursors with high selectivity, for which throughput will plummet not
+  // necessarily due to poor performance.
+  optional double row_processing_rate = 10;
+
+  // The time spent on processing the results of the first Next() call.
+  // Used to characterise the cursors for which the first call is when some
+  // initialisation takes place, such as grouping or sorting cursors.
+  optional int64 preprocessing_time = 11;
+
+  // Hash join cursor characteristic describing the time spent setting up
+  // the lookup index.
+  optional int64 index_set_up_time = 12;
+
+  // Hash join cursor characteristic which sums up the time spent performing
+  // lookups.
+  optional int64 matching_time = 13;
+
+  // Benchmark value for parallel cursors which is the ratio of the sum of
+  // inputs' computation times to the cursor's own computation time.
+  optional double speed_up = 14;
+}

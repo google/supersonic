@@ -19,7 +19,7 @@ using std::vector;
 #include "supersonic/utils/exception/failureor.h"
 #include "supersonic/utils/exception/stack_trace.h"
 
-#include "testing/base/public/gunit.h"
+#include "gtest/gtest.h"
 
 namespace common {
 

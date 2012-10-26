@@ -698,7 +698,7 @@ class UnaryOperateOnFirst
   UnaryOperateOnFirst() {
   }
 
-  UnaryOperateOnFirst(const UnaryOp& f) : f_(f) {  // TODO(user): explicit?
+  UnaryOperateOnFirst(const UnaryOp& f) : f_(f) {
   }
 
   typename UnaryOp::result_type operator()(const Pair& p) const {
@@ -721,7 +721,7 @@ class UnaryOperateOnSecond
   UnaryOperateOnSecond() {
   }
 
-  UnaryOperateOnSecond(const UnaryOp& f) : f_(f) {  // TODO(user): explicit?
+  UnaryOperateOnSecond(const UnaryOp& f) : f_(f) {
   }
 
   typename UnaryOp::result_type operator()(const Pair& p) const {
@@ -744,7 +744,7 @@ class BinaryOperateOnFirst
   BinaryOperateOnFirst() {
   }
 
-  BinaryOperateOnFirst(const BinaryOp& f) : f_(f) {  // TODO(user): explicit?
+  BinaryOperateOnFirst(const BinaryOp& f) : f_(f) {
   }
 
   typename BinaryOp::result_type operator()(const Pair& p1,
@@ -756,7 +756,6 @@ class BinaryOperateOnFirst
   BinaryOp f_;
 };
 
-// TODO(user): explicit?
 template<typename Pair, typename BinaryOp>
 BinaryOperateOnFirst<Pair, BinaryOp> BinaryOperate1st(const BinaryOp& f) {
   return BinaryOperateOnFirst<Pair, BinaryOp>(f);
@@ -839,7 +838,7 @@ class STLCountingAllocator : public Alloc {
   typedef typename Alloc::size_type size_type;
 
   STLCountingAllocator() : bytes_used_(NULL) { }
-  STLCountingAllocator(int64* b) : bytes_used_(b) {}  // TODO(user): explicit?
+  STLCountingAllocator(int64* b) : bytes_used_(b) {}
 
   // Constructor used for rebinding
   template <class U>

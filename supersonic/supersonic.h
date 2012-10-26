@@ -40,10 +40,12 @@
 #include "supersonic/cursor/core/limit.h"  // IWYU pragma: keep
 #include "supersonic/cursor/core/ownership_taker.h"  // IWYU pragma: keep
 #include "supersonic/cursor/core/project.h"  // IWYU pragma: keep
+#include "supersonic/cursor/core/sort.h"  // IWYU pragma: keep
 #include "supersonic/cursor/core/scan_view.h"  // IWYU pragma: keep
 // TODO(tkaftal): Add support for union cursor.
 #include "supersonic/cursor/infrastructure/basic_cursor.h"  // IWYU pragma: keep
 #include "supersonic/cursor/infrastructure/basic_operation.h"  // IWYU pragma: keep
+#include "supersonic/cursor/infrastructure/ordering.h"  // IWYU pragma: keep
 #include "supersonic/cursor/infrastructure/table.h"  // IWYU pragma: keep
 #include "supersonic/cursor/infrastructure/value_ref.h"  // IWYU pragma: keep
 #include "supersonic/cursor/infrastructure/writer.h"  // IWYU pragma: keep

@@ -101,6 +101,22 @@ StringPiece AnyOf::Find(StringPiece text) const {
   return GenericFind(text, delimiters_, AnyOfPolicy());
 }
 
+//
+// FixedLength
+//
+FixedLength::FixedLength(int length) : length_(length) {
+  CHECK_GT(length, 0);
+}
+
+StringPiece FixedLength::Find(StringPiece text) const {
+  // If the string is shorter than the chunk size we say we
+  // "can't find the delimiter" so this will be the last chunk.
+  if (text.length() <= length_)
+    return StringPiece(text.end(), 0);
+
+  return StringPiece(text.begin() + length_, 0);
+}
+
 }  // namespace delimiter
 }  // namespace strings
 

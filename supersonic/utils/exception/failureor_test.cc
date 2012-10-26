@@ -19,8 +19,8 @@
 using std::string;
 
 #include "supersonic/utils/scoped_ptr.h"
-#include "testing/base/public/googletest.h"
-#include "testing/base/public/gunit.h"
+#include "gtest/gtest.h"
+#include "gtest/gtest.h"
 
 namespace common {
 

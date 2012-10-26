@@ -1,5 +1,5 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 // Enum describing cursors for internal usage.
 //
 // A proto enum provides several convenient utility functions out of the box,

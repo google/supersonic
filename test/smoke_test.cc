@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // Simple smoke test to check if compilation and linking have succeeded.
 // TODO(tkaftal): This will be replaced with more a elaborate testing suite,

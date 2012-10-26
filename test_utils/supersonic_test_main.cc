@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // This file contains a custom googletest main method to launch tests.
 // It launches the Supersonic initialisation routine.
@@ -24,10 +24,10 @@ using std::endl;
 #include "supersonic/base/infrastructure/init.h"
 #include "gtest/gtest.h"
 
-GTEST_API_ int main(int argc, char **argv) {
+GTEST_API_ int main(int argc, char** argv) {
   std::cout << "Running main() from supersonic_test_main.cc\n";
 
-  supersonic::SupersonicInit(argv[0]);
+  supersonic::SupersonicInit(&argc, &argv);
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

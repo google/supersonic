@@ -100,7 +100,7 @@ class iterator_first {
   typedef typename helper::difference_type            difference_type;
 
   iterator_first() : it_() {}
-  iterator_first(const It& it) : it_(it) {}  // TODO(user): explicit?
+  iterator_first(const It& it) : it_(it) {}
 
   // Allow "upcasting" from iterator_first<T*const*> to
   // iterator_first<const T*const*>.
@@ -188,7 +188,7 @@ class iterator_second {
   typedef typename helper::difference_type            difference_type;
 
   iterator_second() : it_() {}
-  iterator_second(const It& it) : it_(it) {}  // TODO(user): explicit?
+  iterator_second(const It& it) : it_(it) {}
 
   // Allow "upcasting" from iterator_second<T*const*> to
   // iterator_second<const T*const*>.
@@ -291,7 +291,7 @@ class iterator_second_ptr {
   typedef typename helper::difference_type            difference_type;
 
   iterator_second_ptr() : it_() {}
-  iterator_second_ptr(const It& it) : it_(it) {}  // TODO(user): explicit?
+  iterator_second_ptr(const It& it) : it_(it) {}
 
   // Allow "upcasting" from iterator_second_ptr<T*const*> to
   // iterator_second_ptr<const T*const*>.
@@ -395,7 +395,7 @@ class iterator_ptr {
   typedef typename helper::difference_type            difference_type;
 
   iterator_ptr() : it_() {}
-  iterator_ptr(const It& it) : it_(it) {}  // TODO(user): explicit?
+  iterator_ptr(const It& it) : it_(it) {}
 
   // Allow "upcasting" from iterator_ptr<T*const*> to
   // iterator_ptr<const T*const*>.

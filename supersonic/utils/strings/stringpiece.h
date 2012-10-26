@@ -144,6 +144,7 @@ class StringPiece {
   // Style guide exception granted:
   // http://goto/style-guide-exception-20978288
   StringPiece() : ptr_(NULL), length_(0) {}
+
   StringPiece(const char* str)  // NOLINT(runtime/explicit)
       : ptr_(str), length_(0) {
     if (str != NULL) {
@@ -152,12 +153,23 @@ class StringPiece {
       length_ = static_cast<int>(length);
     }
   }
+
+  StringPiece(const std::string& str)  // NOLINT(runtime/explicit)
+      : ptr_(str.data()), length_(0) {
+    size_t length = str.size();
+    assert(length <= static_cast<size_t>(std::numeric_limits<int>::max()));
+    length_ = static_cast<int>(length);
+  }
+
+#if defined(HAS_GLOBAL_STRING)
   StringPiece(const string& str)  // NOLINT(runtime/explicit)
       : ptr_(str.data()), length_(0) {
     size_t length = str.size();
     assert(length <= static_cast<size_t>(std::numeric_limits<int>::max()));
     length_ = static_cast<int>(length);
   }
+#endif
+
   StringPiece(const char* offset, int len) : ptr_(offset), length_(len) {
     assert(len >= 0);
   }

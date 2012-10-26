@@ -34,6 +34,7 @@ using std::vector;
 #include "supersonic/cursor/base/cursor.h"
 #include "supersonic/cursor/base/operation.h"
 #include "supersonic/proto/supersonic.pb.h"
+#include "gtest/gtest_prod.h"
 #include "supersonic/utils/linked_ptr.h"
 
 
@@ -177,6 +178,8 @@ class BasicOperation : public Operation {
 
   vector<linked_ptr<Operation> > children_;
   mutable string debug_description_;
+
+  FRIEND_TEST(BasicOperationTest, SetBufferAllocatorTest);
 
   DISALLOW_COPY_AND_ASSIGN(BasicOperation);
 };

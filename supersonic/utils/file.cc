@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Author: tkaftal@google.com (Tomasz Kaftal)
+// Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 //
 // File wrapper implementation.
 
@@ -73,6 +73,7 @@ class LocalFileImpl : public File {
   virtual bool Delete();
   virtual bool Close();
   virtual int64 Read(void* OUTPUT, uint64 length);
+  virtual char* ReadLine(char* buffer, uint64 max_length);
   virtual int64 Write(const void* buffer, uint64 length);
   virtual bool Seek(int64 position);
   virtual bool eof();
@@ -161,8 +162,7 @@ bool LocalFileImpl::Open() {
     int fd = open(file_name_.c_str(), mode_flags, permissions);
     if (fd >= 0) {
       internal_file_ = fdopen(fd, file_mode_.c_str());
-
-      if (internal_file_ != NULL) {
+      if (internal_file_ == NULL) {
         LOG(ERROR) << "fdopen failed: " << strerror(errno);
         close(fd);
       }
@@ -221,6 +221,11 @@ int64 LocalFileImpl::Read(void* buffer, uint64 length) {
     total_bytes_read += bytes_read;
   } while (total_bytes_read != length && bytes_read == bytes_to_read);
   return total_bytes_read;
+}
+
+char* LocalFileImpl::ReadLine(char* buffer, uint64 max_length) {
+  if (internal_file_ == NULL) return NULL;
+  return (fgets(buffer, static_cast<int>(max_length), internal_file_));
 }
 
 int64 LocalFileImpl::Write(const void* buffer, uint64 length) {
@@ -284,7 +289,23 @@ File* File::Create(const std::string& file_name,
   return new LocalFileImpl(file_name, mode, DEFAULT_FILE_MODE);
 }
 
+File* File::OpenOrDie(const std::string& file_name, const std::string& mode) {
+  File* fp = File::Create(file_name, mode);
+  if (fp == NULL) {
+    LOG(ERROR) << "Cannot create file " << file_name << "in mode: " << mode;
+    return NULL;
+  }
+  if (!fp->Open()) {
+    LOG(ERROR)
+        << "Cannot open created file " << file_name << "in mode: " << mode;
+    return NULL;
+  }
+  return fp;
+}
+
 /* static */
 bool File::Exists(const string& fname) {
-  return LocalFileImpl(fname, NULL, DEFAULT_FILE_MODE).Exists();
+  return LocalFileImpl(fname,
+                       /* any mode will be correct */ "r",
+                       DEFAULT_FILE_MODE).Exists();
 }
