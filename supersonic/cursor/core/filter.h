@@ -20,8 +20,6 @@
 
 namespace supersonic {
 
-// Creates new filter operation with the given predicate.
-// Takes ownership of predicate, projector and child.
 class BoundExpressionTree;
 class BoundSingleSourceProjector;
 class BufferAllocator;
@@ -30,11 +28,17 @@ class Expression;
 class Operation;
 class SingleSourceProjector;
 
+// Creates new filter operation with the given predicate.
+// The projector specifies the attributes to keep after filtering (use
+// ProjectAllAttributes() if you don't want to change the schema).
+// Takes ownership of predicate, projector and child.
 Operation* Filter(const Expression* predicate,
                   const SingleSourceProjector* projector,
                   Operation* child);
 
 // Creates new filter cursor.
+// The projector specifies the attributes to keep after filtering (use
+// ProjectAllAttributes() if you don't want to change the schema).
 // Takes ownership of predicate, projector and child, doesn't take
 // ownership of allocator.
 FailureOrOwned<Cursor> BoundFilter(BoundExpressionTree* predicate,

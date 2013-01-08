@@ -18,7 +18,6 @@
 
 #include <string.h>
 
-#include "supersonic/utils/basictypes.h"
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/type_traits.h"
 

@@ -259,7 +259,7 @@ string DictionaryDoubleEncode(const hash_map<string, double>* dictionary) {
 }
 
 bool DictionaryParse(const string& encoded_str,
-                      vector<pair<string, string> >* items) {
+                      vector<std::pair<string, string> >* items) {
   vector<string> entries;
   SplitStringUsing(encoded_str, ",", &entries);
   for (int i = 0; i < entries.size(); ++i) {
@@ -274,7 +274,7 @@ bool DictionaryParse(const string& encoded_str,
 
 bool DictionaryInt32Decode(hash_map<string, int32>* dictionary,
                            const string& encoded_str) {
-  vector<pair<string, string> > items;
+  vector<std::pair<string, string> > items;
   if (!DictionaryParse(encoded_str, &items))
     return false;
 
@@ -293,7 +293,7 @@ bool DictionaryInt32Decode(hash_map<string, int32>* dictionary,
 
 bool DictionaryInt64Decode(hash_map<string, int64>* dictionary,
                            const string& encoded_str) {
-  vector<pair<string, string> > items;
+  vector<std::pair<string, string> > items;
   if (!DictionaryParse(encoded_str, &items))
     return false;
 
@@ -313,7 +313,7 @@ bool DictionaryInt64Decode(hash_map<string, int64>* dictionary,
 
 bool DictionaryDoubleDecode(hash_map<string, double>* dictionary,
                             const string& encoded_str) {
-  vector<pair<string, string> > items;
+  vector<std::pair<string, string> > items;
   if (!DictionaryParse(encoded_str, &items))
     return false;
 

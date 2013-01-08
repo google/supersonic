@@ -126,7 +126,7 @@ class iterator_first {
   friend iterator operator+(const difference_type& d, const iterator& it) {
     return it.it_ + d;
   }
-  difference_type operator-(const iterator& x) { return it_ - x.it_; }
+  difference_type operator-(const iterator& x) const { return it_ - x.it_; }
   reference operator[](const difference_type& d) { return it_[d].first; }
   value_type operator[](const difference_type& d) const { return it_[d].first; }
 
@@ -214,7 +214,7 @@ class iterator_second {
   friend iterator operator+(const difference_type& d, const iterator& it) {
     return it.it_ + d;
   }
-  difference_type operator-(const iterator& x) { return it_ - x.it_; }
+  difference_type operator-(const iterator& x) const { return it_ - x.it_; }
   reference operator[](const difference_type& d) { return it_[d].second; }
   value_type operator[](const difference_type& d) const { return it_[d].second;}
 
@@ -317,7 +317,7 @@ class iterator_second_ptr {
   friend iterator operator+(const difference_type& d, const iterator& it) {
     return it.it_ + d;
   }
-  difference_type operator-(const iterator& x) { return it_ - x.it_; }
+  difference_type operator-(const iterator& x) const { return it_ - x.it_; }
   reference operator[](const difference_type& d) { return *(it_[d].second); }
   value_type operator[](const difference_type& d) const {
     return *(it_[d].second);
@@ -421,7 +421,7 @@ class iterator_ptr {
   friend iterator operator+(const difference_type& d, const iterator& it) {
     return it.it_ + d;
   }
-  difference_type operator-(const iterator& x) { return it_ - x.it_; }
+  difference_type operator-(const iterator& x) const { return it_ - x.it_; }
   reference operator[](const difference_type& d) { return *(it_[d]); }
   value_type operator[](const difference_type& d) const { return *(it_[d]); }
 

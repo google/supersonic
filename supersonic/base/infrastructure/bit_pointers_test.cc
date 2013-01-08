@@ -513,6 +513,9 @@ TEST(BitPointersTest, FillFromBooleanRegressionTest) {
   for (int i = 0; i < 6; ++i) EXPECT_EQ(nulls[i], null_ptr[i]);
 }
 
+#if 0
+// These two tests rely on undefined behavior, which will cause a test failure
+// when compiling with LLVM/Clang.
 TEST(BitPointersTest, FillFromBooleanRegressionTest2) {
   // Didn't work for "evil" (i.e. not 0/1) boolean variables.
   char data[9] = { 17, 15, 16, 118, 0, 43, 65, 91, 222 };
@@ -534,7 +537,6 @@ TEST(BitPointersTest, FillBooleanFromBooleanSafe) {
   for (int i = 0; i < 12; ++i) EXPECT_EQ(expected[i], output[i]);
 }
 
-#if 0
 // This test relies on undefined behavior, and crosstoolv15
 // makes it fail due to valid transformation of invalid code. See also
 TEST(BitPointersTest, AssignEvil) {

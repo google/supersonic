@@ -7,10 +7,9 @@
 
 //  This implementation was designed to match the then-anticipated TR2
 //  implementation of the scoped_ptr class, and its closely-related brethren,
-//  scoped_array, scoped_ptr_malloc, and make_scoped_ptr. The anticipated
-//  standardization of scoped_ptr has been superseded by unique_ptr, and
-//  the APIs in this file are being revised to be a subset of unique_ptr,
-//  for details).
+//  scoped_array and scoped_ptr_malloc. The anticipated  standardization of
+//  scoped_ptr has been superseded by unique_ptr, and the APIs in this file are
+//  being revised to be a subset of unique_ptr, as a step towards replacing them
 //
 //  drove this file.
 
@@ -67,9 +66,6 @@ struct FreeDeleter {
 };
 
 }  // namespace base
-
-template <class C>
-scoped_ptr<C, base::DefaultDeleter<C> > make_scoped_ptr(C *);
 
 // A scoped_ptr<T> is like a T*, except that the destructor of scoped_ptr<T>
 // automatically deletes the pointer it holds (if any).
@@ -146,9 +142,6 @@ class scoped_ptr {
  private:
   base::internal::scoped_ptr_impl<C,D> impl_;
 
-  // calls a copy ctor, there will be a problem) see below
-  friend scoped_ptr<C, base::DefaultDeleter<C> > make_scoped_ptr<C>(C *p);
-
   // Forbid comparison of scoped_ptr types.  If C2 != C, it totally doesn't
   // make sense, and if C2 == C, it still doesn't make sense because you should
   // never have the same object owned by two different scoped_ptrs.
@@ -211,33 +204,18 @@ class scoped_ptr<C[], D> {
   // There is no way to create an uninitialized scoped_ptr.
   scoped_ptr() : impl_(NULL) { }
 
-  // Constructor. Stores the given array. Note that the argument's type
-  // must exactly match C*. In particular:
-  // - it cannot be a pointer to a type derived from C, because it is
-  //   inherently unsafe to access an array through a pointer whose
-  //   dynamic type does not match its static type. If you're doing this,
-  //   fix your code.
-  // - it cannot be NULL, because NULL is an integral expression, not a
-  //   pointer to C. Use the no-argument version instead of explicitly
-  //   passing NULL.
-  // - it cannot be const-qualified differently from C. You can work around
-  //   this using implicit_cast (from base/casts.h):
-  //
-  //   int* i;
-  //   scoped_ptr<const int[]> arr(implicit_cast<const int[]>(i));
+  // Constructor. Stores the given array. Note that 'array' must be a pointer
+  // to C, not to some class derived from C, because it is inherently unsafe
+  // to access an array through a pointer whose dynamic type does not match
+  // its static type. This is not currently enforced, but it will be
   explicit scoped_ptr(C* array) : impl_(array) { }
 
   // Reset.  Deletes the current owned object, if any, then takes ownership of
-  // the new object, if given. Note that the argument's type must exactly
-  // match C*; see the comments on the constructor for details.
+  // the new object, if given. Note that 'array' must not be a pointer to
+  // some class derived from C; see the comments on the constructor for details.
   // this->reset(this->get()) works, but this behavior is DEPRECATED, and
-  void reset(C* array) {
+  void reset(C* array  = NULL) {
     impl_.reset(array);
-  }
-
-  void reset() {
-    // Cast is necessary to avoid matching disabled reset() template below.
-    reset(static_cast<C*>(NULL));
   }
 
   // Array indexing operation. Returns the specified element of the underlying
@@ -277,19 +255,6 @@ class scoped_ptr<C[], D> {
   // Force C to be a complete type.
   enum { type_must_be_complete = sizeof(C) };
 
-  // Disable initialization from any type other than C*, by providing a
-  // constructor that matches such an initialization, but is private and
-  // has no definition. This is disabled because it is not safe to
-  // call delete[] on an array whose static type does not match its dynamic
-  // type.
-  template <typename T>
-  explicit scoped_ptr(T* array);
-
-  // Disable reset() from any type other than C*, for the same reasons
-  // as the constructor above.
-  template <typename T>
-  void reset(T* array);
-
   base::internal::scoped_ptr_impl<C,D> impl_;
 
   // Forbid comparison of scoped_ptr types.  If C2 != C, it totally doesn't
@@ -323,20 +288,6 @@ inline bool operator!=(const C* p1, const scoped_ptr<C[], D>& p2) {
 template <class C, class D>
 inline bool operator!=(const C* p1, const scoped_ptr<const C[], D>& p2) {
   return p1 != p2.get();
-}
-
-template <class C>
-scoped_ptr<C> make_scoped_ptr(C *p) {
-  // This does nothing but to return a scoped_ptr of the type that the passed
-  // pointer is of.  (This eliminates the need to specify the name of T when
-  // making a scoped_ptr that is used anonymously/temporarily.)  From an
-  // access control point of view, we construct an unnamed scoped_ptr here
-  // which we return and thus copy-construct.  Hence, we need to have access
-  // to scoped_ptr::scoped_ptr(scoped_ptr const &).  However, it is guaranteed
-  // that we never actually call the copy constructor, which is a good thing
-  // as we would call the temporary's object destructor (and thus delete p)
-  // if we actually did copy some object, here.
-  return scoped_ptr<C>(p);
 }
 
 // scoped_array<C> is like scoped_ptr<C>, except that the caller must allocate
@@ -464,14 +415,10 @@ inline bool operator!=(const C* p1, const scoped_array<const C>& p2) {
 // scoped_ptr_malloc<> is similar to scoped_ptr<>, but it accepts a
 // second template argument, the functor used to free the object.
 //
-// scoped_ptr has a slightly different API, will not invoke the deleter
-// on NULL pointers, and maintains a separate deleter object for each
-// scoped_ptr, rather than a single static deleter object shared across
-// all instances as scoped_ptr_malloc does.
-template<class C, class FreeProc = base::FreeDeleter>
+// scoped_ptr has a slightly different API, which does not allow construction
+template<class C, class D = base::FreeDeleter>
 class scoped_ptr_malloc {
  public:
-
   // The element type
   typedef C element_type;
 
@@ -480,80 +427,54 @@ class scoped_ptr_malloc {
   // The input parameter must be allocated with an allocator that matches the
   // Free functor.  For the default Free functor, this is malloc, calloc, or
   // realloc.
-  explicit scoped_ptr_malloc(): ptr_(NULL) { }
+  scoped_ptr_malloc(): impl_(NULL) { }
 
   // Construct with a C*, and provides an error with a D*.
   template<class must_be_C>
-  explicit scoped_ptr_malloc(must_be_C* p): ptr_(p) { }
+  explicit scoped_ptr_malloc(must_be_C* p): impl_(p) { }
 
   // Construct with a void*, such as you get from malloc.
-  explicit scoped_ptr_malloc(void *p): ptr_(static_cast<C*>(p)) { }
+  explicit scoped_ptr_malloc(void *p): impl_(static_cast<C*>(p)) { }
 
   // Destructor.  If there is a C object, call the Free functor.
   ~scoped_ptr_malloc() {
-    free_(ptr_);
+    reset();
   }
 
   // Reset.  Calls the Free functor on the current owned object, if any.
   // Then takes ownership of a new object, if given.
   // this->reset(this->get()) works.
   void reset(C* p = NULL) {
-    if (ptr_ != p) {
-      free_(ptr_);
-      ptr_ = p;
-    }
-  }
-
-  // Reallocates the existing pointer, and returns 'true' if
-  // the reallcation is succesfull.  If the reallocation failed, then
-  // the pointer remains in its previous state.
-  //
-  // Note: this calls realloc() directly, even if an alternate 'free'
-  // functor is provided in the template instantiation.
-  bool try_realloc(size_t new_size) {
-    C* new_ptr = static_cast<C*>(realloc(ptr_, new_size));
-    if (new_ptr == NULL) {
-      return false;
-    }
-    ptr_ = new_ptr;
-    return true;
+    impl_.reset(p);
   }
 
   // Get the current object.
   // operator* and operator-> will cause an assert() failure if there is
   // no current object.
   C& operator*() const {
-    assert(ptr_ != NULL);
-    return *ptr_;
+    assert(impl_.get() != NULL);
+    return *impl_.get();
   }
 
   C* operator->() const {
-    assert(ptr_ != NULL);
-    return ptr_;
+    assert(impl_.get() != NULL);
+    return impl_.get();
   }
 
-  C* get() const {
-    return ptr_;
-  }
+  C* get() const { return impl_.get(); }
 
   // Comparison operators.
   // These return whether a scoped_ptr_malloc and a plain pointer refer
   // to the same object, not just to two different but equal objects.
   // For compatibility with the boost-derived implementation, these
   // take non-const arguments.
-  bool operator==(C* p) const {
-    return ptr_ == p;
-  }
+  bool operator==(C* p) const { return impl_.get() == p; }
 
-  bool operator!=(C* p) const {
-    return ptr_ != p;
-  }
+  bool operator!=(C* p) const { return impl_.get() != p; }
 
   // Swap two scoped pointers.
   void swap(scoped_ptr_malloc & b) {
-    C* tmp = b.ptr_;
-    b.ptr_ = ptr_;
-    ptr_ = tmp;
+    impl_.swap(b.impl_);
   }
 
   // Release a pointer.
@@ -562,13 +483,11 @@ class scoped_ptr_malloc {
   // After this operation, this object will hold a NULL pointer,
   // and will not own the object any more.
   C* release() {
-    C* tmp = ptr_;
-    ptr_ = NULL;
-    return tmp;
+    return impl_.release();
   }
 
  private:
-  C* ptr_;
+  base::internal::scoped_ptr_impl<C, D> impl_;
 
   // no reason to use these: each scoped_ptr_malloc should have its own object
   template <class C2, class GP>
@@ -576,28 +495,23 @@ class scoped_ptr_malloc {
   template <class C2, class GP>
   bool operator!=(scoped_ptr_malloc<C2, GP> const& p) const;
 
-  static FreeProc const free_;
-
   // Disallow copy and assignment.
   scoped_ptr_malloc(const scoped_ptr_malloc&);
   void operator=(const scoped_ptr_malloc&);
 };
 
-template<class C, class FP>
-FP const scoped_ptr_malloc<C, FP>::free_ = FP();
-
-template<class C, class FP> inline
-void swap(scoped_ptr_malloc<C, FP>& a, scoped_ptr_malloc<C, FP>& b) {
+template<class C, class D> inline
+void swap(scoped_ptr_malloc<C, D>& a, scoped_ptr_malloc<C, D>& b) {
   a.swap(b);
 }
 
-template<class C, class FP> inline
-bool operator==(C* p, const scoped_ptr_malloc<C, FP>& b) {
+template<class C, class D> inline
+bool operator==(C* p, const scoped_ptr_malloc<C, D>& b) {
   return p == b.get();
 }
 
-template<class C, class FP> inline
-bool operator!=(C* p, const scoped_ptr_malloc<C, FP>& b) {
+template<class C, class D> inline
+bool operator!=(C* p, const scoped_ptr_malloc<C, D>& b) {
   return p != b.get();
 }
 

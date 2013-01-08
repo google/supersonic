@@ -157,7 +157,7 @@ class ManualConstructor {
   inline Type& operator*() { return *get(); }
   inline const Type& operator*() const { return *get(); }
 
-  // You can pass up to four constructor arguments as arguments of Init().
+  // You can pass up to eleven constructor arguments as arguments of Init().
   inline void Init() {
     new(space_) Type;
   }

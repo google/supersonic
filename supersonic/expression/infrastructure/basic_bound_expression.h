@@ -236,8 +236,17 @@ class BoundTernaryExpression : public BasicBoundExpression {
 // evaluation is a success and evaluates to null.
 // Does not takes ownership of input_expression!
 template<DataType data_type>
+FailureOr<typename TypeTraits<data_type>::hold_type>
+    GetConstantBoundExpressionValue(BoundExpression* expression, bool* is_null);
+
+// Takes an expression that is expected to resolve to a constant during binding
+// and resolves it into a single value. is_null is a pointer to a boolean value
+// which will be set true if the evaluation is a success and evaluates to null.
+//
+// Does not takes ownership of input_expression!
+template<DataType data_type>
 FailureOr<typename TypeTraits<data_type>::hold_type> GetConstantExpressionValue(
-    BoundExpression* expression, bool* is_null);
+    const Expression& expression, bool* is_null);
 
 // Takes a bound and initialized expression that can be calculated without
 // supplying any inputs, and the result is constant (eg. no randomness and

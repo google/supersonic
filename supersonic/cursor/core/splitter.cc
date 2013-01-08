@@ -170,7 +170,6 @@ FailureOr<const View*> BufferedSplitter::NextView(size_t position) {
         if (copier.Copy(
                 copy_count,
                 view_to_be_copied,
-                NULL,
                 last_block_->filled_row_count_,
                 last_block_->block_) < copy_count) {
           THROW(new Exception(

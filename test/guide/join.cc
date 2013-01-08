@@ -30,7 +30,7 @@ using std::pair;
 
 #include "gtest/gtest.h"
 
-#include "supersonic/supersonic.h"
+#include "supersonic/public/supersonic.h"
 #include "supersonic/cursor/core/sort.h"
 #include "supersonic/cursor/infrastructure/ordering.h"
 #include "supersonic/utils/strings/stringpiece.h"
@@ -43,9 +43,11 @@ using supersonic::Block;
 using supersonic::Cursor;
 using supersonic::Operation;
 using supersonic::FailureOr;
+using supersonic::FailureOrOwned;
+using supersonic::GetConstantExpressionValue;
 using supersonic::TupleSchema;
 using supersonic::Table;
-using supersonic::TableSink;
+using supersonic::TableRowWriter;
 using supersonic::View;
 using supersonic::ViewCopier;
 using supersonic::HashJoinOperation;
@@ -53,6 +55,7 @@ using supersonic::HeapBufferAllocator;
 using supersonic::JoinType;
 using supersonic::ProjectNamedAttribute;
 using supersonic::ProjectNamedAttributeAs;
+using supersonic::rowid_t;
 using supersonic::SingleSourceProjector;
 using supersonic::MultiSourceProjector;
 using supersonic::CompoundSingleSourceProjector;
@@ -74,7 +77,6 @@ using supersonic::ConstString;
 using supersonic::ConstInt32;
 using supersonic::Null;
 
-using supersonic::NO_SELECTOR;
 using supersonic::INNER;
 using supersonic::UNIQUE;
 
@@ -167,6 +169,11 @@ class HashJoinTest : public testing::Test {
                                  HeapBufferAllocator::Get()));
     book_table.reset(new Table(book_schema,
                                HeapBufferAllocator::Get()));
+
+    // We will present 2 different mechanisms of populating the table with data:
+    // 1. Using TableRowWriter - that better matches simple test scenarios.
+    author_table_writer.reset(new TableRowWriter(author_table.get()));
+    // 2. And writing directly to the table.
 
     // Entry counters to generate ids.
     author_count = 0;
@@ -264,24 +271,49 @@ class HashJoinTest : public testing::Test {
   // return the generated ids from the function call to be able
   // to tie books to the authors.
   int32 AddAuthor(const StringPiece& name, bool nobel) {
-    // The CompoundExpression object will combine a list of subexpressions
-    // into tuples.
-    scoped_ptr<CompoundExpression> new_tuple(new CompoundExpression());
-    new_tuple->AddAs("author_id", ConstInt32(author_count++));
-    new_tuple->AddAs("name", ConstString(name));
-    new_tuple->AddAs("nobel", ConstBool(nobel));
-
-    // We use an abstracted-away function to handle tuple insertion,
-    // which we will also employ whilst inserting book entries.
-    return AddTuple(new_tuple.release(), author_table.get());
+    int32 author_id = author_count++;
+    // The order of fields is important and must match the schema of
+    // author_table.
+    author_table_writer
+        ->AddRow().Int32(author_id).String(name).Bool(nobel).CheckSuccess();
+    return author_id;
   }
 
-  // We use the same mechanism to add rows to our book table. Here we also
+  // We will here the direct write to book table. Here we also
   // add simple support for null values, a null date_published argument
   // and a negative author_id will both be treated as such.
   int32 AddBook(const StringPiece& title,
                 const StringPiece& date_published,
                 int32 author_id) {
+    int32 book_id = book_count++;
+    // In fact we don't need separate book_count as we can always read it from
+    // book_table.row_count() directly.
+    CHECK_EQ(book_id, book_table->row_count());
+
+    rowid_t row_id = book_table->AddRow();
+
+    // setting Attribute("book_id", INT32, NOT_NULLABLE).
+    book_table->Set<INT32>(0, row_id, book_id);
+
+    // setting Attribute("author_id_ref", INT32, NULLABLE).
+    if (author_id >= 0) {
+      book_table->Set<INT32>(1, row_id, author_id);
+    } else {
+      book_table->SetNull(1, row_id);
+    }
+    // setting Attribute("title", STRING, NOT_NULLABLE).
+    // This makes a deep copy of the StringPiece.
+    book_table->Set<STRING>(2, row_id, title);
+
+    // setting Attribute("date_published", DATE, NULLABLE).
+
+    // DATEs are internally represented as int32s, and - since we don't want our
+    // test to depend on the exact representation - we're using Supersonic's
+    // evaluation machinery to obtain the int32 that would be used to represent
+    // the value and store it in the row.
+    // Alternate way to do this would be to simply put the string into the
+    // table, and then prepend the ParseStringNulling to our evaluation.
+
     // The ParseStringNulling utility allows us to convert a string expression
     // into a date object. A null entry will be created on null or invalid
     // input.
@@ -291,67 +323,19 @@ class HashJoinTest : public testing::Test {
     // DATEs has not been implemented.
     scoped_ptr<const Expression> date_or_null(
         ParseStringNulling(DATE, ConstString(date_published)));
+    bool date_published_is_null = false;
+    FailureOr<int32> data_published_as_int32 =
+        GetConstantExpressionValue<DATE>(*date_or_null,
+                                         &date_published_is_null);
+    CHECK(data_published_as_int32.is_success())
+        << data_published_as_int32.exception().ToString();
 
-    // To convert negative ids into null values we'll use the If expression,
-    // to which we pass a handful of constants. The If expression gets
-    // a condition and two other expressions - it evaluates to the first one,
-    // if the condition is true and to the second otherwise.
-    //
-    // Supersonic can pre-evaluate constant expressions, which means that even
-    // if we were processing more than a single row of data using the following
-    // expression, it would still only be evaluated once.
-    scoped_ptr<const Expression> author_ref_or_null(
-        If(Less(ConstInt32(author_id), ConstInt32(0)),
-           Null(INT32),
-           ConstInt32(author_id)));
-
-    scoped_ptr<CompoundExpression> new_tuple(new CompoundExpression());
-    new_tuple->AddAs("book_id", ConstInt32(book_count++));
-    new_tuple->AddAs("author_id_ref", author_ref_or_null.release());
-    new_tuple->AddAs("title", ConstString(title));
-    new_tuple->AddAs("date_published", date_or_null.release());
-
-    return AddTuple(new_tuple.release(), book_table.get());
-  }
-
-  int32 AddTuple(CompoundExpression* tuple, Table* table) {
-    // We would now like to use Compute() to turn an expression into
-    // an operation. Our tuple expression already contains all the data
-    // we need, but Compute also requires an input operation. We don't
-    // need any actual input to proceed, but we do have to know how
-    // many rows to produce, so we pass a Generate() operation which
-    // creates zero-column input of a defined length.
-    scoped_ptr<Operation> compute(Compute(tuple,
-                                          Generate(1)));
-
-    scoped_ptr<Cursor> author_cursor(SucceedOrDie(compute->CreateCursor()));
-    ResultView result(author_cursor->Next(1));
-
-    // Make sure there is a result row.
-    EXPECT_TRUE(result.has_data());
-    EXPECT_FALSE(result.is_eos());
-    EXPECT_EQ(1, result.view().row_count());
-
-    const int32 new_id = result.view().column(0).typed_data<INT32>()[0];
-
-    // We now have to create a sink. Sinks are places we want to send our
-    // cursors' data to. In this scenario we want to materialise views into
-    // tables, hence we create a table sink. This is only one possible
-    // application of sinks, they can also be used to write to files
-    // or pass data to sorting objects (Sorters).
-    //
-    // The sink does not take ownership of the table.
-    TableSink sink(table);
-
-    // Write to the sink and make sure the operation was a success and exactly
-    // one row has been written.
-    FailureOr<rowcount_t> written_rows = sink.Write(result.view());
-
-    EXPECT_TRUE(written_rows.is_success());
-    EXPECT_EQ(1, written_rows.get());
-
-    // Return the newly generated id value;
-    return new_id;
+    if (!date_published_is_null) {
+      book_table->Set<DATE>(3, row_id, data_published_as_int32.get());
+    } else {
+      book_table->SetNull(3, row_id);
+    }
+    return book_id;
   }
 
   // Maps of author names and book titles by ids (authors) and author reference
@@ -369,10 +353,7 @@ class HashJoinTest : public testing::Test {
     scoped_ptr<Block> result_space(new Block(result_cursor->schema(),
                                              HeapBufferAllocator::Get()));
 
-    ViewCopier copier(/* input schema */ result_cursor->schema(),
-                      /* output schema */ result_cursor->schema(),
-                      NO_SELECTOR,
-                      /* deep copy */ true);
+    ViewCopier copier(result_cursor->schema(), /* deep copy */ true);
     rowcount_t offset = 0;
     scoped_ptr<ResultView> rv(new ResultView(result_cursor->Next(-1)));
 
@@ -386,7 +367,6 @@ class HashJoinTest : public testing::Test {
 
       rowcount_t rows_copied = copier.Copy(view_row_count,
                                            view,
-                                           /* input row ids */ NULL,
                                            offset,
                                            result_space.get());
 
@@ -463,6 +443,7 @@ class HashJoinTest : public testing::Test {
   TupleSchema book_schema;
 
   scoped_ptr<Table> author_table;
+  scoped_ptr<TableRowWriter> author_table_writer;
   scoped_ptr<Table> book_table;
 
   // Sequence counters.

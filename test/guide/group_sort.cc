@@ -39,7 +39,7 @@ using std::pair;
 
 #include "gtest/gtest.h"
 
-#include "supersonic/supersonic.h"
+#include "supersonic/public/supersonic.h"
 #include "supersonic/cursor/core/sort.h"
 #include "supersonic/cursor/infrastructure/ordering.h"
 #include "supersonic/utils/strings/stringpiece.h"
@@ -295,11 +295,12 @@ TEST_F(GroupingTest, LargeRandomGroupingTest) {
   // pooled employee and department names.
   const unsigned row_count = 10000;
 
-  StringPiece names[row_count];
-  int32 ages[row_count];
-  int32 salaries[row_count];
-  StringPiece depts[row_count];
-  bool full_times[row_count];
+  // We allocate on heap to not exceed max stack frame size (e.g. 16KB).
+  scoped_ptr<StringPiece[]> names(new StringPiece[row_count]);
+  scoped_ptr<int32[]> ages(new int32[row_count]);
+  scoped_ptr<int32[]> salaries(new int32[row_count]);
+  scoped_ptr<StringPiece[]> depts(new StringPiece[row_count]);
+  scoped_ptr<bool[]> full_times(new bool[row_count]);
 
   const unsigned kNamePoolSize = 7;
   const unsigned kDeptPoolSize = 15;
@@ -346,9 +347,11 @@ TEST_F(GroupingTest, LargeRandomGroupingTest) {
     full_times[i] = rand() % 2;
   }
 
-  LoadData(names, ages, salaries, depts, full_times, row_count);
+  LoadData(names.get(), ages.get(), salaries.get(), depts.get(),
+           full_times.get(), row_count);
   PrepareAggregation();
-  TestResults(ages, salaries, depts, full_times, row_count);
+  TestResults(ages.get(), salaries.get(), depts.get(), full_times.get(),
+              row_count);
 }
 
 // EXAMPLE 2 :: Single-column sort
@@ -450,10 +453,7 @@ class SortingTest : public testing::Test {
     // (identical in this case), which rows should be selected (we can
     // use a NO_SELECTOR parameter to copy all rows without filtering)
     // and whether a deep copy should be made.
-    ViewCopier copier(/* input schema */ schema,
-                      /* output schema */ schema,
-                      NO_SELECTOR,
-                      /* deep copy */ true);
+    ViewCopier copier(schema, /* deep copy */ true);
 
     // The copier is ready to get cracking. We can now launch a polling
     // loop and get our hands on the results.
@@ -477,7 +477,6 @@ class SortingTest : public testing::Test {
       // the result_space scoped pointer.
       unsigned rows_copied = copier.Copy(view_row_count,
                                          view,
-                                         /* input row ids */ NULL,
                                          offset,
                                          result_space.get());
 
@@ -554,15 +553,16 @@ TEST_F(SortingTest, SmallSortingTest) {
 TEST_F(SortingTest, LargeSortingTest) {
   // Data set for sorting.
   const unsigned row_count = 100000;
-  int32 ids[row_count];
-  double grades[row_count];
+  // We allocate on heap to not exceed max stack frame size (e.g. 16KB).
+  scoped_ptr<int32[]> ids(new int32[row_count]);
+  scoped_ptr<double[]> grades(new double[row_count]);
 
   for (int i = 0; i < row_count; ++i) {
     ids[i] = i + 1;
     grades[i] = (4.0 * static_cast<double>(rand()) / RAND_MAX) + 1.0;
   }
 
-  LoadData(ids, grades, row_count);
+  LoadData(ids.get(), grades.get(), row_count);
   PrepareSort();
-  TestResults(ids, grades, row_count);
+  TestResults(ids.get(), grades.get(), row_count);
 }

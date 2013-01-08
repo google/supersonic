@@ -23,9 +23,9 @@
 
 // DFATAL is FATAL in debug mode, ERROR in normal mode
 #ifdef NDEBUG
-#define DFATAL_LEVEL ERROR
+#define DFATAL ERROR
 #else
-#define DFATAL_LEVEL FATAL
+#define DFATAL FATAL
 #endif
 
 // NDEBUG usage helpers related to (RAW_)DCHECK:

@@ -26,6 +26,11 @@ using std::vector;
 namespace supersonic {
 
 class Cursor;
+class Operation;
+
+// Creates a coalesce operation. Takes ownership of the child operations.
+// Caller takes ownership of the returned operation.
+Operation* Coalesce(const vector<Operation*>& children);
 
 // Creates a coalesce cursor that has all attributes of all child cursors.
 // Returns an Exception if the schemata of the child cursors contain
@@ -36,7 +41,6 @@ FailureOrOwned<Cursor> BoundCoalesce(const vector<Cursor*>& children);
 
 // TODO(user): Add the following functions:
 //  BoundCoalesceUsingProjector(const BoundMultiSourceProjector*, ...)
-//  Operation* Coalesce(const vector<Operation*>& children)
 //  Operation* CoalesceUsingProjector(const BoundMultiSourceProjector*, ...)
 
 }  // namespace supersonic

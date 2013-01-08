@@ -131,10 +131,48 @@ using std::string;
 #include "supersonic/utils/strings/fastmem.h"
 #include "supersonic/utils/hash/hash.h"
 
+// StringPiece has *two* size types.
+// StringPiece::size_type
+//   is unsigned
+//   is 32 bits in LP32, 64 bits in LP64, 64 bits in LLP64
+//   no future changes intended
+// stringpiece_ssize_type
+//   is signed
+//   is 32 bits in LP32, 64 bits in LP64, 64 bits in LLP64
+//
+typedef string::difference_type stringpiece_ssize_type;
+
+// STRINGPIECE_CHECK_SIZE protects us from 32-bit overflows.
+// TODO(user): delete this after stringpiece_ssize_type goes 64 bit.
+#if !defined(NDEBUG)
+#define STRINGPIECE_CHECK_SIZE 1
+#elif defined(_FORTIFY_SOURCE) && _FORTIFY_SOURCE > 0
+#define STRINGPIECE_CHECK_SIZE 1
+#else
+#define STRINGPIECE_CHECK_SIZE 0
+#endif
+
 class StringPiece {
  private:
-  const char*   ptr_;
-  int           length_;
+  const char* ptr_;
+  stringpiece_ssize_type length_;
+
+  // Prevent overflow in debug mode or fortified mode.
+  // sizeof(stringpiece_ssize_type) may be smaller than sizeof(size_t).
+  static stringpiece_ssize_type CheckedSsizeTFromSizeT(size_t size) {
+#if STRINGPIECE_CHECK_SIZE > 0
+    if (size > static_cast<size_t>(
+        std::numeric_limits<stringpiece_ssize_type>::max())) {
+      // Some people grep for this message in logs
+      // so take care if you ever change it.
+      LogFatalSizeTooBig(size, "size_t to int conversion");
+    }
+#endif
+    return static_cast<stringpiece_ssize_type>(size);
+  }
+
+  // Out-of-line error path.
+  static void LogFatalSizeTooBig(size_t size, const char* details);
 
  public:
   // We provide non-explicit singleton constructors so users can pass
@@ -148,47 +186,44 @@ class StringPiece {
   StringPiece(const char* str)  // NOLINT(runtime/explicit)
       : ptr_(str), length_(0) {
     if (str != NULL) {
-      size_t length = strlen(str);
-      assert(length <= static_cast<size_t>(std::numeric_limits<int>::max()));
-      length_ = static_cast<int>(length);
+      length_ = CheckedSsizeTFromSizeT(strlen(str));
     }
   }
 
   StringPiece(const std::string& str)  // NOLINT(runtime/explicit)
       : ptr_(str.data()), length_(0) {
-    size_t length = str.size();
-    assert(length <= static_cast<size_t>(std::numeric_limits<int>::max()));
-    length_ = static_cast<int>(length);
+    length_ = CheckedSsizeTFromSizeT(str.size());
   }
 
 #if defined(HAS_GLOBAL_STRING)
   StringPiece(const string& str)  // NOLINT(runtime/explicit)
       : ptr_(str.data()), length_(0) {
-    size_t length = str.size();
-    assert(length <= static_cast<size_t>(std::numeric_limits<int>::max()));
-    length_ = static_cast<int>(length);
+    length_ = CheckedSsizeTFromSizeT(str.size());
   }
 #endif
 
-  StringPiece(const char* offset, int len) : ptr_(offset), length_(len) {
+  StringPiece(const char* offset, stringpiece_ssize_type len)
+      : ptr_(offset), length_(len) {
     assert(len >= 0);
   }
 
   // Substring of another StringPiece.
   // pos must be non-negative and <= x.length().
-  StringPiece(StringPiece x, int pos);
+  StringPiece(StringPiece x, stringpiece_ssize_type pos);
   // Substring of another StringPiece.
   // pos must be non-negative and <= x.length().
   // len must be non-negative and will be pinned to at most x.length() - pos.
-  StringPiece(StringPiece x, int pos, int len);
+  StringPiece(StringPiece x,
+              stringpiece_ssize_type pos,
+              stringpiece_ssize_type len);
 
   // data() may return a pointer to a buffer with embedded NULs, and the
   // returned buffer may or may not be null terminated.  Therefore it is
   // typically a mistake to pass data() to a routine that expects a NUL
   // terminated string.
   const char* data() const { return ptr_; }
-  int size() const { return length_; }
-  int length() const { return length_; }
+  stringpiece_ssize_type size() const { return length_; }
+  stringpiece_ssize_type length() const { return length_; }
   bool empty() const { return length_ == 0; }
 
   void clear() {
@@ -196,7 +231,7 @@ class StringPiece {
     length_ = 0;
   }
 
-  void set(const char* data, int len) {
+  void set(const char* data, stringpiece_ssize_type len) {
     assert(len >= 0);
     ptr_ = data;
     length_ = len;
@@ -205,35 +240,37 @@ class StringPiece {
   void set(const char* str) {
     ptr_ = str;
     if (str != NULL)
-      length_ = static_cast<int>(strlen(str));
+      length_ = CheckedSsizeTFromSizeT(strlen(str));
     else
       length_ = 0;
   }
-  void set(const void* data, int len) {
+
+  void set(const void* data, stringpiece_ssize_type len) {
     ptr_ = reinterpret_cast<const char*>(data);
     length_ = len;
   }
 
-  char operator[](int i) const {
+  char operator[](stringpiece_ssize_type i) const {
     assert(0 <= i);
     assert(i < length_);
     return ptr_[i];
   }
 
-  void remove_prefix(int n) {
+  void remove_prefix(stringpiece_ssize_type n) {
     assert(length_ >= n);
     ptr_ += n;
     length_ -= n;
   }
 
-  void remove_suffix(int n) {
+  void remove_suffix(stringpiece_ssize_type n) {
     assert(length_ >= n);
     length_ -= n;
   }
 
   // returns {-1, 0, 1}
   int compare(StringPiece x) const {
-    const int min_size = length_ < x.length_ ? length_ : x.length_;
+    const stringpiece_ssize_type min_size =
+        length_ < x.length_ ? length_ : x.length_;
     int r = memcmp(ptr_, x.ptr_, min_size);
     if (r < 0) return -1;
     if (r > 0) return 1;
@@ -287,28 +324,34 @@ class StringPiece {
   const_reverse_iterator rend() const {
     return const_reverse_iterator(ptr_);
   }
-  // STLS says return size_type, but Google says return int
-  int max_size() const { return length_; }
-  int capacity() const { return length_; }
+  stringpiece_ssize_type max_size() const { return length_; }
+  stringpiece_ssize_type capacity() const { return length_; }
 
   // cpplint.py emits a false positive [build/include_what_you_use]
-  int copy(char* buf, size_type n, size_type pos = 0) const;  // NOLINT
+  stringpiece_ssize_type copy(char* buf, size_type n, size_type pos = 0) const;  // NOLINT
 
   bool contains(StringPiece s) const;
 
-  int find(StringPiece s, size_type pos = 0) const;
-  int find(char c, size_type pos = 0) const;
-  int rfind(StringPiece s, size_type pos = npos) const;
-  int rfind(char c, size_type pos = npos) const;
+  stringpiece_ssize_type find(StringPiece s, size_type pos = 0) const;
+  stringpiece_ssize_type find(char c, size_type pos = 0) const;
+  stringpiece_ssize_type rfind(StringPiece s, size_type pos = npos) const;
+  stringpiece_ssize_type rfind(char c, size_type pos = npos) const;
 
-  int find_first_of(StringPiece s, size_type pos = 0) const;
-  int find_first_of(char c, size_type pos = 0) const { return find(c, pos); }
-  int find_first_not_of(StringPiece s, size_type pos = 0) const;
-  int find_first_not_of(char c, size_type pos = 0) const;
-  int find_last_of(StringPiece s, size_type pos = npos) const;
-  int find_last_of(char c, size_type pos = npos) const { return rfind(c, pos); }
-  int find_last_not_of(StringPiece s, size_type pos = npos) const;
-  int find_last_not_of(char c, size_type pos = npos) const;
+  stringpiece_ssize_type find_first_of(StringPiece s, size_type pos = 0) const;
+  stringpiece_ssize_type find_first_of(char c, size_type pos = 0) const {
+    return find(c, pos);
+  }
+  stringpiece_ssize_type find_first_not_of(StringPiece s,
+                                           size_type pos = 0) const;
+  stringpiece_ssize_type find_first_not_of(char c, size_type pos = 0) const;
+  stringpiece_ssize_type find_last_of(StringPiece s,
+                                      size_type pos = npos) const;
+  stringpiece_ssize_type find_last_of(char c, size_type pos = npos) const {
+    return rfind(c, pos);
+  }
+  stringpiece_ssize_type find_last_not_of(StringPiece s,
+                                          size_type pos = npos) const;
+  stringpiece_ssize_type find_last_not_of(char c, size_type pos = npos) const;
 
   StringPiece substr(size_type pos, size_type n = npos) const;
 };
@@ -321,7 +364,7 @@ DECLARE_POD(StringPiece);  // So vector<StringPiece> becomes really fast
 // one of the arguments is a literal, the compiler can elide a lot of the
 // following comparisons.
 inline bool operator==(StringPiece x, StringPiece y) {
-  int len = x.size();
+  stringpiece_ssize_type len = x.size();
   if (len != y.size()) {
     return false;
   }
@@ -335,7 +378,8 @@ inline bool operator!=(StringPiece x, StringPiece y) {
 }
 
 inline bool operator<(StringPiece x, StringPiece y) {
-  const int min_size = x.size() < y.size() ? x.size() : y.size();
+  const stringpiece_ssize_type min_size =
+      x.size() < y.size() ? x.size() : y.size();
   const int r = memcmp(x.data(), y.data(), min_size);
   return (r < 0) || (r == 0 && x.size() < y.size());
 }
@@ -395,7 +439,7 @@ template<> struct GoodFastHash<StringPiece> {
 #endif
 
 // allow StringPiece to be logged
-extern ostream& operator<<(ostream& o, StringPiece piece);
+extern std::ostream& operator<<(std::ostream& o, StringPiece piece);
 
 
 #endif  // STRINGS_STRINGPIECE_H__

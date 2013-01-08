@@ -44,11 +44,10 @@ class ViewCopierTest : public testing::Test {
         AddRow(__,  __, "b").
         Build());
 
-    // 3rd output column explicitly set as nullable != 3rd input column.
     TupleSchema output_schema;
     output_schema.add_attribute(Attribute("c1", INT64, NULLABLE));
     output_schema.add_attribute(Attribute("c2", STRING, NULLABLE));
-    output_schema.add_attribute(Attribute("c3", STRING, NULLABLE));
+    output_schema.add_attribute(Attribute("c3", STRING, NOT_NULLABLE));
     output_.reset(new Block(output_schema, HeapBufferAllocator::Get()));
     output_->Reallocate(4);
 
@@ -69,9 +68,8 @@ class ViewCopierTest : public testing::Test {
 
 TEST_F(ViewCopierTest,
        ViewCopierSimpleCopy) {
-  ViewCopier view_copier(
-      input_->schema(), output_->schema(), NO_SELECTOR, true);
-  EXPECT_EQ(4, view_copier.Copy(4, input_->view(), NULL, 0, output_.get()));
+  ViewCopier view_copier(input_->schema(), true);
+  EXPECT_EQ(4, view_copier.Copy(4, input_->view(), 0, output_.get()));
   EXPECT_VIEWS_EQUAL(input_->view(), output_->view());
   EXPECT_TRUE(VariableSizeColumnIsACopy(input_->column(1),
                                         output_->column(1), 4));
@@ -81,9 +79,8 @@ TEST_F(ViewCopierTest,
 
 TEST_F(ViewCopierTest,
        ViewCopierCopySubsetOfRowsIntoOffset) {
-  ViewCopier view_copier(input_->schema(), output_->schema(),
-                         NO_SELECTOR, true);
-  EXPECT_EQ(3, view_copier.Copy(3, input_->view(), NULL, 1, output_.get()));
+  ViewCopier view_copier(input_->schema(), true);
+  EXPECT_EQ(3, view_copier.Copy(3, input_->view(), 1, output_.get()));
   View expected(input_->view(), 0, 3);
   View observed(output_->view(), 1, 3);
   EXPECT_VIEWS_EQUAL(expected, observed);
@@ -92,8 +89,7 @@ TEST_F(ViewCopierTest,
 
 TEST_F(ViewCopierTest,
        ViewCopierCopyUsingSelectionVector) {
-  ViewCopier view_copier(input_->schema(), output_->schema(),
-                         INPUT_SELECTOR, true);
+  SelectiveViewCopier view_copier(input_->schema(), true);
   rowid_t selection_vector[2] = { 1, 3 };
   EXPECT_EQ(2, view_copier.Copy(
       2, input_->view(), selection_vector, 2, output_.get()));
@@ -105,43 +101,15 @@ TEST_F(ViewCopierTest,
 
 TEST_F(ViewCopierTest,
        ViewCopierCopyAlongProjection) {
-  ViewCopier view_copier(single_source_projector_.get(), NO_SELECTOR, true);
+  ViewCopier view_copier(single_source_projector_.get(), true);
   EXPECT_EQ(4, view_copier.Copy(
-      4, input_->view(), NULL, 0, projected_output_.get()));
+      4, input_->view(), 0, projected_output_.get()));
   // Set up a view over input block's 1st and 3rd column.
   View projected_input_view(projected_output_->schema());
   projected_input_view.mutable_column(0)->ResetFrom(input_->column(0));
   projected_input_view.mutable_column(1)->ResetFrom(input_->column(2));
   projected_input_view.set_row_count(4);
   EXPECT_VIEWS_EQUAL(projected_input_view, projected_output_->view());
-  EXPECT_TRUE(VariableSizeColumnIsACopy(input_->column(2),
-                                        projected_output_->column(1), 4));
-}
-
-TEST_F(ViewCopierTest,
-       MultiViewCopierCopyAlongProjection) {
-  // Use the same source twice, project it's 1rd and 3st column, taking one
-  // from each 'copy' of the source.
-  BoundMultiSourceProjector multi_source_projector(
-      util::gtl::Container(&input_->schema(), &input_->schema()).
-      As<vector<const TupleSchema*> >());
-  multi_source_projector.Add(0, 0);
-  multi_source_projector.Add(1, 2);
-
-  MultiViewCopier view_copier(&multi_source_projector, NO_SELECTOR, true);
-  EXPECT_EQ(4, view_copier.Copy(
-      4,
-      util::gtl::Container(&input_->view(), &input_->view()),
-      NULL,
-      0,
-      projected_output_.get()));
-
-  // Set up a view over input block's 3rd and 2nd column.
-  View projected_input_view(projected_output_->schema());
-  projected_input_view.mutable_column(0)->ResetFrom(input_->column(0));
-  projected_input_view.mutable_column(1)->ResetFrom(input_->column(2));
-  projected_input_view.set_row_count(4);
-  EXPECT_VIEWS_EQUAL(projected_output_->view(), projected_input_view);
   EXPECT_TRUE(VariableSizeColumnIsACopy(input_->column(2),
                                         projected_output_->column(1), 4));
 }

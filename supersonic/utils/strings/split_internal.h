@@ -31,7 +31,7 @@ using std::vector;
 
 #ifdef LANG_CXX11
 // This must be included after "base/port.h", which defines LANG_CXX11.
-#include <initializer_list>
+#include <initializer_list>  // NOLINT(build/include_order)
 #endif  // LANG_CXX11
 
 namespace strings {
@@ -300,9 +300,9 @@ class Splitter {
 
   // Inserts split results into the container. To do this the results are first
   // stored in a vector<StringPiece>. This is where the input text is actually
-  // "parsed". This vector is then used to possibly reserve space in the output
-  // container, and the StringPieces in "v" are converted as necessary to the
-  // output container's value type.
+  // "parsed". The elements in this vector are then converted to the requested
+  // type and inserted into the requested container. This is handled by the
+  // ConvertContainer() function.
   //
   // The reason to use an intermediate vector of StringPiece is so we can learn
   // the needed capacity of the output container. This is needed when the output
@@ -318,14 +318,8 @@ class Splitter {
     for (Iterator it = begin(); it != end_; ++it) {
       v.push_back(*it);
     }
-    typedef typename Container::value_type ToType;
-    internal::StringPieceTo<ToType> converter;
     Container c;
-    ReserveCapacity(&c, v.size());
-    std::insert_iterator<Container> inserter(c, c.begin());
-    for (size_t i = 0; i < v.size(); ++i) {
-      *inserter++ = converter(v[i]);
-    }
+    ConvertContainer(v, &c);
     return c;
   }
 
@@ -389,12 +383,36 @@ class Splitter {
     return map->insert(value);
   }
 
-  // Reserves the given amount of capacity in a vector<string>
-  template <typename A>
-  void ReserveCapacity(vector<string, A>* v, size_t size) {
-    v->reserve(size);
+  // Converts the container and elements to the specified types. This is the
+  // generic case. There is an overload of this function to optimize for the
+  // common case of a vector<string>.
+  template <typename Container>
+  void ConvertContainer(const vector<StringPiece>& vin, Container* c) {
+    typedef typename Container::value_type ToType;
+    internal::StringPieceTo<ToType> converter;
+    std::insert_iterator<Container> inserter(*c, c->begin());
+    for (size_t i = 0; i < vin.size(); ++i) {
+      *inserter++ = converter(vin[i]);
+    }
   }
-  void ReserveCapacity(...) {}
+
+  // Overload of ConvertContainer() that is optimized for the common case of a
+  // vector<string>. In this case, vector space is reserved, and a temp string
+  // is lifted outside the loop and reused inside the loop to minimize
+  // constructor calls and allocations. This resulted in about a 10% performance
+  // improvement in the Split2SplitStringUsing benchmark. We can revisit the
+  // need for this optimization in the future if/when ::string gains support for
+  // move semantics.
+  template <typename A>
+  void ConvertContainer(const vector<StringPiece>& vin,
+                        vector<string, A>* vout) {
+    vout->reserve(vin.size());
+    string tmp;  // reused inside the loop
+    for (size_t i = 0; i < vin.size(); ++i) {
+      vin[i].CopyToString(&tmp);
+      vout->push_back(tmp);
+    }
+  }
 
   const Iterator begin_;
   const Iterator end_;

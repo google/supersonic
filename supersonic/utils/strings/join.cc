@@ -98,7 +98,7 @@ void JoinStringsInArray(string const* const* components,
   CHECK(result != NULL);
   result->clear();
   for (int i = 0; i < num_components; i++) {
-    if (i>0) {
+    if (i > 0) {
       (*result) += delim;
     }
     (*result) += *(components[i]);
@@ -125,7 +125,7 @@ void JoinStringsInArray(string const *components,
 //    as the last argument).
 // ----------------------------------------------------------------------
 
-void JoinMapKeysAndValues(const map<string, string>& components,
+void JoinMapKeysAndValues(const std::map<string, string>& components,
                           const StringPiece& intra_delim,
                           const StringPiece& inter_delim,
                           string* result) {
@@ -134,10 +134,11 @@ void JoinMapKeysAndValues(const map<string, string>& components,
                             result);
 }
 
-void JoinVectorKeysAndValues(const vector< pair<string, string> >& components,
-                             const StringPiece& intra_delim,
-                             const StringPiece& inter_delim,
-                             string* result) {
+void JoinVectorKeysAndValues(
+    const vector< std::pair<string, string> >& components,
+    const StringPiece& intra_delim,
+    const StringPiece& inter_delim,
+    string* result) {
   JoinKeysAndValuesIterator(components.begin(), components.end(),
                             intra_delim, inter_delim,
                             result);

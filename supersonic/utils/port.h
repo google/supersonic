@@ -73,22 +73,6 @@ typedef unsigned long ulong;
 // _BIG_ENDIAN
 #include <machine/endian.h>
 
-#elif defined OS_SOLARIS
-
-// _BIG_ENDIAN
-#include <sys/isa_defs.h>
-
-// Solaris doesn't define sig_t (function taking an int, returning void)
-typedef void (*sig_t)(int);
-
-// Solaris only defines strtoll, not strtoq
-#define strtoq  strtoll
-#define strtouq strtoull
-
-// It doesn't define the posix-standard(?) u_int_16
-#include <sys/int_types.h>  // NOLINT(build/include)
-typedef uint16_t u_int16_t;
-
 #elif defined __APPLE__
 
 // BIG_ENDIAN
@@ -148,7 +132,7 @@ static inline uint64 bswap_64(uint64 x) {
 
 
 // define the macros IS_LITTLE_ENDIAN or IS_BIG_ENDIAN
-// using the above endian defintions from endian.h if
+// using the above endian definitions from endian.h if
 // endian.h was included
 #ifdef __BYTE_ORDER
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -1266,5 +1250,58 @@ enum { kPlatformUsesOPDSections = 1 };
 enum { kPlatformUsesOPDSections = 0 };
 #define FUNC_PTR_TO_CHAR_PTR(func)  (reinterpret_cast<char *>(func))
 #endif
+
+// Private implementation detail: __has_extension is useful to implement
+// static_assert, and defining it for all toolchains avoids an extra level of
+// nesting of #if/#ifdef/#ifndef.
+#ifndef __has_extension
+#define __has_extension(x) 0  // MSVC 10's preprocessor can't handle 'false'.
+#endif
+
+#ifdef __cplusplus
+// We support C++11's static_assert(expression, message) for all C++
+// builds, though for some pre-C++11 toolchains we fall back to using
+// GG_PRIVATE_STATIC_ASSERT, which has two limitations: (1) the
+// expression argument will need to be parenthesized if it would
+// otherwise contain commas outside of parentheses, and (2) the
+// message is ignored (though the compiler error will likely mention
+// "static_assert_failed" and point to the line with the failing assertion).
+
+#if LANG_CXX11 || __has_extension(cxx_static_assert) || _MSC_VER >= 1600
+// There's a native implementation of static_assert, no need to define our own.
+// Except that Crosstool V15 blocks use of static_assert, and lacks a warning
+// option to permit it, so we fall back to _Static_assert in that case.
+// TODO(user): Eliminate this when we no longer need to support compilation
+// with Crosstool V15.
+#if defined(__clang__)
+#if !__has_warning("-Wc++98-compat-static-assert")
+#define static_assert _Static_assert
+#else
+#endif
+#endif
+#elif __has_extension(c_static_assert)
+// C11's _Static_assert is available, and makes a great static_assert.
+#define static_assert _Static_assert
+#else
+// Fall back on our home-grown implementation, with its limitations.
+#define static_assert GG_PRIVATE_STATIC_ASSERT
+#endif
+
+// CompileAssert is an implementation detail of COMPILE_ASSERT and
+// GG_PRIVATE_STATIC_ASSERT.
+template <bool>
+struct CompileAssert {
+};
+
+// GG_PRIVATE_STATIC_ASSERT: A poor man's static_assert.  This doesn't handle
+// condition expressions that contain unparenthesized top-level commas;
+// write GG_PRIVATE_STATIC_ASSERT((expr), "comment") when needed.
+#define GG_PRIVATE_CAT_IMMEDIATE(a, b) a ## b
+#define GG_PRIVATE_CAT(a, b) GG_PRIVATE_CAT_IMMEDIATE(a, b)
+#define GG_PRIVATE_STATIC_ASSERT(expr, ignored) \
+  typedef CompileAssert<(static_cast<bool>(expr))> \
+  GG_PRIVATE_CAT(static_assert_failed_at_line, __LINE__)[bool(expr) ? 1 : -1]
+
+#endif  // __cplusplus
 
 #endif  // BASE_PORT_H_

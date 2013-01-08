@@ -1,9 +1,26 @@
 // Copyright 2008 Google Inc. All Rights Reserved.
+//
+// DO NOT use the CharSet(const char*) constructor in new codes as it will be
+// obsolete sometime in Q1 of 2013. Use the explicit CharSet(StringPiece)
+// constructor instead.
+//
+// The plan of migrating away from CharSet(const char*) is the following.
+//
+// 1. Check in the replacement constructor -- done at CL/38145114.
+//    arguments -- 16 identified so far.
+// 3. Replace callers of identified functions passing in a const char* like
+//      foo("a const char*")
+//    by
+//      foo(CharSet("a const char*"))
+//    and send such CLs for review by respective code OWNERs.
+// 4. Run TAP global presubmit to catch missing call sites and fix them.
+// 5. Remove the CharSet(const char*) constructor from this header file.
 
 #ifndef STRINGS_CHARSET_H_
 #define STRINGS_CHARSET_H_
 
 #include "supersonic/utils/integral_types.h"
+#include "supersonic/utils/strings/stringpiece.h"
 
 namespace strings {
 
@@ -36,7 +53,7 @@ class CharSet {
   // Deliberately an implicit constructor, so anything that takes a CharSet
   // can also take an explicit list of characters.
   CharSet(const char* characters);  // NOLINT(runtime/explicit)
-  explicit CharSet(const CharSet& other);
+  explicit CharSet(StringPiece characters);
 
   // Add or remove a character from the set.
   void Add(unsigned char c) { bits_[Word(c)] |= BitMask(c); }

@@ -183,7 +183,7 @@ void AppendToMap(Map* m, Splitter splitter) {
 }
 
 template <typename Splitter>
-void AppendToImpl(map<string, string>* map_container, Splitter splitter) {
+void AppendToImpl(std::map<string, string>* map_container, Splitter splitter) {
   AppendToMap(map_container, splitter);
 }
 
@@ -284,40 +284,6 @@ void ClipString(string* full_str, int max_len) {
   }
 }
 
-// ----------------------------------------------------------------------
-// SplitStringToIteratorAllowEmpty()
-//    Split a string using a character delimiter. Append the components
-//    to 'result'.  If there are consecutive delimiters, this function
-//    will return corresponding empty strings. The string is split into
-//    at most the specified number of pieces greedily. This means that the
-//    last piece may possibly be split further. To split into as many pieces
-//    as possible, specify 0 as the number of pieces.
-//
-//    If "full" is the empty string, yields an empty string as the only value.
-//
-//    If "pieces" is negative for some reason, it returns the whole string
-// ----------------------------------------------------------------------
-template <typename StringType, typename ITR>
-static inline
-void SplitStringToIteratorAllowEmpty(const StringType& full,
-                                     const char* delim,
-                                     int pieces,
-                                     ITR& result) {
-  string::size_type begin_index, end_index;
-  begin_index = 0;
-
-  for (int i = 0; (i < pieces-1) || (pieces == 0); i++) {
-    end_index = full.find_first_of(delim, begin_index);
-    if (end_index == string::npos) {
-      *result++ = full.substr(begin_index);
-      return;
-    }
-    *result++ = full.substr(begin_index, (end_index - begin_index));
-    begin_index = end_index + 1;
-  }
-  *result++ = full.substr(begin_index);
-}
-
 void SplitStringIntoNPiecesAllowEmpty(const string& full,
                                       const char* delim,
                                       int pieces,
@@ -346,93 +312,10 @@ void SplitStringAllowEmpty(const string& full, const char* delim,
   AppendTo(result, strings::Split(full, AnyOf(delim)));
 }
 
-// If we know how much to allocate for a vector of strings, we can
-// allocate the vector<string> only once and directly to the right size.
-// This saves in between 33-66 % of memory space needed for the result,
-// and runs faster in the microbenchmarks.
-//
-// The reserve is only implemented for the single character delim.
-//
-// The implementation for counting is cut-and-pasted from
-// SplitStringToIteratorUsing. I could have written my own counting iterator,
-// and use the existing template function, but probably this is more clear
-// and more sure to get optimized to reasonable code.
-static int CalculateReserveForVector(const string& full, const char* delim) {
-  int count = 0;
-  if (delim[0] != '\0' && delim[1] == '\0') {
-    // Optimize the common case where delim is a single character.
-    char c = delim[0];
-    const char* p = full.data();
-    const char* end = p + full.size();
-    while (p != end) {
-      if (*p == c) {  // This could be optimized with hasless(v,1) trick.
-        ++p;
-      } else {
-        while (++p != end && *p != c) {
-          // Skip to the next occurence of the delimiter.
-        }
-        ++count;
-      }
-    }
-  }
-  return count;
-}
-
-// ----------------------------------------------------------------------
-// SplitStringUsing()
-// SplitStringToHashsetUsing()
-// SplitStringToSetUsing()
-// SplitStringToMapUsing()
-// SplitStringToHashmapUsing()
-//    Split a string using a character delimiter. Append the components
-//    to 'result'.
-//
-// Note: For multi-character delimiters, this routine will split on *ANY* of
-// the characters in the string, not the entire string as a single delimiter.
-// ----------------------------------------------------------------------
-template <typename StringType, typename ITR>
-static inline
-void SplitStringToIteratorUsing(const StringType& full,
-                                const char* delim,
-                                ITR& result) {
-  // Optimize the common case where delim is a single character.
-  if (delim[0] != '\0' && delim[1] == '\0') {
-    char c = delim[0];
-    const char* p = full.data();
-    const char* end = p + full.size();
-    while (p != end) {
-      if (*p == c) {
-        ++p;
-      } else {
-        const char* start = p;
-        while (++p != end && *p != c) {
-          // Skip to the next occurence of the delimiter.
-        }
-        *result++ = StringType(start, p - start);
-      }
-    }
-    return;
-  }
-
-  string::size_type begin_index, end_index;
-  begin_index = full.find_first_not_of(delim);
-  while (begin_index != string::npos) {
-    end_index = full.find_first_of(delim, begin_index);
-    if (end_index == string::npos) {
-      *result++ = full.substr(begin_index);
-      return;
-    }
-    *result++ = full.substr(begin_index, (end_index - begin_index));
-    begin_index = full.find_first_not_of(delim, end_index);
-  }
-}
-
 void SplitStringUsing(const string& full,
                       const char* delim,
                       vector<string>* result) {
-  result->reserve(result->size() + CalculateReserveForVector(full, delim));
-  std::back_insert_iterator< vector<string> > it(*result);
-  SplitStringToIteratorUsing(full, delim, it);
+  AppendTo(result, strings::Split(full, AnyOf(delim), strings::SkipEmpty()));
 }
 
 void SplitStringToHashsetUsing(const string& full, const char* delim,
@@ -441,12 +324,7 @@ void SplitStringToHashsetUsing(const string& full, const char* delim,
 }
 
 void SplitStringToSetUsing(const string& full, const char* delim,
-                           set<string>* result) {
-  AppendTo(result, strings::Split(full, AnyOf(delim), strings::SkipEmpty()));
-}
-
-void SplitStringToMapUsing(const string& full, const char* delim,
-                           map<string, string>* result) {
+                           std::set<string>* result) {
   AppendTo(result, strings::Split(full, AnyOf(delim), strings::SkipEmpty()));
 }
 
@@ -597,8 +475,8 @@ void SplitStringWithEscapingAllowEmpty(const string &full,
 
 void SplitStringWithEscapingToSet(const string &full,
                                   const strings::CharSet& delimiters,
-                                  set<string> *result) {
-  std::insert_iterator< set<string> > it(*result, result->end());
+                                  std::set<string> *result) {
+  std::insert_iterator< std::set<string> > it(*result, result->end());
   SplitStringWithEscapingToIterator(full, delimiters, false, &it);
 }
 
@@ -1010,14 +888,19 @@ bool SplitStringIntoKeyValues(const string& line,
   return true;
 }
 
-bool SplitStringIntoKeyValuePairs(const string& line,
-                                  const string& key_value_delimiters,
-                                  const string& key_value_pair_delimiters,
-                                  vector<pair<string, string> >* kv_pairs) {
+bool SplitStringIntoKeyValuePairs(
+    const string& line,
+    const string& key_value_delimiters,
+    const string& key_value_pair_delimiters,
+    vector<std::pair<string, string> >* kv_pairs) {
   kv_pairs->clear();
 
   vector<string> pairs;
-  SplitStringUsing(line, key_value_pair_delimiters.c_str(), &pairs);
+  if (key_value_pair_delimiters.empty()) {
+    pairs.push_back(line);
+  } else {
+    SplitStringUsing(line, key_value_pair_delimiters.c_str(), &pairs);
+  }
 
   bool success = true;
   for (size_t i = 0; i < pairs.size(); ++i) {
@@ -1054,10 +937,10 @@ const char* SplitLeadingDec32Values(const char *str, vector<int32> *result) {
     if (end == str)
       break;
     // Limit long values to int32 min/max.  Needed for lp64.
-    if (value > numeric_limits<int32>::max()) {
-      value = numeric_limits<int32>::max();
-    } else if (value < numeric_limits<int32>::min()) {
-      value = numeric_limits<int32>::min();
+    if (value > std::numeric_limits<int32>::max()) {
+      value = std::numeric_limits<int32>::max();
+    } else if (value < std::numeric_limits<int32>::min()) {
+      value = std::numeric_limits<int32>::min();
     }
     result->push_back(value);
     str = end;

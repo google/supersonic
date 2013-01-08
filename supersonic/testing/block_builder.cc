@@ -62,28 +62,30 @@ namespace internal {
 Block* CloneViewAndOptimizeNullabilityWithSomeForcedNullable(
     const View& view,
     const vector<bool>& is_column_forced_nullable) {
-  View source(view);
   TupleSchema result_schema =
       GetSchemaWithOptimizedNullabilityWithSomeForcedNullable(
-          source, is_column_forced_nullable);
-  scoped_ptr<Block> copy(
-      new Block(result_schema, HeapBufferAllocator::Get()));
-  CHECK(copy->Reallocate(source.row_count()));
-  // Shadow the original nullability (true for all columns) with the actual
-  // nullability, as stored in copy.
-  for (int i = 0; i < source.column_count(); ++i) {
-    if (!result_schema.attribute(i).is_nullable()) {
-      source.mutable_column(i)->Reset(source.column(i).data(), bool_ptr(NULL));
+          view, is_column_forced_nullable);
+  View shadow(result_schema);
+  // Copy view to the shadow, but override the original nullability (true for
+  // all columns) with the actual nullability, as we want stored in copy.
+  for (int i = 0; i < shadow.column_count(); ++i) {
+    Column* column = shadow.mutable_column(i);
+    if (result_schema.attribute(i).is_nullable()) {
+      column->ResetFrom(view.column(i));
+    } else {
+      column->Reset(view.column(i).data(), bool_ptr(NULL));
     }
   }
+  shadow.set_row_count(view.row_count());
+  // Now, copy the shadow's content into a new block.
+  scoped_ptr<Block> copy(new Block(result_schema, HeapBufferAllocator::Get()));
+  CHECK(copy->Reallocate(shadow.row_count()));
 
   // TODO(user): we might need some more systematic way to remove
   // nullability; perhaps an expression.
-  const ViewCopier block_copier(
-      copy->schema(), copy->schema(), NO_SELECTOR, true);
-  CHECK_EQ(source.row_count(),
-           block_copier.Copy(source.row_count(), source, NULL, 0,
-                             copy.get()));
+  const ViewCopier block_copier(shadow.schema(), true);
+  CHECK_EQ(shadow.row_count(),
+           block_copier.Copy(shadow.row_count(), shadow, 0, copy.get()));
   return copy.release();
 }
 

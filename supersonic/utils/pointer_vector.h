@@ -5,7 +5,6 @@
 #define UTIL_GTL_POINTER_VECTOR_H_
 
 #include <stddef.h>
-#include <stdint.h>
 #include <iterator>
 using std::back_insert_iterator;
 using std::iterator_traits;
@@ -278,9 +277,7 @@ PointerVector<T>::~PointerVector() {
 template<typename T>
 typename PointerVector<T>::iterator PointerVector<T>::erase(iterator pos) {
   pos->reset(NULL);
-  size_t offset = pos - begin();
-  data_.erase(data_.begin() + offset);
-  return pos;  // OK because erase is guaranteed not to reallocate the vector.
+  return data_.erase(pos.base_iterator_);
 }
 
 template<typename T>
@@ -289,10 +286,7 @@ typename PointerVector<T>::iterator PointerVector<T>::erase(iterator first,
   for (iterator it = first; it != last; ++it) {
     it->reset(NULL);
   }
-  size_t first_offset = first - begin();
-  size_t last_offset = last - begin();
-  data_.erase(data_.begin() + first_offset, data_.begin() + last_offset);
-  return first;
+  return data_.erase(first.base_iterator_, last.base_iterator_);
 }
 
 // The following nonmember functions are part of the public vector interface.

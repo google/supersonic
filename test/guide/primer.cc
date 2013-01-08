@@ -43,7 +43,7 @@ using std::multimap;
 // Include Supersonic. The public/supersonic.h is a utility include which
 // encapsulates all functionalities of the engine. It is convenient to use
 // for core functionality but additional includes may at times be required.
-#include "supersonic/supersonic.h"
+#include "supersonic/public/supersonic.h"
 
 // Using-declarations for Supersonic names, pre-listed to make the test code
 // more readable.

@@ -164,6 +164,10 @@
 // void swap(sparsetable &x,   sparsetable    Swap two sparsetables
 //           sparsetable &y)                  (global, not member, function)
 //
+// std::ostream& operator<<(   sparsetable    put to stream (for debugging)
+//     std::ostream& out,                     (nonmember function)
+//     sparsetable& x)
+//
 // size_type size() const      sparsetable    Number of "buckets" in the table
 // size_type max_size() const  sparsetable    Max allowed size of a sparsetable
 // bool empty() const          sparsetable    true if size() == 0
@@ -216,7 +220,7 @@
 // deleted (ie set() or erase() is used) or when the size of
 // the table changes (ie resize() or clear() is used).
 //
-// See doc/sparsetable.html for more information about how to use this class.
+// See doc/sparsetable.html for more info about using this class.
 
 // Note: this uses STL style for naming, rather than Google naming.
 // That's because this is an STL-y container
@@ -240,6 +244,8 @@ using std::swap;            // equal, lexicographical_compare, swap,...
 using std::back_insert_iterator;
 using std::iterator_traits;             // to define reverse_iterator for me
 #include <memory>               // uninitialized_copy, uninitialized_fill
+#include <ostream>
+using std::endl;              // NOLINT -- ostream << support
 #include <vector>
 using std::vector;               // a sparsetable is a vector of groups
 
@@ -1006,7 +1012,7 @@ class sparsegroup {
 
  public:
   // Constructors -- default and copy -- and destructor
-  explicit sparsegroup(allocator_type& a) :
+  explicit sparsegroup(const allocator_type& a) :
       group(0), settings(alloc_impl<value_alloc_type>(a)) {
     memset(bitmap, 0, sizeof(bitmap));
   }
@@ -1141,7 +1147,7 @@ class sparsegroup {
            base::is_same<
                allocator_type,
                libc_allocator_with_realloc<value_type> >::value)>
-          realloc_and_memmove_ok; // we pretend mv(x,y) == "x.~T(); new(x) T(y)"
+          realloc_and_memmove_ok;  // pretend mv(x,y) == "x.~T(); new(x) T(y)"
       set_aux(offset, realloc_and_memmove_ok());
       ++settings.num_buckets;
       bmset(i);
@@ -1829,9 +1835,26 @@ inline void swap(sparsetable<T, GROUP_SIZE, Alloc> &x,
   x.swap(y);
 }
 
+template<class T, u_int16_t GROUP_SIZE, class Alloc>
+inline std::ostream&
+operator<<(std::ostream& out, const sparsetable<T, GROUP_SIZE, Alloc>& table) {
+  out << "{";
+  int displayed = 0;
+  for (int i = 0; i < table.size() && displayed < 100; ++i)
+    if (table.test(i)) {
+      if (displayed > 0)
+        out << " ";
+      out << "[" << i << "]=" << table.get(i);
+      ++displayed;
+    }
+  out << "}";
+  return out;
+}
+
 #undef GET_
 #undef PUT_
 
 }
 
 #endif  // UTIL_GTL_SPARSETABLE_H_
+

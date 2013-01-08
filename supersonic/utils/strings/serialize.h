@@ -311,7 +311,7 @@ inline bool DecodeUint64(const StringPiece& s, uint64* i) {
 //    otherwise.
 // -------------------------------------------------------------------------
 bool DictionaryParse(const string& encoded_str,
-                      vector<pair<string, string> >* items);
+                      vector<std::pair<string, string> >* items);
 
 // --------------------------------------------------------------------------
 // DictionaryInt32Encode

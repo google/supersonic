@@ -26,7 +26,6 @@ using std::vector;
 #include "supersonic/utils/port.h"
 #include "supersonic/utils/stringprintf.h"
 
-
 // START DOXYGEN NumbersFunctions grouping
 /* @defgroup NumbersFunctions
  * @{ */
@@ -80,6 +79,11 @@ bool safe_strto32_base(const char* startptr, int buffer_size,
                        int32* value, int base);
 bool safe_strto64_base(const char* startptr, int buffer_size,
                        int64* value, int base);
+
+bool safe_strtou32_base(const char* startptr, int buffer_size,
+                        uint32* value, int base);
+bool safe_strtou64_base(const char* startptr, int buffer_size,
+                        uint64* value, int base);
 
 // u64tostr_base36()
 //    The inverse of safe_strtou64_base, converts the number agument to
@@ -337,28 +341,28 @@ bool StrictAutoDigitLessThan(const char* a, int alen,
                              const char* b, int blen);
 
 struct autodigit_less
-  : public binary_function<const string&, const string&, bool> {
+  : public std::binary_function<const string&, const string&, bool> {
   bool operator()(const string& a, const string& b) const {
     return AutoDigitLessThan(a.data(), a.size(), b.data(), b.size());
   }
 };
 
 struct autodigit_greater
-  : public binary_function<const string&, const string&, bool> {
+  : public std::binary_function<const string&, const string&, bool> {
   bool operator()(const string& a, const string& b) const {
     return AutoDigitLessThan(b.data(), b.size(), a.data(), a.size());
   }
 };
 
 struct strict_autodigit_less
-  : public binary_function<const string&, const string&, bool> {
+  : public std::binary_function<const string&, const string&, bool> {
   bool operator()(const string& a, const string& b) const {
     return StrictAutoDigitLessThan(a.data(), a.size(), b.data(), b.size());
   }
 };
 
 struct strict_autodigit_greater
-  : public binary_function<const string&, const string&, bool> {
+  : public std::binary_function<const string&, const string&, bool> {
   bool operator()(const string& a, const string& b) const {
     return StrictAutoDigitLessThan(b.data(), b.size(), a.data(), a.size());
   }

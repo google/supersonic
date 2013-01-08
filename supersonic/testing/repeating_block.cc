@@ -40,9 +40,28 @@ using std::string;
 
 namespace supersonic {
 
+Block* ReplicateBlock(const Block& source, rowcount_t requested_row_count,
+                      BufferAllocator* allocator) {
+  scoped_ptr<Block> new_block(new Block(source.schema(), allocator));
+  if (!new_block->Reallocate(requested_row_count)) return NULL;
+  ViewCopier copier(source.schema(), true);
+  rowcount_t rows_copied = 0;
+  while (requested_row_count - rows_copied > 0) {
+    rowcount_t rows_to_copy = std::min(requested_row_count - rows_copied,
+                                       source.row_capacity());
+    CHECK_EQ(rows_to_copy,
+             copier.Copy(rows_to_copy, source.view(), rows_copied,
+                         new_block.get()));
+    rows_copied += rows_to_copy;
+  }
+  return new_block.release();
+}
+
+namespace {
+
 class RepeatingBlockCursor : public BasicCursor {
  public:
-  RepeatingBlockCursor(const Block& input_block, size_t total_num_rows)
+  RepeatingBlockCursor(const Block& input_block, rowcount_t total_num_rows)
       : BasicCursor(input_block.schema()),
         input_block_(input_block),
         num_rows_remaining_(total_num_rows),
@@ -79,8 +98,10 @@ class RepeatingBlockCursor : public BasicCursor {
   DISALLOW_COPY_AND_ASSIGN(RepeatingBlockCursor);
 };
 
+}  // namespace
+
 RepeatingBlockOperation::RepeatingBlockOperation(Block* block,
-                                                 size_t total_num_rows)
+                                                 rowcount_t total_num_rows)
     : BasicOperation(),
       resized_block_(CreateResizedBlock(block, Cursor::kDefaultRowCount)),
       total_num_rows_(total_num_rows) {
@@ -92,33 +113,16 @@ FailureOrOwned<Cursor> RepeatingBlockOperation::CreateCursor() const {
   return Success(new RepeatingBlockCursor(*resized_block_, total_num_rows_));
 }
 
-Block* RepeatingBlockOperation::CreateResizedBlock(Block* original_block,
-                                                   size_t min_num_rows) {
-  CHECK_NOTNULL(original_block);
-  size_t num_input_rows = original_block->row_capacity();
+Block* RepeatingBlockOperation::CreateResizedBlock(Block* source,
+                                                   rowcount_t min_num_rows) {
+  scoped_ptr<Block> source_deleter(source);
+  size_t num_input_rows = source->row_capacity();
   if (num_input_rows >= min_num_rows) {
     // No need to create new block, this one has enough rows.
-    return original_block;
+    return source_deleter.release();
+  } else {
+    return ReplicateBlock(*source, min_num_rows, buffer_allocator());
   }
-  scoped_ptr<Block> original_block_deleter(original_block);
-
-  size_t num_copies = (min_num_rows + num_input_rows - 1) / num_input_rows;
-  CHECK_GT(num_copies, 1);
-  scoped_ptr<Block> new_block(new Block(original_block->schema(),
-                                        buffer_allocator()));
-  if (!new_block->Reallocate(num_copies * num_input_rows)) {
-    return NULL;
-  }
-
-  ViewCopier view_copier(original_block->schema(), new_block->schema(),
-                         NO_SELECTOR, true);
-  for (size_t i = 0; i < num_copies; ++i) {
-    size_t rows_copied = view_copier.Copy(
-        num_input_rows, original_block->view(), NULL,
-        i * num_input_rows, new_block.get());
-    CHECK_EQ(num_input_rows, rows_copied);
-  }
-  return new_block.release();
 }
 
 }  // namespace supersonic

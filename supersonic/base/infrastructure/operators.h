@@ -314,8 +314,7 @@ static inline uint64 LoadBytes(const char * const buf, int len) {
   return val;
 }
 
-static uint64 MurmurHash64(const char *buf,
-                           const size_t len) {
+inline uint64 MurmurHash64(const char *buf, const size_t len) {
   static const uint64 mul = 0xc6a4a7935bd1e995ULL;
   // Let's remove the bytes not divisible by the sizeof(uint64).
   // This allows the inner loop to process the data as 64 bit integers.

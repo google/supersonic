@@ -77,8 +77,7 @@ class RowidMergeJoinCursor : public BasicCursor {
         left_key_(left_key),
         canonical_right_projector_(canonical_right_projector),
         result_projector_(decomposed_result_projector),
-        right_flattener_(canonical_right_projector_.get(),
-                         INPUT_SELECTOR, false),
+        right_flattener_(canonical_right_projector_.get(), false),
         left_(left),
         right_(right),
         indirector_(KeySelectorSchema(), allocator),
@@ -180,7 +179,7 @@ class RowidMergeJoinCursor : public BasicCursor {
   scoped_ptr<const BoundSingleSourceProjector> left_key_;
   scoped_ptr<const BoundSingleSourceProjector> canonical_right_projector_;
   scoped_ptr<const BoundMultiSourceProjector> result_projector_;
-  ViewCopier right_flattener_;
+  SelectiveViewCopier right_flattener_;
   CursorIterator left_;
   CursorIterator right_;
   Block indirector_;

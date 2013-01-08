@@ -28,6 +28,9 @@
 #include "supersonic/testing/comparable_cursor.h"
 #include "supersonic/testing/operation_testing.h"
 #include "gtest/gtest.h"
+#include "supersonic/utils/container_literal.h"
+
+using util::gtl::Container;
 
 namespace supersonic {
 
@@ -253,6 +256,38 @@ TEST_F(BoundCoalesceCursorTest, TransformTest) {
 
   EXPECT_EQ(children[0], spy_transformer->GetEntryAt(0)->original());
   EXPECT_EQ(children[1], spy_transformer->GetEntryAt(1)->original());
+}
+
+TEST(CoalesceOperationTests, FailsOnDuplicatedColumnName) {
+  vector<Operation*> child_ops;
+  TestDataBuilder<INT32, STRING> builder_1;
+  builder_1.AddRow(0, "foo");
+  child_ops.push_back(builder_1.Build());
+  TestDataBuilder<INT32, STRING> builder_2;
+  builder_2.AddRow(1, "bar");
+  child_ops.push_back(builder_2.Build());
+  scoped_ptr<Operation> op(CHECK_NOTNULL(Coalesce(child_ops)));
+  FailureOrOwned<Cursor> cursor(op->CreateCursor());
+  EXPECT_TRUE(cursor.is_failure());
+}
+
+TEST(CoalesceOperationTests, Succeeds) {
+  TestDataBuilder<INT32, STRING> builder_1;
+  builder_1.AddRow(0, "foo");
+  scoped_ptr<Operation> op_1(Project(
+      ProjectRename(Container("left_1", "left_2"),
+                    ProjectAllAttributes()),
+      builder_1.Build()));
+  TestDataBuilder<INT32, STRING> builder_2;
+  builder_2.AddRow(1, "bar");
+  scoped_ptr<Operation> op_2(Project(
+      ProjectRename(Container("right_1", "right_2"),
+                    ProjectAllAttributes()),
+      builder_2.Build()));
+  scoped_ptr<Operation> op(CHECK_NOTNULL(Coalesce(Container(op_1.release(),
+                                                            op_2.release()))));
+  FailureOrOwned<Cursor> cursor(op->CreateCursor());
+  EXPECT_TRUE(cursor.is_success());
 }
 
 }  // namespace supersonic

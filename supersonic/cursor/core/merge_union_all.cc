@@ -166,7 +166,7 @@ class MergeUnionAllCursor : public Cursor {
   RowComparator row_comparator_;
 
   // For appending rows to the result.
-  TableRowAppender<CursorRowIterator> row_appender_;
+  TableRowAppender<DirectRowSourceReader<CursorRowIterator> > row_appender_;
 
   // Used to merge sorted rows from many inputs in order.
   PriorityQueue priority_queue_;

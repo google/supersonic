@@ -236,14 +236,15 @@ inline string JoinStringsInArray(string const* components,
 //    as the last argument).
 // ----------------------------------------------------------------------
 
-void JoinMapKeysAndValues(const map<string, string>& components,
+void JoinMapKeysAndValues(const std::map<string, string>& components,
                           const StringPiece& intra_delim,
                           const StringPiece& inter_delim,
                           string* result);
-void JoinVectorKeysAndValues(const vector< pair<string, string> >& components,
-                             const StringPiece& intra_delim,
-                             const StringPiece& inter_delim,
-                             string* result);
+void JoinVectorKeysAndValues(
+    const vector< std::pair<string, string> >& components,
+    const StringPiece& intra_delim,
+    const StringPiece& inter_delim,
+    string* result);
 
 // DEPRECATED(jyrki): use JoinKeysAndValuesIterator directly.
 template<typename T>

@@ -135,51 +135,9 @@ BoundTernaryExpression::BoundTernaryExpression(const TupleSchema& schema,
   CHECK_EQ(right_type, GetExpressionType(right));
 }
 
-// A struct to be used with the TypedSpecialization function from
-// types_infrastructure.h. See comment below.
-class CreateConstantFunctor {
- public:
-  explicit CreateConstantFunctor(VariantConstPointer data) : data_(data) {}
-  template<DataType type> const Expression* operator()() const {
-    return new ConstExpression<type>(*data_.as<type>());
-  }
- private:
-  const VariantConstPointer data_;
-};
-
-namespace {
-
-// A convenience function for a templatized call to new ConstExpression. This
-// is preferable to a switch, as it will not require adding new code if the list
-// of available DataTypes is modified.
-const Expression* CreateConstantExpression(DataType type,
-                                           VariantConstPointer value) {
-  CreateConstantFunctor functor(value);
-  return TypeSpecialization<const Expression*, CreateConstantFunctor>(
-      type, functor);
-}
-
-// A helper function for ResolveToConstant, deals with an evaluated column,
-// and returns a constant equal to the first value of the column.
-FailureOrOwned<const Expression> ResolveColumnToConstant(
-    const Column& column) {
-  // If we got a null, we return a null of the appropriate type.
-  if (column.is_null() != NULL && column.is_null()[0]) {
-    return Success(Null(column.attribute().type()));
-  } else {
-    // The call to CreateConstantExpression hides types_infrastructure
-    // factory magic of resolving a constant to the appropriate type.
-    const Expression* constant = CreateConstantExpression(
-        column.attribute().type(), column.data());
-    return Success(constant);
-  }
-}
-
-}  // namespace
-
 template<DataType data_type>
 FailureOr<typename TypeTraits<data_type>::hold_type>
-    GetConstantExpressionValue(
+    GetConstantBoundExpressionValue(
     BoundExpression* expression, bool* is_null) {
   CHECK(expression->is_constant());
   CHECK(CheckAttributeCount("Bound expression",
@@ -230,23 +188,37 @@ FailureOr<typename TypeTraits<data_type>::hold_type>
 // For STRING and BINARY, we have to specialize them
 template<>
 FailureOr<TypeTraits<STRING>::hold_type>
-    GetConstantExpressionValue<STRING>(
+    GetConstantBoundExpressionValue<STRING>(
     BoundExpression* expression, bool* is_null) {
   return GetVariableLengthConstantExpressionValue<STRING>(expression, is_null);
 }
 
 template<>
 FailureOr<TypeTraits<BINARY>::hold_type>
-    GetConstantExpressionValue<BINARY>(
+    GetConstantBoundExpressionValue<BINARY>(
     BoundExpression* expression, bool* is_null) {
   return GetVariableLengthConstantExpressionValue<BINARY>(expression, is_null);
+}
+
+template<DataType data_type>
+FailureOr<typename TypeTraits<data_type>::hold_type> GetConstantExpressionValue(
+    const Expression& expression, bool* is_null) {
+  FailureOrOwned<BoundExpression> bound_expression(
+      expression.DoBind(TupleSchema(), HeapBufferAllocator::Get(), 1));
+  PROPAGATE_ON_FAILURE(bound_expression);
+  return GetConstantBoundExpressionValue<data_type>(bound_expression.get(),
+                                                    is_null);
 }
 
 // Force instantiating.
 #define INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION(data_type)                    \
 template FailureOr<TypeTraits<data_type>::hold_type>                           \
+    GetConstantBoundExpressionValue<data_type>(                                \
+    BoundExpression* input_expression, bool* is_null);                         \
+                                                                               \
+template FailureOr<TypeTraits<data_type>::hold_type>                           \
     GetConstantExpressionValue<data_type>(                                     \
-    BoundExpression* input_expression, bool* is_null)
+    const Expression& expression, bool* is_null)                               \
 
 INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION(INT32);
 INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION(INT64);
@@ -261,6 +233,50 @@ INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION(STRING);
 INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION(BINARY);
 INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION(DATA_TYPE);
 #undef INSTANTIATE_EVALUATE_CONSTANT_EXPRESSION
+
+
+namespace {
+
+// A struct to be used with the TypedSpecialization function from
+// types_infrastructure.h. See comment below.
+class CreateConstantFunctor {
+ public:
+  explicit CreateConstantFunctor(VariantConstPointer data) : data_(data) {}
+  template<DataType type> const Expression* operator()() const {
+    return new ConstExpression<type>(*data_.as<type>());
+  }
+ private:
+  const VariantConstPointer data_;
+};
+
+
+// A convenience function for a templatized call to new ConstExpression. This
+// is preferable to a switch, as it will not require adding new code if the list
+// of available DataTypes is modified.
+const Expression* CreateConstantExpression(DataType type,
+                                           VariantConstPointer value) {
+  CreateConstantFunctor functor(value);
+  return TypeSpecialization<const Expression*, CreateConstantFunctor>(
+      type, functor);
+}
+
+// A helper function for ResolveToConstant, deals with an evaluated column,
+// and returns a constant equal to the first value of the column.
+FailureOrOwned<const Expression> ResolveColumnToConstant(
+    const Column& column) {
+  // If we got a null, we return a null of the appropriate type.
+  if (column.is_null() != NULL && column.is_null()[0]) {
+    return Success(Null(column.attribute().type()));
+  } else {
+    // The call to CreateConstantExpression hides types_infrastructure
+    // factory magic of resolving a constant to the appropriate type.
+    const Expression* constant = CreateConstantExpression(
+        column.attribute().type(), column.data());
+    return Success(constant);
+  }
+}
+
+}  // namespace
 
 // We evaluate the input expression, extract the value it evaluated to, and
 // create a constant expression of the appropriate type and value.

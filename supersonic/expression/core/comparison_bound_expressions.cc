@@ -347,7 +347,7 @@ class BoundInSetExpression : public BasicBoundExpression {
         return true;
       }
       bool is_null;
-      FailureOr<hold_type> value = GetConstantExpressionValue<data_type>(
+      FailureOr<hold_type> value = GetConstantBoundExpressionValue<data_type>(
           needle_expression_.get(), &is_null);
       // If actual evaluation of needle expression fails, we can't propagate
       // the failure inside this method. So we say that this can be evaluated,
@@ -679,7 +679,7 @@ FailureOrOwned<BoundExpression> BoundInSetDataTypeAware(
       scoped_ptr<BoundExpression> scoped_arguments_element(
           haystack_arguments->release(i));
       bool is_null;
-      FailureOr<hold_type> value = GetConstantExpressionValue<data_type>(
+      FailureOr<hold_type> value = GetConstantBoundExpressionValue<data_type>(
           scoped_arguments_element.get(), &is_null);
       // The binding will fail on X in <0, 1/0> currently.
       PROPAGATE_ON_FAILURE(value);

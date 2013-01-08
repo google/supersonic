@@ -23,10 +23,8 @@ using std::cout;
 using std::endl;
 
 #include "gtest/gtest.h"
-
 #include "supersonic/utils/integral_types.h"
-
-#include "supersonic/supersonic.h"
+#include "supersonic/public/supersonic.h"
 
 using supersonic::TupleSchema;
 using supersonic::Attribute;
@@ -83,19 +81,18 @@ TEST(SmokeTestSuite, MemTest) {
 }
 
 TEST(SmokeTestSuite, ExpressionTest) {
-  const Expression* col_a = NamedAttribute("a");
-  const Expression* col_b = NamedAttribute("b");
-  const Expression* plus = Plus(col_a, col_b);
-  Table table(TupleSchema::Merge(
+  scoped_ptr<const Expression> plus(
+      Plus(NamedAttribute("a"), NamedAttribute("b")));
+  scoped_ptr<Table> table(new Table(TupleSchema::Merge(
       TupleSchema::Singleton("a", INT32, NULLABLE),
       TupleSchema::Singleton("b", INT32, NULLABLE)),
-              HeapBufferAllocator::Get());
-  TableRowWriter writer(&table);
+              HeapBufferAllocator::Get()));
+  TableRowWriter writer(table.get());
   writer.AddRow().Int32(1).Int32(2)
         .AddRow().Int32(3).Int32(5)
         .CheckSuccess();
 
-  Operation* computation = Compute(plus, &table);
+  scoped_ptr<Operation> computation(Compute(plus.release(), table.release()));
   computation->SetBufferAllocator(HeapBufferAllocator::Get(), false);
 
   FailureOrOwned<Cursor> cursor = computation->CreateCursor();
@@ -109,13 +106,13 @@ TEST(SmokeTestSuite, ExpressionTest) {
 }
 
 TEST(SmokeTestSuite, RandExprTest) {
-  const Expression* rand = RandInt32();
-  Table table(TupleSchema::Singleton("a", INT32, NULLABLE),
-                HeapBufferAllocator::Get());
-  TableRowWriter writer(&table);
+  scoped_ptr<Table> table(new Table(
+      TupleSchema::Singleton("a", INT32, NULLABLE),
+      HeapBufferAllocator::Get()));
+  TableRowWriter writer(table.get());
   writer.AddRow().Int32(1).CheckSuccess();
 
-  Operation* computation = Compute(rand, &table);
+  scoped_ptr<Operation> computation(Compute(RandInt32(), table.release()));
   computation->SetBufferAllocator(HeapBufferAllocator::Get(), false);
 
   FailureOrOwned<Cursor> cursor = computation->CreateCursor();
@@ -129,13 +126,15 @@ TEST(SmokeTestSuite, RandExprTest) {
 
 TEST(SmokeTestSuite, DateTimeTest) {
   int32 useconds = 1000121012;
-  const Expression* date = ConstDateTimeFromMicrosecondsSinceEpoch(useconds);
-  Table table(TupleSchema::Singleton("a", INT32, NULLABLE),
-                HeapBufferAllocator::Get());
-  TableRowWriter writer(&table);
+  scoped_ptr<const Expression> date(
+      ConstDateTimeFromMicrosecondsSinceEpoch(useconds));
+  scoped_ptr<Table> table(new Table(
+      TupleSchema::Singleton("a", INT32, NULLABLE),
+      HeapBufferAllocator::Get()));
+  TableRowWriter writer(table.get());
   writer.AddRow().Int32(1).CheckSuccess();
 
-  Operation* computation = Compute(date, &table);
+  scoped_ptr<Operation> computation(Compute(date.release(), table.release()));
   computation->SetBufferAllocator(HeapBufferAllocator::Get(), false);
 
   FailureOrOwned<Cursor> cursor = computation->CreateCursor();

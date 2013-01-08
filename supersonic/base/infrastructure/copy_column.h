@@ -28,41 +28,28 @@ class OwnedColumn;
 
 // Public interface.
 
-enum {
-  INPUT_SELECTOR_BIT = 1,
-  OUTPUT_SELECTOR_BIT = 2
-};
-
 enum RowSelectorType {
   // Row selector is not used.
   NO_SELECTOR = 0,
   // Row selector is used to match input rows, output is sequential.
-  INPUT_SELECTOR = INPUT_SELECTOR_BIT,
-  // Row selector is used to match output rows, input is sequential.
-  OUTPUT_SELECTOR = OUTPUT_SELECTOR_BIT,
-  // Row selector is used for matching both input and output row ids.
-  INPUT_OUTPUT_SELECTOR = INPUT_SELECTOR_BIT | OUTPUT_SELECTOR_BIT,
+  INPUT_SELECTOR = 1
 };
 
 // Prototype of a function that copies (a part of) input Column into
 // a selected region of output OwnedColumn. Output column must be allocated.
-// selector_row_ids is an optional (can be NULL) sequence of row_count ids that
-// select a subset of input rows to copy from and/or output rows to copy into,
-// depending on row_selector_type. selector_row_ids doesn't need to be sorted
-// and in case of INPUT_SELECTOR and OUTPUT_SELECTOR it can contain repeated
-// values.
-// The offset indicates where sequential reads/writes should start, again
-// depending on row_selector_type: it applies to output column for NO_SELECTOR
-// and INPUT_SELECTOR and to input column for OUTPUT_SELECTOR.
+// selected_row_ids is a sequence of row_count ids that select a subset of
+// input rows to copy from. It must be present if the selector type is
+// INPUT_SELECTOR, and must be absent if the selector type is NO_SELECTOR.
+// The destination_offset indicates where sequential writes should start.
 // Returns the number rows successfully copied. It can be less than row_count
 // iff the data being copied is of variable-length type and the destination
 // arena can't accommodate a copy of a variable-length data buffer.
 typedef rowcount_t (*ColumnCopier)(
     const rowcount_t row_count,
-    const Column& input,
-    const rowid_t* const selector_row_ids,
-    const rowcount_t offset,
-    OwnedColumn* const output);
+    const Column& source,
+    const rowid_t* const selected_row_ids,
+    const rowcount_t destination_offset,
+    OwnedColumn* const destination);
 
 // Returns the specialization of a copy column function appropriate for the
 // arguments given. row_selector_type should be different from NO_SELECTOR iff
@@ -73,6 +60,7 @@ typedef rowcount_t (*ColumnCopier)(
 // the output column.
 ColumnCopier ResolveCopyColumnFunction(
     const DataType type,
+    const Nullability input_nullability,
     const Nullability output_nullability,
     const RowSelectorType row_selector_type,
     bool deep_copy);

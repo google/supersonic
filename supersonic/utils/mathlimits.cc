@@ -98,14 +98,15 @@ const Type MathLimits<Type>::kNaN = HUGE_VAL - HUGE_VAL; \
 const Type MathLimits<Type>::kPosInf = HUGE_VAL; \
 const Type MathLimits<Type>::kNegInf = -HUGE_VAL;
 
-DEF_SIGNED_INT_LIMITS(int8)
-DEF_SIGNED_INT_LIMITS(int16)
-DEF_SIGNED_INT_LIMITS(int32)
-DEF_SIGNED_INT_LIMITS(int64)
-DEF_UNSIGNED_INT_LIMITS(uint8)
-DEF_UNSIGNED_INT_LIMITS(uint16)
-DEF_UNSIGNED_INT_LIMITS(uint32)
-DEF_UNSIGNED_INT_LIMITS(uint64)
+// The following are *not* casts!
+DEF_SIGNED_INT_LIMITS(int8)  // NOLINT(readability/casting)
+DEF_SIGNED_INT_LIMITS(int16)  // NOLINT(readability/casting)
+DEF_SIGNED_INT_LIMITS(int32)  // NOLINT(readability/casting)
+DEF_SIGNED_INT_LIMITS(int64)  // NOLINT(readability/casting)
+DEF_UNSIGNED_INT_LIMITS(uint8)  // NOLINT(readability/casting)
+DEF_UNSIGNED_INT_LIMITS(uint16)  // NOLINT(readability/casting)
+DEF_UNSIGNED_INT_LIMITS(uint32)  // NOLINT(readability/casting)
+DEF_UNSIGNED_INT_LIMITS(uint64)  // NOLINT(readability/casting)
 
 DEF_SIGNED_INT_LIMITS(long int)
 DEF_UNSIGNED_INT_LIMITS(unsigned long int)

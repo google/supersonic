@@ -40,285 +40,377 @@ class Arena;
 
 namespace {
 
-// Helper functions to resolve copying effectively depending on the nullability
-// and selectivity of input and output.
+// Used to specialize column copiers for the is_null column.
+enum IsNullCopierType {
+  BOOL_NONE,                 // Both input and output are not nullable.
+  BOOL_NONE_DCHECK,          // Nullable-to-not-nullable, with selector.
+  BOOL_MEMSET,               // Input is not nullable; no selection vector.
+  BOOL_MEMCPY,               // Copy w/o a selection vector.
+  BOOL_LOOP_FILL_SELECTION,  // Input is not nullable; selector vector present.
+  BOOL_LOOP_COPY_SELECTION   // Both nullable, and selection vector present.
+};
 
-// This simply copies all the data (with appropriate selectivity). Used when
-// we disregard the null columns when copying the data:
-template <DataType type,
-          RowSelectorType row_selector_type, bool deep_copy>
-inline rowcount_t CopyDataInLoop(
-    const rowcount_t row_count,
-    const typename TypeTraits<type>::cpp_type* input_data,
-    typename TypeTraits<type>::cpp_type* output_data,
-    const rowid_t* selector_row_ids,
-    Arena* arena) {
-  DatumCopy<type, deep_copy> copier;
-  for (rowcount_t n = 0; n < row_count; ++n) {
-    const rowid_t nth_input_row_id =
-        (row_selector_type & INPUT_SELECTOR_BIT) ? selector_row_ids[n] : n;
-    const rowid_t nth_output_row_id =
-        (row_selector_type & OUTPUT_SELECTOR_BIT) ? selector_row_ids[n] : n;
-    if (!copier(input_data[nth_input_row_id],
-                &output_data[nth_output_row_id],
-                arena))
-      return n;
-  }
-  return row_count;
-}
+enum DataCopierType {
+  DATA_MEMCPY,                          // Simple types or shallow copy.
+  DATA_LOOP_COPY,                       // Deep copy of variable length.
+  DATA_LOOP_COPY_SKIP_VECTOR,           // As above; nullable output.
+  DATA_LOOP_COPY_SELECTION,             // Selector vector present.
+  DATA_LOOP_COPY_SELECTION_SKIP_VECTOR  // As above; nullable output.
+};
 
-// This simply copies all the data (with appropriate selectivity). Used when
-// we disregard the null columns when copying the data:
-template <DataType type,
-          RowSelectorType row_selector_type, bool deep_copy>
-inline rowcount_t CopyDataAndSetNullToFalseInLoop(
-    const rowcount_t row_count,
-    const typename TypeTraits<type>::cpp_type* input_data,
-    typename TypeTraits<type>::cpp_type* output_data,
-    const rowid_t* selector_row_ids,
-    Arena* arena,
-    bool_ptr output_is_null) {
-  DatumCopy<type, deep_copy> copier;
-  for (rowcount_t n = 0; n < row_count; ++n) {
-    const rowid_t nth_input_row_id =
-        (row_selector_type & INPUT_SELECTOR_BIT) ? selector_row_ids[n] : n;
-    const rowid_t nth_output_row_id =
-        (row_selector_type & OUTPUT_SELECTOR_BIT) ? selector_row_ids[n] : n;
-    // We use &= instead of = because it's faster for bit_ptrs, and in this
-    // case equivalent.
-    output_is_null[nth_output_row_id] &= false;
-    if (!copier(input_data[nth_input_row_id],
-                &output_data[nth_output_row_id],
-                arena))
-      return n;
-  }
-  return row_count;
-}
+// Used to specialize column copiers for the data column.
+template<IsNullCopierType copier_type, bool deep_copy>
+struct IsNullCopier;
 
-// Helper, to copy data with statically resolved both input and output
-// nullability. Its purpose is to factor input nullability checks out of
-// the loop from CopyColumnWithForLoopStaticTypeNullability.
-template <DataType type,
-          Nullability input_nullability,
-          Nullability output_nullability,
-          RowSelectorType row_selector_type, bool deep_copy>
-inline rowcount_t CopyColumnInternal(const rowcount_t row_count,
-                                     const Column& input,
-                                     const rowid_t* selector_row_ids,
-                                     const rowcount_t offset,
-                                     OwnedColumn* const output) {
-  typedef typename TypeTraits<type>::cpp_type cpp_type;
-  DCHECK(input.typed_data<type>() != NULL)
-      << "Input data " << input.attribute().name() << " is NULL; can't copy";
-  DCHECK(output->mutable_typed_data<type>() != NULL)
-      << "Output buffer for " << output->content().attribute().name()
-      << " is NULL; can't copy";
+template<bool deep_copy>
+struct IsNullCopier<BOOL_NONE, deep_copy> {
+  void operator()(const rowcount_t row_count,
+                  const bool* source, bool* destination,
+                  const rowid_t* selection) {}
+};
 
-  const cpp_type* const input_data = input.typed_data<type>() +
-      (row_selector_type == OUTPUT_SELECTOR ? offset : 0);
-  cpp_type* const output_data = output->mutable_typed_data<type>() +
-      (row_selector_type != OUTPUT_SELECTOR ? offset : 0);
-  bool_const_ptr input_is_null = (row_selector_type == OUTPUT_SELECTOR)
-      ? input.is_null_plus_offset(offset)
-      : input.is_null();
-  // output_is_null is only used in the specialization with
-  // output_nullability == NULLABLE.
-  bool_ptr output_is_null = (row_selector_type != OUTPUT_SELECTOR)
-      ? output->mutable_is_null_plus_offset(offset)
-      : output->mutable_is_null();
-
-  // Both the input and output are not nullable, we just copy the data.
-  // Note - the option when we could memcpy the data (no selectors, shallow
-  // copy) was already explored, and has been dealt with separately. Here it
-  // does not apply, so we simply copy in a loop.
-  if (input_nullability == NOT_NULLABLE && output_nullability == NOT_NULLABLE) {
-    return CopyDataInLoop<type, row_selector_type, deep_copy>(
-        row_count, input_data, output_data, selector_row_ids, output->arena());
-  }
-  // The output is nullable, but the input is null, so we have to fill the
-  // output_is_null column with false. If there is no output selector, we can do
-  // this with a single FillWithFalse call, and then copy the data.
-  // We can do this only if the input_selector_bit is not set - if it is set,
-  // it's possible that the caller wants to set additional nulls by setting
-  // minus ones in the selection vector, and then we do not want to copy the
-  // data.
-  if (input_nullability == NOT_NULLABLE && output_nullability == NULLABLE &&
-      (row_selector_type & INPUT_SELECTOR_BIT) == 0 &&
-      (row_selector_type & OUTPUT_SELECTOR_BIT) == 0) {
-    bit_pointer::FillWithFalse(output_is_null, row_count);
-    return CopyDataInLoop<type, row_selector_type, deep_copy>(
-        row_count, input_data, output_data, selector_row_ids, output->arena());
-  }
-  // The same situation, but the output is equipped with a selector. In this
-  // case we have to fill the bit values one by one.
-  // In this case we can't use minus ones to pass extra nulls (as they would
-  // be interpreted as row_ids for the output), so we do not have to avoid the
-  // case of the INPUT_SELECTOR_BIT being set.
-  if (input_nullability == NOT_NULLABLE && output_nullability == NULLABLE &&
-      (row_selector_type & OUTPUT_SELECTOR_BIT)) {
-    return CopyDataAndSetNullToFalseInLoop<type, row_selector_type, deep_copy>(
-        row_count, input_data, output_data, selector_row_ids, output->arena(),
-        output_is_null);
-  }
-
-  // The cases left are that either the input is NULLABLE or we have input
-  // NOT_NULLABLE, output NULLABLE, input_selection TRUE and output_selection
-  // FALSE.
-  DCHECK(input_nullability == NULLABLE ||
-         (input_nullability == NOT_NULLABLE && output_nullability == NULLABLE &&
-          row_selector_type == INPUT_SELECTOR));
-  for (rowcount_t n = 0; n < row_count; ++n) {
-    const rowid_t nth_input_row_id =
-        (row_selector_type & INPUT_SELECTOR_BIT) ? selector_row_ids[n] : n;
-    const rowid_t nth_output_row_id =
-        (row_selector_type & OUTPUT_SELECTOR_BIT) ? selector_row_ids[n] : n;
-    // Copy is_null information.
-    if (output_nullability == NULLABLE) {
-      // Be careful not to use a negative index for input_is_null[]. Negative
-      // nth_input_row_id means that we should put NULL in the corresponding
-      // output column cell.
-      const bool is_null =
-          ((row_selector_type & INPUT_SELECTOR_BIT) && nth_input_row_id < 0) ||
-          (input_nullability == NULLABLE && input_is_null != NULL &&
-           input_is_null[nth_input_row_id]);
-      output_is_null[nth_output_row_id] = is_null;
-      if (is_null) continue;
+template<bool deep_copy>
+struct IsNullCopier<BOOL_NONE_DCHECK, deep_copy> {
+  void operator()(const rowcount_t row_count,
+                  const bool* source, bool* destination,
+                  const rowid_t* selection) {
+#ifndef NDEBUG
+    if (selection != NULL) {
+      for (int i = 0; i < row_count; ++i) { DCHECK(!source[selection[i]]); }
+    } else {
+      for (int i = 0; i < row_count; ++i) { DCHECK(!source[i]); }
     }
-    // Copy data.
+#endif
+  }
+};
+
+template<bool deep_copy>
+struct IsNullCopier<BOOL_MEMCPY, deep_copy> {
+  void operator()(const rowcount_t row_count,
+                  const bool* source, bool* destination,
+                  const rowid_t* selection) {
+    if (source != NULL) {
+      memcpy(destination, source, row_count * sizeof(*destination));
+    } else {
+      // The contract allows NULL vector to be missing even if the schema is
+      // NULLABLE. In that case, we do BOOL_MEMSET.
+      memset(destination, '\0', row_count * sizeof(*destination));
+    }
+  }
+};
+
+template<bool deep_copy>
+struct IsNullCopier<BOOL_MEMSET, deep_copy> {
+  void operator()(const rowcount_t row_count,
+                  const bool* source, bool* destination,
+                  const rowid_t* selection) {
+    memset(destination, '\0', row_count * sizeof(*destination));
+  }
+};
+
+template<bool deep_copy>
+struct IsNullCopier<BOOL_LOOP_COPY_SELECTION, deep_copy> {
+  void operator()(const rowcount_t row_count,
+                  const bool* source, bool* destination,
+                  const rowid_t* selection) {
+    if (source != NULL) {
+      for (rowid_t i = 0; i < row_count; ++i) {
+        destination[i] = (selection[i] < 0 || source[selection[i]]);
+      }
+    } else {
+      // The contract allows NULL vector to be missing even if the schema is
+      // NULLABLE. In that case, we do BOOL_LOOP_FILL_SELECTION.
+      for (rowid_t i = 0; i < row_count; ++i) {
+        destination[i] = (selection[i] < 0);
+      }
+    }
+  }
+};
+
+template<bool deep_copy>
+struct IsNullCopier<BOOL_LOOP_FILL_SELECTION, deep_copy> {
+  void operator()(const rowcount_t row_count,
+                  const bool* source, bool* destination,
+                  const rowid_t* selection) {
+    for (rowid_t i = 0; i < row_count; ++i) {
+      destination[i] = (selection[i] < 0);
+    }
+  }
+};
+
+template<DataCopierType, DataType type, bool deep_copy>
+struct DataCopier;
+
+template<DataType type, bool deep_copy>
+struct DataCopier<DATA_MEMCPY, type, deep_copy> {
+  rowcount_t operator()(const rowcount_t row_count,
+                        const typename TypeTraits<type>::cpp_type* source,
+                        typename TypeTraits<type>::cpp_type* destination,
+                        const rowid_t* selection,
+                        const bool* skip_vector,
+                        Arena* arena) {
+    DCHECK(selection == NULL);
+    DCHECK(!deep_copy || !TypeTraits<type>::is_variable_length);
+    memcpy(destination, source, row_count * TypeTraits<type>::size);
+    return row_count;
+  }
+};
+
+template<DataType type, bool deep_copy>
+struct DataCopier<DATA_LOOP_COPY, type, deep_copy> {
+  rowcount_t operator()(
+      const rowcount_t row_count,
+      const typename TypeTraits<type>::cpp_type* source,
+      typename TypeTraits<type>::cpp_type* destination,
+      const rowid_t* selection,
+      const bool* skip_vector,
+      Arena* arena) {
+    DCHECK(selection == NULL);
     DatumCopy<type, deep_copy> copier;
-    if (!copier(input_data[nth_input_row_id],
-                &output_data[nth_output_row_id],
-                output->arena()))
-      return n;
+    for (int i = 0; i < row_count; ++i) {
+      if (!copier(*source++, destination++, arena)) return i;
+    }
+    return row_count;
   }
-  return row_count;
+};
+
+template<DataType type, bool deep_copy>
+struct DataCopier<DATA_LOOP_COPY_SKIP_VECTOR, type, deep_copy> {
+  rowcount_t operator()(
+      const rowcount_t row_count,
+      const typename TypeTraits<type>::cpp_type* source,
+      typename TypeTraits<type>::cpp_type* destination,
+      const rowid_t* selection,
+      const bool* skip_vector,
+      Arena* arena) {
+    DCHECK(selection == NULL);
+    DatumCopy<type, deep_copy> copier;
+    for (int i = 0; i < row_count; ++i) {
+      if (!*skip_vector++) {
+        if (!copier(*source, destination, arena)) return i;
+      }
+      ++source;
+      ++destination;
+    }
+    return row_count;
+  }
+};
+
+template<DataType type, bool deep_copy>
+struct DataCopier<DATA_LOOP_COPY_SELECTION, type, deep_copy> {
+  rowcount_t operator()(
+      const rowcount_t row_count,
+      const typename TypeTraits<type>::cpp_type* source,
+      typename TypeTraits<type>::cpp_type* destination,
+      const rowid_t* selection,
+      const bool* skip_vector,
+      Arena* arena) {
+    DCHECK(selection != NULL);
+    DatumCopy<type, deep_copy> copier;
+    for (int i = 0; i < row_count; ++i) {
+      if (selection[i] >= 0) {
+        if (!copier(source[selection[i]], destination, arena)) return i;
+      }
+      ++destination;
+    }
+    return row_count;
+  }
+};
+
+template<DataType type, bool deep_copy>
+struct DataCopier<DATA_LOOP_COPY_SELECTION_SKIP_VECTOR, type, deep_copy> {
+  rowcount_t operator()(
+      const rowcount_t row_count,
+      const typename TypeTraits<type>::cpp_type* source,
+      typename TypeTraits<type>::cpp_type* destination,
+      const rowid_t* selection,
+      const bool* skip_vector,
+      Arena* arena) {
+    DCHECK(selection != NULL);
+    DatumCopy<type, deep_copy> copier;
+    for (int i = 0; i < row_count; ++i) {
+      if (!*skip_vector++ && selection[i] >= 0) {
+        if (!copier(source[selection[i]], destination, arena)) return i;
+      }
+      ++destination;
+    }
+    return row_count;
+  }
+};
+
+// Helper; see below.
+template<IsNullCopierType>
+bool* GetDestinationIsNull(OwnedColumn* destination,
+                           rowcount_t destination_offset) {
+  return destination->mutable_is_null() + destination_offset;
 }
 
-}  // namespace.
-
-// The generic for loop-based variant of the core copying function.
-// Returns the number of rows copied successfully.
-template <DataType type, Nullability output_nullability,
-          RowSelectorType row_selector_type, bool deep_copy>
-rowcount_t CopyColumnWithForLoopStaticTypeNullabilityRowSelector(
-    const rowcount_t row_count,
-    const Column& input,
-    const rowid_t* selector_row_ids,
-    const rowcount_t offset,
-    OwnedColumn* const output) {
-  DCHECK_EQ(selector_row_ids != NULL, row_selector_type != NO_SELECTOR);
-  DCHECK(!(offset && row_selector_type == INPUT_OUTPUT_SELECTOR));
-
-  // NOTE: the contract allows the input is_null vector to be missing, even
-  // if the input schema says the column is nullable.
-  return (input.is_null() != NULL)
-      ? CopyColumnInternal<type, NULLABLE, output_nullability,
-                           row_selector_type, deep_copy>(
-            row_count, input, selector_row_ids, offset, output)
-      : CopyColumnInternal<type, NOT_NULLABLE, output_nullability,
-                           row_selector_type, deep_copy>(
-            row_count, input, selector_row_ids, offset, output);
+// Specialication for non-nullable columns that avoids any arithmetics and
+// avoids returning a toxic pointer.
+template<>
+bool* GetDestinationIsNull<BOOL_NONE>(OwnedColumn* destination,
+                                      rowcount_t destination_offset) {
+  return NULL;
 }
 
-// The memcpy-based variant of the core copying function. Only used in special
-// cases, if selection vector is not given and either type is fixed-length or
-// only a shallow copy is made. Returns row_count.
-template <DataType type, Nullability output_nullability>
-rowcount_t CopyColumnWithMemCpyStaticTypeNullability(
-    const rowcount_t row_count,
-    const Column& input,
-    const rowid_t* selector_row_ids_unused,
-    const rowcount_t offset,
-    OwnedColumn* const output) {
-  DCHECK(output != NULL);
-  DCHECK(selector_row_ids_unused == NULL);
-  // Copy data.
-  DCHECK(!input.data().is_null())
-      << "Input data " << input.attribute().name() << " is NULL; can't copy";
-  DCHECK(output->mutable_typed_data<type>() != NULL)
-      << "Output buffer for " << output->content().attribute().name()
+// Puts together the copiers for data and is_null columns. Conforms to the
+// ColumnCopier contract declared in copy_column.h.
+// NOTE(user): when adding structure, we will probably want to separate these
+// two into independent two functions, called via separate pointers.
+template<DataType type,
+         IsNullCopierType is_null_copier_type, DataCopierType data_copier_type,
+         bool deep_copy>
+rowcount_t ColumnCopierFn(const rowcount_t row_count,
+                          const Column& source,
+                          const rowid_t* selection,
+                          const rowcount_t destination_offset,
+                          OwnedColumn* const destination) {
+  DCHECK_EQ(type, source.type_info().type());
+  DCHECK(source.typed_data<type>() != NULL)
+      << "Source data " << source.attribute().name()
       << " is NULL; can't copy";
-  memcpy(output->mutable_typed_data<type>() + offset, input.data().raw(),
-         TypeTraits<type>::size * row_count);
-  // Copy is_null information.
-  // NOTE: the contract allows the input is_null vector to be missing, even
-  // if the input schema says the column is nullable.
-  if (output_nullability == NULLABLE && input.is_null() != NULL) {
-    // Already asserted that output_is_nullable.
-    bit_pointer::FillFrom(output->mutable_is_null() + offset,
-                          input.is_null(), row_count);
-  } else if (output_nullability == NULLABLE) {
-    bit_pointer::FillWithFalse(output->mutable_is_null() + offset, row_count);
-  } else {
-    DCHECK(input.is_null() == NULL)
-        << "Nullable input while copying to not nullable output";
-  }
-  return row_count;
+  DCHECK(destination->mutable_typed_data<type>() != NULL)
+      << "Output buffer for " << destination->content().attribute().name()
+      << " is NULL; can't copy";
+
+  IsNullCopier<is_null_copier_type, deep_copy> is_null_copier;
+  DataCopier<data_copier_type, type, deep_copy> data_copier;
+
+  bool* destination_is_null = GetDestinationIsNull<is_null_copier_type>(
+      destination, destination_offset);
+  is_null_copier(row_count, source.is_null(), destination_is_null, selection);
+  return data_copier(
+      row_count, source.data().as<type>(),
+      destination->mutable_typed_data<type>() + destination_offset,
+      selection, destination_is_null, destination->arena());
 }
 
-// Incrementally binds run-time arguments to static template arguments,
-// one dimension at a time.
+// Helper to resolve run-time options into template specializations.
 struct CopyColumnResolver {
-  CopyColumnResolver(Nullability output_nullability,
+  CopyColumnResolver(Nullability input_nullability,
+                     Nullability output_nullability,
                      RowSelectorType row_selector_type,
                      bool deep_copy)
-      : output_nullability(output_nullability),
+      : input_nullability(input_nullability),
+        output_nullability(output_nullability),
         row_selector_type(row_selector_type),
         deep_copy(deep_copy) {}
 
   template<DataType type>
   ColumnCopier operator()() const {
-    return output_nullability == NULLABLE
-        ? Resolve1<type, NULLABLE>()
-        : Resolve1<type, NOT_NULLABLE>();
+    switch (is_null_copier_type()) {
+      case BOOL_NONE:
+        return Resolve1<type, BOOL_NONE>();
+      case BOOL_NONE_DCHECK:
+        return Resolve1<type, BOOL_NONE_DCHECK>();
+      case BOOL_MEMSET:
+        return Resolve1<type, BOOL_MEMSET>();
+      case BOOL_MEMCPY:
+        return Resolve1<type, BOOL_MEMCPY>();
+      case BOOL_LOOP_FILL_SELECTION:
+        return Resolve1<type, BOOL_LOOP_FILL_SELECTION>();
+      case BOOL_LOOP_COPY_SELECTION:
+        return Resolve1<type, BOOL_LOOP_COPY_SELECTION>();
+    }
+    LOG(FATAL) << "Unhandled switch case";
   }
 
-  template<DataType type, Nullability nullability_p>
+  template<DataType type, IsNullCopierType is_null_copier_type_p>
   ColumnCopier Resolve1() const {
-    if ((!TypeTraits<type>::is_variable_length || !deep_copy)
-        && row_selector_type == NO_SELECTOR) {
-      // Prefer the memcpy variant when possible.
-      return CopyColumnWithMemCpyStaticTypeNullability<type, nullability_p>;
+    switch (data_copier_type<type>(deep_copy)) {
+      case DATA_MEMCPY:
+        return Resolve2<type, is_null_copier_type_p,
+                        DATA_MEMCPY>();
+      case DATA_LOOP_COPY:
+        return Resolve2<type, is_null_copier_type_p,
+                        DATA_LOOP_COPY>();
+      case DATA_LOOP_COPY_SKIP_VECTOR:
+        return Resolve2<type, is_null_copier_type_p,
+                        DATA_LOOP_COPY_SKIP_VECTOR>();
+      case DATA_LOOP_COPY_SELECTION:
+        return Resolve2<type, is_null_copier_type_p,
+                        DATA_LOOP_COPY_SELECTION>();
+      case DATA_LOOP_COPY_SELECTION_SKIP_VECTOR:
+        return Resolve2<type, is_null_copier_type_p,
+                        DATA_LOOP_COPY_SELECTION_SKIP_VECTOR>();
     }
+    LOG(FATAL) << "Unhandled case";
+  }
+
+  template<DataType type, IsNullCopierType is_null_copier_type_p,
+           DataCopierType data_copier_type_p>
+  ColumnCopier Resolve2() const {
+    if (deep_copy) {
+      return &ColumnCopierFn<type, is_null_copier_type_p, data_copier_type_p,
+                             true>;
+    } else {
+      return &ColumnCopierFn<type, is_null_copier_type_p, data_copier_type_p,
+                             false>;
+    }
+  }
+
+  IsNullCopierType is_null_copier_type() const {
+    // Determine the type of is_null copier.
+    if (output_nullability == NOT_NULLABLE) {
+      if (input_nullability == NULLABLE) {
+        return BOOL_NONE_DCHECK;
+      }
+      return BOOL_NONE;
+    } else {
+      // output_nullability == NULLABLE.
+      if (input_nullability == NOT_NULLABLE) {
+        switch (row_selector_type) {
+          case NO_SELECTOR: return BOOL_MEMSET;
+          case INPUT_SELECTOR: return BOOL_LOOP_FILL_SELECTION;
+        }
+      } else {
+        // output_nullability == NULLABLE, input_nullability == NULLABLE.
+        switch (row_selector_type) {
+          case NO_SELECTOR: return BOOL_MEMCPY;
+          case INPUT_SELECTOR: return BOOL_LOOP_COPY_SELECTION;
+        }
+      }
+    }
+    LOG(FATAL) << "Unhandled case";
+  }
+
+  template<DataType type>
+  DataCopierType data_copier_type(bool deep_copy) const {
+    // Determine the type of data copier.
     switch (row_selector_type) {
       case NO_SELECTOR:
-        return Resolve2<type, nullability_p, NO_SELECTOR>();
+        if (!TypeTraits<type>::is_variable_length || !deep_copy) {
+          // Ignore the skip vector if memcpy is otherwise feasible.
+          return DATA_MEMCPY;
+        } else {
+          return output_nullability == NULLABLE
+              ? DATA_LOOP_COPY_SKIP_VECTOR
+              : DATA_LOOP_COPY;
+        }
       case INPUT_SELECTOR:
-        return Resolve2<type, nullability_p, INPUT_SELECTOR>();
-      case OUTPUT_SELECTOR:
-        return Resolve2<type, nullability_p, OUTPUT_SELECTOR>();
-      case INPUT_OUTPUT_SELECTOR:
-        return Resolve2<type, nullability_p, INPUT_OUTPUT_SELECTOR>();
+        return output_nullability == NULLABLE
+            ? DATA_LOOP_COPY_SELECTION_SKIP_VECTOR
+            : DATA_LOOP_COPY_SELECTION;
     }
-    LOG(FATAL) << "Unable to resolve; unexpected input data";
+    LOG(FATAL) << "Unhandled case";
   }
 
-  template<DataType type, Nullability nullability_p,
-           RowSelectorType row_selector_type_p>
-  ColumnCopier Resolve2() const {
-    return deep_copy
-        ? Resolve3<type, nullability_p, row_selector_type_p, true>()
-        : Resolve3<type, nullability_p, row_selector_type_p, false>();
-  }
-
-  template<DataType type, Nullability nullability_p,
-           RowSelectorType row_selector_type_p, bool deep_copy_p>
-  ColumnCopier Resolve3() const {
-    return CopyColumnWithForLoopStaticTypeNullabilityRowSelector<
-        type, nullability_p, row_selector_type_p, deep_copy_p>;
-  }
-
+  Nullability input_nullability;
   Nullability output_nullability;
   const RowSelectorType row_selector_type;
   bool deep_copy;
 };
 
+}  // namespace
+
 ColumnCopier ResolveCopyColumnFunction(
     const DataType type,
+    const Nullability input_nullability,
     const Nullability output_nullability,
     const RowSelectorType row_selector_type,
     bool deep_copy) {
-  CopyColumnResolver resolver(output_nullability, row_selector_type, deep_copy);
+  CopyColumnResolver resolver(input_nullability, output_nullability,
+                              row_selector_type, deep_copy);
   return TypeSpecialization<ColumnCopier, CopyColumnResolver>(type, resolver);
 }
 

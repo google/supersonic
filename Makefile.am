@@ -365,15 +365,7 @@ sources_H = supersonic/utils/algorithm.h \
     supersonic/utils/atomic/locking.h \
     supersonic/utils/atomic/tsan.h \
     supersonic/utils/atomic/x86-gcc.h \
-    supersonic/utils/hash/builtin_type_hash.h \
-    supersonic/utils/hash/city.h \
     supersonic/utils/hash/hash.h \
-    supersonic/utils/hash/hash128to64.h \
-    supersonic/utils/hash/jenkins.h \
-    supersonic/utils/hash/jenkins_lookup2.h \
-    supersonic/utils/hash/legacy_hash.h \
-    supersonic/utils/hash/murmur.h \
-    supersonic/utils/hash/string_hash.h \
     supersonic/utils/exception/coowned_pointer.h \
     supersonic/utils/exception/failureor.h \
     supersonic/utils/exception/stack_trace.h \
@@ -537,10 +529,7 @@ supersonic_S += \
     supersonic/utils/stringprintf.cc \
     supersonic/utils/atomic/locking.cc \
     supersonic/utils/atomic/x86-gcc.cc \
-    supersonic/utils/hash/city.cc \
     supersonic/utils/hash/hash.cc \
-    supersonic/utils/hash/jenkins.cc \
-    supersonic/utils/hash/murmur.cc \
     supersonic/utils/exception/stack_trace.cc \
     supersonic/utils/strings/join.cc \
     supersonic/utils/strings/stringpiece.cc \

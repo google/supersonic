@@ -34,27 +34,29 @@ using std::vector;
 
 namespace supersonic {
 
-template <typename ConstRow>
+template <typename RowReader, typename RowWriter>
 class RowCopier {
  public:
-  typedef bool (*CopyFn)(const ConstRow& row,
-                         size_t column_position,
-                         size_t output_offset,
-                         OwnedColumn* output);
+  typedef bool (*CopyFn)(const RowReader& reader,
+                         const typename RowReader::ValueType& input,
+                         size_t input_column_index,
+                         const RowWriter& writer,
+                         typename RowWriter::ValueType* output,
+                         size_t output_column_index);
 
   // Creates a copier that copies all columns from the given schema.
   RowCopier(const TupleSchema& schema, bool deep_copy);
 
   // Returns true if successfully copied; false otherwise.
-  bool Copy(const ConstRow& input,
-            const size_t output_offset,
-            Block* output) const;
+  bool Copy(const RowReader& reader, const typename RowReader::ValueType& input,
+            const RowWriter& writer, typename RowWriter::ValueType* output)
+      const;
 
  private:
   vector<CopyFn> copiers_;
 };
 
-template <typename ConstRow>
+template <typename RowReader, typename RowWriter>
 class RowCopierWithProjector {
  public:
   // Variant that only copies projected columns; input and output schemas
@@ -64,19 +66,19 @@ class RowCopierWithProjector {
                          bool deep_copy);
 
   // Returns true if successfully copied; false otherwise.
-  bool Copy(const ConstRow& input,
-            const size_t output_offset,
-            Block* output) const;
+  bool Copy(const RowReader& reader, const typename RowReader::ValueType& input,
+            const RowWriter& writer, typename RowWriter::ValueType* output)
+      const;
 
  private:
   const BoundSingleSourceProjector* projector_;
-  vector<typename RowCopier<ConstRow>::CopyFn> copiers_;
+  vector<typename RowCopier<RowReader, RowWriter>::CopyFn> copiers_;
 };
 
 // Copies multiple source rows into a destination block. A projector must
 // be supplied to indicate the mapping from many sources to a single
 // destination.
-template<typename ConstRow>
+template<typename RowReader, typename RowWriter>
 class MultiRowCopier {
  public:
   // Input and output schemas are given by the bound projector, which must
@@ -84,13 +86,14 @@ class MultiRowCopier {
   MultiRowCopier(const BoundMultiSourceProjector* projector, bool deep_copy);
 
   // Returns true if successfully copied; false otherwise.
-  size_t Copy(const vector<const ConstRow*>& input_rows,
-              const size_t output_offset,
-              Block* output) const;
+  size_t Copy(const vector<const RowReader*>& readers,
+              const vector<const typename RowReader::ValueType*>& inputs,
+              const RowWriter& writer,
+              typename RowWriter::ValueType* output) const;
 
  private:
   const BoundMultiSourceProjector* projector_;
-  vector<typename RowCopier<ConstRow>::CopyFn> copiers_;
+  vector<typename RowCopier<RowReader, RowWriter>::CopyFn> copiers_;
 };
 
 
@@ -98,146 +101,245 @@ class MultiRowCopier {
 
 namespace internal {
 
-template<typename ConstRow,
+template<typename RowReader,
+         typename RowWriter,
          DataType type,
          bool nullable,
          bool deep_copy>
-bool CopyItem(const ConstRow& row,
-              size_t column_position,
-              size_t output_offset,
-              OwnedColumn* output) {
-  if (nullable && row.is_null(column_position)) {
-    output->mutable_is_null()[output_offset] = true;
+struct ItemCopy {
+  bool operator()(const RowReader& reader,
+                  const typename RowReader::ValueType& input,
+                  size_t input_column_index,
+                  const RowWriter& writer,
+                  typename RowWriter::ValueType* output,
+                  size_t output_column_index) {
+    COMPILE_ASSERT(!TypeTraits<type>::is_variable_length,
+                   Simple_ItemCopy_called_for_variable_length_argument);
+    if (nullable && reader.is_null(input, input_column_index)) {
+      writer.set_null(output_column_index, output);
+    } else {
+      writer.template set_value<type, nullable>(
+          output_column_index,
+          reader.template fetch<type>(input, input_column_index),
+          output);
+    }
     return true;
   }
-  if (nullable) output->mutable_is_null()[output_offset] = false;
-  DatumCopy<type, deep_copy> copier;
-  return copier(row.template typed_notnull_data<type>(column_position),
-                output->mutable_typed_data<type>() + output_offset,
-                output->arena());
+};
+
+template<typename RowReader,
+         typename RowWriter,
+         DataType type,
+         bool nullable,
+         bool deep_copy>
+bool CopyVariableLengthItem(const RowReader& reader,
+                            const typename RowReader::ValueType& input,
+                            size_t input_column_index,
+                            const RowWriter& writer,
+                            typename RowWriter::ValueType* output,
+                            size_t output_column_index) {
+  COMPILE_ASSERT(TypeTraits<type>::is_variable_length,
+                 Variable_length_ItemCopy_called_for_simple_argument);
+  if (nullable && reader.is_null(input, input_column_index)) {
+    writer.set_null(output_column_index, output);
+    return true;
+  } else {
+    StringPiece datum;
+    if (!reader.template fetch_variable_length_using_allocator<
+        type, deep_copy, typename RowWriter::Allocator>(
+        input, input_column_index, &datum,
+        writer.allocator(output_column_index, output))) {
+      return false;
+    }
+    writer.template set_value<type, nullable>(output_column_index, datum,
+                                              output);
+    return true;
+  }
 }
 
-template<typename ConstRow>
+// A specialization for STRING.
+template<typename RowReader,
+         typename RowWriter,
+         bool nullable,
+         bool deep_copy>
+struct ItemCopy<RowReader, RowWriter, STRING, nullable, deep_copy> {
+  bool operator()(
+      const RowReader& reader,
+      const typename RowReader::ValueType& input,
+      size_t input_column_index,
+      const RowWriter& writer,
+      typename RowWriter::ValueType* output,
+      size_t output_column_index) const {
+    return CopyVariableLengthItem<RowReader, RowWriter, STRING, nullable,
+                                  deep_copy>(
+        reader, input, input_column_index, writer, output, output_column_index);
+  }
+};
+
+// A specialization for BINARY.
+template<typename RowReader,
+         typename RowWriter,
+         bool nullable,
+         bool deep_copy>
+struct ItemCopy<RowReader, RowWriter, BINARY, nullable, deep_copy> {
+  bool operator()(
+      const RowReader& reader,
+      const typename RowReader::ValueType& input,
+      size_t input_column_index,
+      const RowWriter& writer,
+      typename RowWriter::ValueType* output,
+      size_t output_column_index) const {
+    return CopyVariableLengthItem<RowReader, RowWriter, BINARY, nullable,
+                                  deep_copy>(
+        reader, input, input_column_index, writer, output, output_column_index);
+  }
+};
+
+// Definition of the functions that we will be calling via pointers.
+template<typename RowReader,
+         typename RowWriter,
+         DataType type,
+         bool nullable,
+         bool deep_copy>
+bool CopyItem(const RowReader& reader,
+              const typename RowReader::ValueType& input,
+              size_t input_column_index,
+              const RowWriter& writer,
+              typename RowWriter::ValueType* output,
+              size_t output_column_index) {
+  ItemCopy<RowReader, RowWriter, type, nullable, deep_copy> copy;
+  return copy(reader, input, input_column_index,
+              writer, output, output_column_index);
+}
+
+
+template<typename RowReader, typename RowWriter>
 struct ItemExtractorResolver {
   ItemExtractorResolver(bool nullable, bool deep_copy)
       : nullable(nullable),
         deep_copy(deep_copy) {}
 
   template<DataType type>
-  typename RowCopier<ConstRow>::CopyFn operator()() const {
+  typename RowCopier<RowReader, RowWriter>::CopyFn operator()() const {
     return nullable
         ? Resolve1<type, true>()
         : Resolve1<type, false>();
   }
 
   template<DataType type, bool nullable_p>
-  typename RowCopier<ConstRow>::CopyFn Resolve1() const {
+  typename RowCopier<RowReader, RowWriter>::CopyFn Resolve1() const {
     return deep_copy
         ? Resolve2<type, nullable_p, true>()
         : Resolve2<type, nullable_p, false>();
   }
 
   template<DataType type, bool nullable_p, bool deep_copy_p>
-  typename RowCopier<ConstRow>::CopyFn Resolve2() const {
-    return &CopyItem<ConstRow, type, nullable_p, deep_copy_p>;
+  typename RowCopier<RowReader, RowWriter>::CopyFn Resolve2() const {
+    return &CopyItem<RowReader, RowWriter, type, nullable_p, deep_copy_p>;
   }
 
   bool nullable;
   bool deep_copy;
 };
 
-template<typename ConstRow>
+template<typename RowReader, typename RowWriter>
 void CreateDataCopiers(
     const TupleSchema& schema,
     bool deep_copy,
-    vector<typename RowCopier<ConstRow>::CopyFn>* copiers) {
+    vector<typename RowCopier<RowReader, RowWriter>::CopyFn>* copiers) {
   for (size_t i = 0; i < schema.attribute_count(); i++) {
     const Attribute& attribute = schema.attribute(i);
-    ItemExtractorResolver<ConstRow> resolver(attribute.is_nullable(),
-                                             deep_copy);
+    ItemExtractorResolver<RowReader, RowWriter> resolver(
+        attribute.is_nullable(), deep_copy);
     copiers->push_back(
-        TypeSpecialization<typename RowCopier<ConstRow>::CopyFn,
-                           ItemExtractorResolver<ConstRow> >(
+        TypeSpecialization<typename RowCopier<RowReader, RowWriter>::CopyFn,
+                           ItemExtractorResolver<RowReader, RowWriter> >(
             attribute.type(), resolver));
   }
 }
 
 }  // namespace internal
 
-template<typename ConstRow>
-RowCopier<ConstRow>::RowCopier(const TupleSchema& schema, bool deep_copy) {
-  internal::CreateDataCopiers<ConstRow>(schema, deep_copy, &copiers_);
+template<typename RowReader, typename RowWriter>
+RowCopier<RowReader, RowWriter>::RowCopier(const TupleSchema& schema,
+                                         bool deep_copy) {
+  internal::CreateDataCopiers<RowReader, RowWriter>(schema, deep_copy,
+                                                    &copiers_);
 }
 
-template<typename ConstRow>
-bool RowCopier<ConstRow>::Copy(const ConstRow& input,
-                               const size_t output_offset,
-                               Block* output) const {
+template<typename RowReader, typename RowWriter>
+bool RowCopier<RowReader, RowWriter>::Copy(
+    const RowReader& reader,
+    const typename RowReader::ValueType& input,
+    const RowWriter& writer,
+    typename RowWriter::ValueType* output) const {
   DCHECK(output != NULL) << "Missing output for view copy";
-  DCHECK(input.schema().EqualByType(output->schema()));
+  DCHECK(reader.schema(input).EqualByType(writer.schema(output)));
   bool copied = true;
   for (size_t i = 0; i < copiers_.size(); i++) {
-    copied &= copiers_[i](input, i, output_offset, output->mutable_column(i));
+    copied &= copiers_[i](reader, input, i, writer, output, i);
   }
   return copied;
 }
 
-template<typename ConstRow>
-RowCopierWithProjector<ConstRow>::RowCopierWithProjector(
+template<typename RowReader, typename RowWriter>
+RowCopierWithProjector<RowReader, RowWriter>::RowCopierWithProjector(
     const BoundSingleSourceProjector* projector,
     bool deep_copy)
     : projector_(projector) {
-  internal::CreateDataCopiers<ConstRow>(projector->result_schema(),
-                                        deep_copy, &copiers_);
+  internal::CreateDataCopiers<RowReader, RowWriter>(projector->result_schema(),
+                                                    deep_copy, &copiers_);
 }
 
-template<typename ConstRow>
-bool RowCopierWithProjector<ConstRow>::Copy(const ConstRow& input,
-                                            const size_t output_offset,
-                                            Block* output) const {
+template<typename RowReader, typename RowWriter>
+bool RowCopierWithProjector<RowReader, RowWriter>::Copy(
+    const RowReader& reader,
+    const typename RowReader::ValueType& input,
+    const RowWriter& writer,
+    typename RowWriter::ValueType* output) const {
   DCHECK(output != NULL) << "Missing output for view copy";
   const TupleSchema& output_schema = projector_->result_schema();
-  DCHECK(output_schema.EqualByType(output->schema()));
+  DCHECK(output_schema.EqualByType(writer.schema(output)));
   bool copied = true;
   for (size_t i = 0; i < copiers_.size(); i++) {
-    copied &= copiers_[i](
-        input,
-        projector_->source_attribute_position(i),
-        output_offset,
-        output->mutable_column(i));
+    copied &= copiers_[i](reader, input,
+                          projector_->source_attribute_position(i),
+                          writer, output, i);
   }
   return copied;
 }
 
-template<typename ConstRow>
-MultiRowCopier<ConstRow>::MultiRowCopier(
+template<typename RowReader, typename RowWriter>
+MultiRowCopier<RowReader, RowWriter>::MultiRowCopier(
     const BoundMultiSourceProjector* projector,
     bool deep_copy)
     : projector_(projector) {
   for (size_t i = 0; i < projector_->result_schema().attribute_count(); i++) {
     const Attribute& attribute = projector_->result_schema().attribute(i);
-    internal::ItemExtractorResolver<ConstRow> resolver(
+    internal::ItemExtractorResolver<RowReader, RowWriter> resolver(
         attribute.is_nullable(),
         deep_copy);
     copiers_.push_back(
-        TypeSpecialization<typename RowCopier<ConstRow>::CopyFn,
-                           internal::ItemExtractorResolver<ConstRow> >(
+        TypeSpecialization<
+            typename RowCopier<RowReader, RowWriter>::CopyFn,
+            internal::ItemExtractorResolver<RowReader, RowWriter> >(
             attribute.type(), resolver));
   }
 }
 
-template<typename ConstRow>
-size_t MultiRowCopier<ConstRow>::Copy(
-    const vector<const ConstRow*>& input_rows,
-    const size_t output_offset,
-    Block* output) const {
+template<typename RowReader, typename RowWriter>
+size_t MultiRowCopier<RowReader, RowWriter>::Copy(
+    const vector<const RowReader*>& readers,
+    const vector<const typename RowReader::ValueType*>& inputs,
+    const RowWriter& writer,
+    typename RowWriter::ValueType* output) const {
   DCHECK(projector_->result_schema().EqualByType(output->schema()));
   bool copied = true;
   for (size_t i = 0; i < projector_->result_schema().attribute_count(); i++) {
-    copied &= copiers_[i](*input_rows[projector_->source_index(i)],
+    copied &= copiers_[i](*readers[projector_->source_index(i)],
+                          *inputs[projector_->source_index(i)],
                           projector_->source_attribute_position(i),
-                          output_offset,
-                          output->mutable_column(i));
+                          writer, output, i);
   }
   return copied;
 }

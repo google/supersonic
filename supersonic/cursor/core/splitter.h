@@ -103,8 +103,8 @@ class BufferedSplitter : public SplitterInterface {
   explicit BufferedSplitter(Cursor* input,
                             BufferAllocator* buffer_allocator,
                             rowcount_t max_row_count)
-      : input_(input), copier(input->schema(), input->schema(),
-                              NO_SELECTOR, /* deep copy = */ true),
+      : input_(input),
+        copier(input->schema(), /* deep copy = */ true),
         rows_fetched_(0), has_next_called_(false),
         buffer_allocator_(buffer_allocator), max_row_count_(max_row_count) {}
   virtual ~BufferedSplitter() {}

@@ -29,9 +29,8 @@ namespace supersonic {
 class BlockTest : public testing::Test {
  public:
   const rowcount_t Copy(const View& source, Block* destination) {
-    ViewCopier copier(source.schema(), destination->schema(),
-                      NO_SELECTOR, true);
-    return copier.Copy(source.row_count(), source, NULL, 0, destination);
+    ViewCopier copier(source.schema(), true);
+    return copier.Copy(source.row_count(), source, 0, destination);
   }
   Block* test_block() {
     return BlockBuilder<STRING, INT32>()

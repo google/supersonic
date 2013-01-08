@@ -41,7 +41,7 @@ Table::Table(const TupleSchema& schema, BufferAllocator* buffer_allocator)
     : BasicOperation(),
       block_(new Block(schema, buffer_allocator)),
       view_(schema),
-      view_copier_no_selector_(schema, schema, NO_SELECTOR, true) {
+      view_copier_(schema, true) {
   view_.ResetFrom(block_->view());
 }
 
@@ -49,8 +49,7 @@ Table::Table(Block* block)
     : BasicOperation(),
       block_(block),
       view_(block->schema()),
-      view_copier_no_selector_(block_->schema(), block_->schema(),
-                               NO_SELECTOR, true) {
+      view_copier_(block_->schema(), true) {
   view_.ResetFrom(block_->view());
 }
 
@@ -120,9 +119,7 @@ rowcount_t Table::AppendView(const View& view) {
   rowcount_t rows_to_copy =
       std::min(view.row_count(), block_->row_capacity() - row_count());
   rowcount_t rows_copied =
-      view_copier_no_selector_.Copy(rows_to_copy, view, NULL,
-                                    row_count(),
-                                    block_.get());
+      view_copier_.Copy(rows_to_copy, view, row_count(), block_.get());
   view_.set_row_count(row_count() + rows_copied);
   return rows_copied;
 }

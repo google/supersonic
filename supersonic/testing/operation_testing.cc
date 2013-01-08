@@ -243,7 +243,7 @@ class DeepCopyingCursor : public BasicDecoratorCursor {
       : BasicDecoratorCursor(cursor),
         block_(delegate()->schema(), allocator),
         view_(block_.schema()),
-        deep_copier_(block_.schema(), block_.schema(), NO_SELECTOR, true) {}
+        deep_copier_(block_.schema(), true) {}
 
   virtual ResultView Next(rowcount_t max_row_count) {
     block_.ResetArenas();
@@ -259,7 +259,7 @@ class DeepCopyingCursor : public BasicDecoratorCursor {
         }
       }
       rowcount_t copy_result =
-          deep_copier_.Copy(result_rowcount, result.view(), NULL, 0, &block_);
+          deep_copier_.Copy(result_rowcount, result.view(), 0, &block_);
       if (copy_result < result_rowcount) {
         THROW(new Exception(
             ERROR_MEMORY_EXCEEDED,

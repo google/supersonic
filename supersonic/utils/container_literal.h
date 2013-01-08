@@ -42,7 +42,7 @@
 //
 //   list<double> foo = util::gtl::Container<double>(1, 3.5, 7);
 //
-// Currently we support up-to 40 elements in the container.  If this
+// Currently we support up-to 50 elements in the container.  If this
 // is inadequate, you can easily raise the limit by increasing the
 // value of max_arity in container_literal_generated.h.pump and
 // re-generating container_literal_generated.h.
@@ -81,7 +81,10 @@
 // a copy of the elements before adding them to the target container -
 // it needs the original elements to be around when being converted to
 // the target container type.  Therefore make sure the conversion is
-// done while the original elements are still alive.
+// done while the original elements are still alive.  In particular,
+// it is unsafe to save the result of Container() to a local variable
+// declared with 'auto' if any of the elements are rvalues.  (See
+// happens, so it's safer to just avoid 'auto' with Container.
 
 #ifndef UTIL_GTL_CONTAINER_LITERAL_H_
 #define UTIL_GTL_CONTAINER_LITERAL_H_
@@ -106,7 +109,7 @@ using std::string;
 //  2) This pragma turns off *all* warnings in this file, so you're more likely
 //     to write broken code if you use it.
 #pragma GCC system_header
-#include <initializer_list>
+#include <initializer_list>  // NOLINT(build/include_order)
 #endif
 
 namespace util {

@@ -34,7 +34,9 @@ using std::vector;
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/exception/exception_macros.h"
 #include "supersonic/base/exception/result.h"
+#include "supersonic/base/infrastructure/types.h"
 #include "supersonic/proto/supersonic.pb.h"
+#include "supersonic/utils/shared_ptr.h"
 
 namespace supersonic {
 
@@ -66,47 +68,86 @@ class Attribute {
 // for table sorting; therefore, it needs to support copy construction and
 // assignment.
 class TupleSchema {
+ private:
+  class Rep {
+   public:
+    // Creates a new, empty schema (with no attributes).
+    Rep() {}
+
+    // A copy constructor.
+    Rep(const Rep& other)
+        : attributes_(other.attributes_),
+          attribute_names_(other.attribute_names_) {}
+
+    int attribute_count() const { return attributes_.size(); }
+
+    const Attribute& attribute(const int position) const {
+      DCHECK_GE(position, 0);
+      DCHECK_LT(position, attribute_count());
+      return attributes_[position];
+    }
+
+    bool add_attribute(const Attribute& attribute) {
+      const bool inserted = attribute_names_.insert(
+          make_pair(attribute.name(), attributes_.size())).second;
+      if (inserted) {
+        attributes_.push_back(attribute);
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    const Attribute& LookupAttribute(const string& name) const {
+      int position = LookupAttributePosition(name);
+      CHECK_GE(position, 0) << "Cannot LookupAttribute '" << name
+                            << "' in schema "
+                            << GetHumanReadableSpecification();
+      CHECK_LT(position, attribute_count());
+      return attributes_[position];
+    }
+
+    int LookupAttributePosition(const string& attribute_name) const {
+      map<string, int>::const_iterator i = attribute_names_.find(attribute_name);
+      return (i == attribute_names_.end()) ? -1 : i->second;
+    }
+
+    string GetHumanReadableSpecification() const;
+
+   private:
+    vector<Attribute> attributes_;
+    map<string, int> attribute_names_;
+  };
+
  public:
   // Creates a new, empty schema (with no attributes).
-  TupleSchema() {}
+  TupleSchema() : rep_(new Rep()) {}
 
   // A copy constructor.
-  TupleSchema(const TupleSchema& other)
-      : attributes_(other.attributes_),
-        attribute_names_(other.attribute_names_) {}
+  TupleSchema(const TupleSchema& other) : rep_(other.rep_) {}
 
   // Returns the number of attributes.
-  int attribute_count() const { return attributes_.size(); }
+  int attribute_count() const { return rep_->attribute_count(); }
 
   // Returns the attribute at the specified position.
   const Attribute& attribute(const int position) const {
-    DCHECK_GE(position, 0);
-    DCHECK_LT(position, attribute_count());
-    return attributes_[position];
+    return rep_->attribute(position);
   }
 
   // Adds an attribute to the schema if it isn't already defined. The added
   // attribute occupies the last position (positions of all existing attributes
   // do not change). Returns true iff name has been successfully added.
   bool add_attribute(const Attribute& attribute) {
-    const bool inserted = attribute_names_.insert(
-        make_pair(attribute.name(), attributes_.size())).second;
-    if (inserted) {
-      attributes_.push_back(attribute);
-      return true;
-    } else {
-      return false;
+    if (!rep_.unique()) {
+      rep_.reset(new Rep(*rep_));
     }
+    return rep_->add_attribute(attribute);
   };
 
   // Looks up an attribute with the specified name. O(log2(attribute count)).
   // The attribute must exist in the schema.
   const Attribute& LookupAttribute(const string& name) const {
-    int position = LookupAttributePosition(name);
-    CHECK_GE(position, 0) << "Cannot LookupAttribute '" << name
-                          << "' in schema " << GetHumanReadableSpecification();
-    CHECK_LT(position, attribute_count());
-    return attributes_[position];
+    return rep_->LookupAttribute(name);
   }
 
   // Checks whether two schemas are equal, i.e. they have attributes of the
@@ -114,6 +155,7 @@ class TupleSchema {
   static bool AreEqual(const TupleSchema& a,
                        const TupleSchema& b,
                        bool check_names) {
+    if (a.rep_.get() == b.rep_.get()) return true;
     if (a.attribute_count() != b.attribute_count()) {
       return false;
     }
@@ -146,8 +188,7 @@ class TupleSchema {
   // Looks up and returns the position of an attribute with the specified
   // name, or -1 if not found in the schema. O(log2(attribute count)).
   int LookupAttributePosition(const string& attribute_name) const {
-    map<string, int>::const_iterator i = attribute_names_.find(attribute_name);
-    return (i == attribute_names_.end()) ? -1 : i->second;
+    return rep_->LookupAttributePosition(attribute_name);
   }
 
   // Creates and returns a schema with a single attribute.
@@ -170,11 +211,12 @@ class TupleSchema {
   // For example: "a: STRING, b: INT32"
   // Note: for logging only. Prone to ambiguities in corner cases, e.g.
   // attribute names with non-ASCII characters, or ':'.
-  string GetHumanReadableSpecification() const;
+  string GetHumanReadableSpecification() const {
+    return rep_->GetHumanReadableSpecification();
+  }
 
  private:
-  vector<Attribute> attributes_;
-  map<string, int> attribute_names_;
+  shared_ptr<Rep> rep_;
 };
 
 }  // namespace supersonic

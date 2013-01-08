@@ -293,6 +293,8 @@ void ConsumeStrayLeadingZeroes(string *const str) {
 // --------------------------------------------------------------------
 
 int32 ParseLeadingInt32Value(const char *str, int32 deflt) {
+  using std::numeric_limits;
+
   char *error = NULL;
   long value = strtol(str, &error, 0);
   // Limit long values to int32 min/max.  Needed for lp64; no-op on 32 bits.
@@ -305,6 +307,8 @@ int32 ParseLeadingInt32Value(const char *str, int32 deflt) {
 }
 
 uint32 ParseLeadingUInt32Value(const char *str, uint32 deflt) {
+  using std::numeric_limits;
+
   if (numeric_limits<unsigned long>::max() == numeric_limits<uint32>::max()) {
     // When long is 32 bits, we can use strtoul.
     char *error = NULL;
@@ -337,6 +341,8 @@ uint32 ParseLeadingUInt32Value(const char *str, uint32 deflt) {
 // --------------------------------------------------------------------
 
 int32 ParseLeadingDec32Value(const char *str, int32 deflt) {
+  using std::numeric_limits;
+
   char *error = NULL;
   long value = strtol(str, &error, 10);
   // Limit long values to int32 min/max.  Needed for lp64; no-op on 32 bits.
@@ -349,6 +355,8 @@ int32 ParseLeadingDec32Value(const char *str, int32 deflt) {
 }
 
 uint32 ParseLeadingUDec32Value(const char *str, uint32 deflt) {
+  using std::numeric_limits;
+
   if (numeric_limits<unsigned long>::max() == numeric_limits<uint32>::max()) {
     // When long is 32 bits, we can use strtoul.
     char *error = NULL;
@@ -534,11 +542,16 @@ static const int8 kAsciiToInt[256] = {
   36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36,
   36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36 };
 
-// Input format based on POSIX.1-2008 strtol
-// http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
-template<typename IntType>
-bool safe_int_internal(const char* start, const char* end, int base,
-                       IntType* value_p) {
+// Parse the sign and optional hex or oct prefix in range
+// [*start_ptr, *end_ptr).
+inline bool safe_parse_sign_and_base(const char** start_ptr  /*inout*/,
+                                     const char** end_ptr  /*inout*/,
+                                     int* base_ptr  /*inout*/,
+                                     bool* negative_ptr  /*output*/) {
+  const char* start = *start_ptr;
+  const char* end = *end_ptr;
+  int base = *base_ptr;
+
   // Consume whitespace.
   while (start < end && ascii_isspace(start[0])) {
     ++start;
@@ -551,8 +564,8 @@ bool safe_int_internal(const char* start, const char* end, int base,
   }
 
   // Consume sign.
-  const bool negative = (start[0] == '-');
-  if (negative || start[0] == '+') {
+  *negative_ptr = (start[0] == '-');
+  if (*negative_ptr || start[0] == '+') {
     ++start;
     if (start >= end) {
       return false;
@@ -584,77 +597,113 @@ bool safe_int_internal(const char* start, const char* end, int base,
   } else {
     return false;
   }
+  *start_ptr = start;
+  *end_ptr = end;
+  *base_ptr = base;
+  return true;
+}
 
-  // Consume digits.
-  //
-  // The classic loop:
-  //
-  //   for each digit
-  //     value = value * base + digit
-  //   value *= sign
-  //
-  // The classic loop needs overflow checking.  It also fails on the most
-  // negative integer, -2147483648 in 32-bit two's complement representation.
-  //
-  // My improved loop:
-  //
-  //  if (!negative)
-  //    for each digit
-  //      value = value * base
-  //      value = value + digit
-  //  else
-  //    for each digit
-  //      value = value * base
-  //      value = value - digit
-  //
-  // Overflow checking becomes simple.
-  //
-  // I present the positive code first for easier reading.
+// Consume digits.
+//
+// The classic loop:
+//
+//   for each digit
+//     value = value * base + digit
+//   value *= sign
+//
+// The classic loop needs overflow checking.  It also fails on the most
+// negative integer, -2147483648 in 32-bit two's complement representation.
+//
+// My improved loop:
+//
+//  if (!negative)
+//    for each digit
+//      value = value * base
+//      value = value + digit
+//  else
+//    for each digit
+//      value = value * base
+//      value = value - digit
+//
+// Overflow checking becomes simple.
+
+template<typename IntType>
+inline bool safe_parse_positive_int(
+    const char* start, const char* end, int base, IntType* value_p) {
   IntType value = 0;
-  if (!negative) {
-    const IntType vmax = std::numeric_limits<IntType>::max();
-    assert(vmax > 0);
-    assert(vmax >= base);
-    const IntType vmax_over_base = vmax / base;
-    // loop over digits
-    // loop body is interleaved for perf, not readability
-    for (; start < end; ++start) {
-      unsigned char c = static_cast<unsigned char>(start[0]);
-      int digit = kAsciiToInt[c];
-      if (value > vmax_over_base) return false;
-      value *= base;
-      if (digit >= base) return false;
-      if (value > vmax - digit) return false;
-      value += digit;
-    }
-  } else {
-    const IntType vmin = std::numeric_limits<IntType>::min();
-    assert(vmin < 0);
-    assert(vmin <= 0 - base);
-    IntType vmin_over_base = vmin / base;
-    // 2003 c++ standard [expr.mul]
-    // "... the sign of the remainder is implementation-defined."
-    // Although (vmin/base)*base + vmin%base is always vmin.
-    // 2011 c++ standard tightens the spec but we cannot rely on it.
-    if (vmin % base > 0) {
-      vmin_over_base += 1;
-    }
-    // loop over digits
-    // loop body is interleaved for perf, not readability
-    for (; start < end; ++start) {
-      unsigned char c = static_cast<unsigned char>(start[0]);
-      int digit = kAsciiToInt[c];
-      if (value < vmin_over_base) return false;
-      value *= base;
-      if (digit >= base) return false;
-      if (value < vmin + digit) return false;
-      value -= digit;
-    }
+  const IntType vmax = std::numeric_limits<IntType>::max();
+  assert(vmax > 0);
+  assert(vmax >= base);
+  const IntType vmax_over_base = vmax / base;
+  // loop over digits
+  // loop body is interleaved for perf, not readability
+  for (; start < end; ++start) {
+    unsigned char c = static_cast<unsigned char>(start[0]);
+    int digit = kAsciiToInt[c];
+    if (value > vmax_over_base) return false;
+    value *= base;
+    if (digit >= base) return false;
+    if (value > vmax - digit) return false;
+    value += digit;
   }
-
-  // Store output.
   *value_p = value;
   return true;
+}
+
+template<typename IntType>
+inline bool safe_parse_negative_int(
+    const char* start, const char* end, int base, IntType* value_p) {
+  IntType value = 0;
+  const IntType vmin = std::numeric_limits<IntType>::min();
+  assert(vmin < 0);
+  assert(vmin <= 0 - base);
+  IntType vmin_over_base = vmin / base;
+  // 2003 c++ standard [expr.mul]
+  // "... the sign of the remainder is implementation-defined."
+  // Although (vmin/base)*base + vmin%base is always vmin.
+  // 2011 c++ standard tightens the spec but we cannot rely on it.
+  if (vmin % base > 0) {
+    vmin_over_base += 1;
+  }
+  // loop over digits
+  // loop body is interleaved for perf, not readability
+  for (; start < end; ++start) {
+    unsigned char c = static_cast<unsigned char>(start[0]);
+    int digit = kAsciiToInt[c];
+    if (value < vmin_over_base) return false;
+    value *= base;
+    if (digit >= base) return false;
+    if (value < vmin + digit) return false;
+    value -= digit;
+  }
+  *value_p = value;
+  return true;
+}
+
+// Input format based on POSIX.1-2008 strtol
+// http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
+template<typename IntType>
+bool safe_int_internal(const char* start, const char* end, int base,
+                       IntType* value_p) {
+  bool negative;
+  if (!safe_parse_sign_and_base(&start, &end, &base, &negative)) {
+    return false;
+  }
+  if (!negative) {
+    return safe_parse_positive_int(start, end, base, value_p);
+  } else {
+    return safe_parse_negative_int(start, end, base, value_p);
+  }
+}
+
+template<typename IntType>
+inline bool safe_uint_internal(const char* start, const char* end, int base,
+                               IntType* value_p) {
+  bool negative;
+  if (!safe_parse_sign_and_base(&start, &end, &base, &negative) || negative) {
+    return false;
+  }
+  return safe_parse_positive_int(start, end, base, value_p);
 }
 
 }  // anonymous namespace
@@ -675,6 +724,16 @@ bool safe_strto32(const char* startptr, const int buffer_size, int32* value) {
 
 bool safe_strto64(const char* startptr, const int buffer_size, int64* value) {
   return safe_int_internal<int64>(startptr, startptr + buffer_size, 10, value);
+}
+
+bool safe_strtou32_base(const char* str, int buffer_size,
+                        uint32* value, int base) {
+  return safe_uint_internal<uint32>(str, str + buffer_size, base, value);
+}
+
+bool safe_strtou64_base(const char* str, int buffer_size,
+                        uint64* value, int base) {
+  return safe_uint_internal<uint64>(str, str + buffer_size, base, value);
 }
 
 bool safe_strto32_base(const char* str, int32* value, int base) {
@@ -1429,7 +1488,7 @@ string ItoaKMGT(int64 i) {
   if (i < 0) {
     // We lose some accuracy if the caller passes LONG_LONG_MIN, but
     // that's OK as this function is only for human readability
-    if (i == numeric_limits<int64>::min()) i++;
+    if (i == std::numeric_limits<int64>::min()) i++;
     sign = "-";
     i = -i;
   }
@@ -1469,4 +1528,3 @@ string Int64ToString(int64 i64, const char* format) {
 string UInt64ToString(uint64 ui64, const char* format) {
   return StringPrintf(format, ui64);
 }
-

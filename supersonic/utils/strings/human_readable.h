@@ -80,7 +80,7 @@ class HumanReadableNumBytes {
 
 // See documentation at HumanReadableNumBytes::LessThan().
 struct humanreadablebytes_less
-    : public binary_function<const string&, const string&, bool> {
+    : public std::binary_function<const string&, const string&, bool> {
   bool operator()(const string& a, const string &b) const {
     return HumanReadableNumBytes::LessThan(a, b);
   }
@@ -88,7 +88,7 @@ struct humanreadablebytes_less
 
 // See documentation at HumanReadableNumBytes::LessThan().
 struct humanreadablebytes_greater
-    : public binary_function<const string&, const string&, bool> {
+    : public std::binary_function<const string&, const string&, bool> {
   bool operator()(const string& a, const string &b) const {
     return HumanReadableNumBytes::LessThan(b, a);
   }

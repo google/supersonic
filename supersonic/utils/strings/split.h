@@ -302,18 +302,6 @@ namespace strings {
 //   char* C-strings are not supported in Split2--use StringPiece instead).
 //
 
-// Definitions of the main Split() function.
-template <typename Delimiter>
-inline internal::Splitter<Delimiter> Split(StringPiece text, Delimiter d) {
-  return internal::Splitter<Delimiter>(text, d);
-}
-
-template <typename Delimiter, typename Predicate>
-inline internal::Splitter<Delimiter, Predicate> Split(
-    StringPiece text, Delimiter d, Predicate p) {
-  return internal::Splitter<Delimiter, Predicate>(text, d, p);
-}
-
 namespace delimiter {
 // A Delimiter object tells the splitter where a string should be broken. Some
 // examples are breaking a string wherever a given character or substring is
@@ -363,6 +351,13 @@ namespace delimiter {
 //   assert(v[1] == "b");
 //   assert(v[2] == "c");
 //
+// This is the *default* delimiter used if a literal string or string-like
+// object is used where a Delimiter object is expected. For example, the
+// following calls are equivalent.
+//
+//   vector<string> v = strings::Split("a,b", ",");
+//   vector<string> v = strings::Split("a,b", strings::delimiter::Literal(","));
+//
 class Literal {
  public:
   explicit Literal(StringPiece sp);
@@ -371,6 +366,26 @@ class Literal {
  private:
   const string delimiter_;
 };
+
+namespace internal {
+// A traits-like metafunction for selecting the default Delimiter object type
+// for a particular Delimiter type. The base case simply exposes type Delimiter
+// itself as the delimiter's Type. However, there are specializations for
+// string-like objects that map them to the Literal delimiter object. This
+// allows functions like strings::Split() and strings::delimiter::Limit() to
+// accept string-like objects (e.g., ",") as delimiter arguments but they will
+// be treated as if a Literal delimiter was given.
+template <typename Delimiter>
+struct SelectDelimiter {
+  typedef Delimiter Type;
+};
+template <> struct SelectDelimiter<const char*> { typedef Literal Type; };
+template <> struct SelectDelimiter<StringPiece> { typedef Literal Type; };
+template <> struct SelectDelimiter<std::string> { typedef Literal Type; };
+#if defined(HAS_GLOBAL_STRING)
+template <> struct SelectDelimiter<string> { typedef Literal Type; };
+#endif
+}  // namespace internal
 
 // Represents a delimiter that will match any of the given byte-sized
 // characters. AnyOf is similar to Literal, except that AnyOf uses
@@ -459,24 +474,12 @@ class LimitImpl {
   int count_;
 };
 
-// Overloaded Limit() function to create LimitImpl<> objects. Uses the Delimiter
-// Literal as the default if string-like objects are passed as the delimiter
-// parameter. This is similar to the overloads for Split() below.
+// Limit() function to create LimitImpl<> objects.
 template <typename Delimiter>
-inline LimitImpl<Delimiter> Limit(Delimiter delim, int limit) {
-  return LimitImpl<Delimiter>(delim, limit);
-}
-
-inline LimitImpl<Literal> Limit(const char* s, int limit) {
-  return LimitImpl<Literal>(Literal(s), limit);
-}
-
-inline LimitImpl<Literal> Limit(const string& s, int limit) {
-  return LimitImpl<Literal>(Literal(s), limit);
-}
-
-inline LimitImpl<Literal> Limit(StringPiece s, int limit) {
-  return LimitImpl<Literal>(Literal(s), limit);
+inline LimitImpl<typename internal::SelectDelimiter<Delimiter>::Type>
+  Limit(Delimiter delim, int limit) {
+  typedef typename internal::SelectDelimiter<Delimiter>::Type DelimiterType;
+  return LimitImpl<DelimiterType>(DelimiterType(delim), limit);
 }
 
 }  // namespace delimiter
@@ -524,57 +527,28 @@ struct SkipWhitespace {
   }
 };
 
-// Split() function overloads to effectively give Split() a default Delimiter
-// type of Literal. If Split() is called and a string is passed as the delimiter
-// instead of an actual Delimiter object, then one of these overloads will be
-// invoked and will create a Splitter<Literal> with the delimiter string.
-//
-// Since Split() is a function template above, these overload signatures need to
-// be explicit about the string type so they match better than the templated
-// version. These functions are overloaded for:
-//
-//   - const char*
-//   - const string&
-//   - StringPiece
-
-inline internal::Splitter<delimiter::Literal> Split(
-    StringPiece text, const char* delimiter) {
-  return internal::Splitter<delimiter::Literal>(
-      text, delimiter::Literal(delimiter));
+// Definitions of the main Split() function. The use of SelectDelimiter<> allows
+// these functions to be called with a Delimiter template paramter that is an
+// actual Delimiter object (e.g., Literal or AnyOf), OR called with a
+// string-like delimiter argument, (e.g., ","), in which case the delimiter used
+// will default to strings::delimiter::Literal.
+template <typename Delimiter>
+inline internal::Splitter<
+    typename delimiter::internal::SelectDelimiter<Delimiter>::Type>
+    Split(StringPiece text, Delimiter d) {
+  typedef typename delimiter::internal::SelectDelimiter<Delimiter>::Type
+      DelimiterType;
+  return internal::Splitter<DelimiterType>(text, DelimiterType(d));
 }
 
-inline internal::Splitter<delimiter::Literal> Split(
-    StringPiece text, const string& delimiter) {
-  return internal::Splitter<delimiter::Literal>(
-      text, delimiter::Literal(delimiter));
-}
-
-inline internal::Splitter<delimiter::Literal> Split(
-    StringPiece text, StringPiece delimiter) {
-  return internal::Splitter<delimiter::Literal>(
-      text, delimiter::Literal(delimiter));
-}
-
-// Same overloads as above, but also including a Predicate argument.
-template <typename Predicate>
-inline internal::Splitter<delimiter::Literal, Predicate> Split(
-    StringPiece text, const char* delimiter, Predicate p) {
-  return internal::Splitter<delimiter::Literal, Predicate>(
-      text, delimiter::Literal(delimiter), p);
-}
-
-template <typename Predicate>
-inline internal::Splitter<delimiter::Literal, Predicate> Split(
-    StringPiece text, const string& delimiter, Predicate p) {
-  return internal::Splitter<delimiter::Literal, Predicate>(
-      text, delimiter::Literal(delimiter), p);
-}
-
-template <typename Predicate>
-inline internal::Splitter<delimiter::Literal, Predicate> Split(
-    StringPiece text, StringPiece delimiter, Predicate p) {
-  return internal::Splitter<delimiter::Literal, Predicate>(
-      text, delimiter::Literal(delimiter), p);
+template <typename Delimiter, typename Predicate>
+inline internal::Splitter<
+    typename delimiter::internal::SelectDelimiter<Delimiter>::Type, Predicate>
+    Split(StringPiece text, Delimiter d, Predicate p) {
+  typedef typename delimiter::internal::SelectDelimiter<Delimiter>::Type
+      DelimiterType;
+  return internal::Splitter<DelimiterType, Predicate>(
+      text, DelimiterType(d), p);
 }
 
 }  // namespace strings
@@ -696,7 +670,6 @@ void SplitStringPieceToVector(const StringPiece& full,
 // SplitStringUsing()
 // SplitStringToHashsetUsing()
 // SplitStringToSetUsing()
-// SplitStringToMapUsing()
 // SplitStringToHashmapUsing()
 
 // Splits a string using one or more byte delimiters, presented as a
@@ -725,14 +698,12 @@ void SplitStringUsing(const string& full, const char* delimiters,
 void SplitStringToHashsetUsing(const string& full, const char* delimiters,
                                hash_set<string>* result);
 void SplitStringToSetUsing(const string& full, const char* delimiters,
-                           set<string>* result);
+                           std::set<string>* result);
 // The even-positioned (0-based) components become the keys for the
 // odd-positioned components that follow them. When there is an odd
 // number of components, the value for the last key will be unchanged
 // if the key was already present in the hash table, or will be the
 // empty string if the key is a newly inserted key.
-void SplitStringToMapUsing(const string& full, const char* delim,
-                           map<string, string>* result);
 void SplitStringToHashmapUsing(const string& full, const char* delim,
                                hash_map<string, string>* result);
 
@@ -785,7 +756,7 @@ void SplitStringWithEscapingAllowEmpty(const string& full,
                                        vector<string>* result);
 void SplitStringWithEscapingToSet(const string& full,
                                   const strings::CharSet& delimiters,
-                                  set<string>* result);
+                                  std::set<string>* result);
 void SplitStringWithEscapingToHashset(const string& full,
                                       const strings::CharSet& delimiters,
                                       hash_set<string>* result);
@@ -1080,7 +1051,7 @@ bool SplitStringIntoKeyValues(const string& line,
 bool SplitStringIntoKeyValuePairs(const string& line,
                                   const string& key_value_delimiters,
                                   const string& key_value_pair_delimiters,
-                                  vector<pair<string, string> >* kv_pairs);
+                                  vector<std::pair<string, string> >* kv_pairs);
 
 
 // ----------------------------------------------------------------------

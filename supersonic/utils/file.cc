@@ -210,7 +210,7 @@ int64 LocalFileImpl::Read(void* buffer, uint64 length) {
   uint64 bytes_read = 0;
   uint64 total_bytes_read = 0;
   do {
-    bytes_to_read = min(length-total_bytes_read, max_bytes_to_read);
+    bytes_to_read = std::min(length-total_bytes_read, max_bytes_to_read);
     bytes_read = fread(static_cast<char *>(buffer) + total_bytes_read, 1,
                        bytes_to_read, internal_file_);
     if (bytes_read < bytes_to_read && ferror(internal_file_)) {

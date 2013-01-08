@@ -376,8 +376,8 @@ struct DatumCopy<type, true, true> {
   // Can return false only if data being copied is of
   // variable-length type, deep copying is requested, and the destination arena
   // can't accommodate a copy of a variable-length data buffer.
-  bool operator()(const CPP_TYPE(type)& input,
-                  CPP_TYPE(type)* const output,
+  bool operator()(const StringPiece& input,
+                  StringPiece* const output,
                   Arena* const arena) {
     // For variable-length types cpp_type is StringPiece.
     const char* copy = arena->AddStringPieceContent(input);

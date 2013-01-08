@@ -42,7 +42,8 @@ using std::vector;
 #include "supersonic/base/infrastructure/types.h"
 #include "supersonic/base/infrastructure/types_infrastructure.h"
 #include "supersonic/base/infrastructure/variant_pointer.h"
-#include "supersonic/base/infrastructure/view_copier.h"
+#include "supersonic/cursor/infrastructure/row.h"
+#include "supersonic/cursor/infrastructure/row_copier.h"
 #include "supersonic/cursor/base/cursor.h"
 #include "supersonic/cursor/proto/cursors.pb.h"
 #include "supersonic/cursor/base/operation.h"
@@ -213,7 +214,8 @@ class AggregateClustersKeySet {
       : child_key_view_(group_by->result_schema()),
         key_projector_(group_by),
         indexed_block_(group_by->result_schema(), allocator),
-        indexed_block_row_count_(0) {
+        indexed_block_row_count_(0),
+        copier_(indexed_block_.schema(), true) {
     for (int i = 0; i < key_schema().attribute_count(); i++) {
       comparators_.push_back(
           CreateValueComparator(key_schema().attribute(i).type()));
@@ -259,6 +261,9 @@ class AggregateClustersKeySet {
   // comparator_[index] is used for index-th column comparison
   vector<const ValueComparatorInterface*> comparators_;
 
+  RowCopier<DirectRowSourceReader<RowSourceAdapter>,
+            DirectRowSourceWriter<RowSinkAdapter> > copier_;
+
   DISALLOW_COPY_AND_ASSIGN(AggregateClustersKeySet);
 };
 
@@ -287,26 +292,19 @@ bool AggregateClustersKeySet::GetIndexTable(const View& query,
                                             rowid_t* result) {
   DCHECK_GT(indexed_block_.row_capacity(), 0) << "Init() must be called first";
   DCHECK(query.schema().EqualByType(indexed_block_.schema()));
-  // TODO(user): use use row iterator and row copier, declared as instance
-  // variables.
-  ViewCopier copier(
-      query.schema(), indexed_block_.schema(), INPUT_SELECTOR, true);
-
   for (rowid_t i = 0; i < query.row_count(); ++i) row_diff_[i] = false;
   if (last_added_.get() == NULL) row_diff_[0] = true;
-
   for (int i = 0; i < query.column_count(); ++i)
     column_compare(query, last_added_.get(), i, all_equal, row_diff_);
 
   for (rowid_t row_id = 0; row_id < query.row_count(); row_id++) {
     if (row_diff_[row_id]) {
       // Copy query row into the index.
-      if (copier.Copy(
-          1,
-          query,
-          &row_id,
-          indexed_block_row_count_,
-          &indexed_block_) != 1)
+      DirectRowSourceWriter<RowSinkAdapter> writer;
+      RowSinkAdapter sink(&indexed_block_, indexed_block_row_count_);
+      DirectRowSourceReader<RowSourceAdapter> reader;
+      RowSourceAdapter source(query, row_id);
+      if (!copier_.Copy(reader, source, writer, &sink))
         return false;
       if (last_added_.get() == NULL) {
         last_added_.reset(new Row(&indexed_block_.view(), row_id));

@@ -31,11 +31,14 @@ using std::vector;
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/base/infrastructure/types.h"
 #include "supersonic/cursor/base/cursor.h"
+#include "supersonic/cursor/base/operation.h"
 #include "supersonic/cursor/proto/cursors.pb.h"
 #include "supersonic/cursor/core/generate.h"
 #include "supersonic/cursor/infrastructure/basic_cursor.h"
+#include "supersonic/cursor/infrastructure/basic_operation.h"
 #include "supersonic/cursor/infrastructure/iterators.h"
 #include "supersonic/utils/pointer_vector.h"
+#include "supersonic/utils/stl_util.h"
 
 namespace supersonic {
 
@@ -104,6 +107,33 @@ ResultView CoalesceCursor::Next(rowcount_t max_row_count) {
   return ResultView::Success(my_view());
 }
 
+class CoalesceOperation : public BasicOperation {
+ public:
+  virtual ~CoalesceOperation() {}
+
+  explicit CoalesceOperation(const vector<Operation*>& children)
+      : BasicOperation(children) {}
+
+  virtual FailureOrOwned<Cursor> CreateCursor() const {
+    vector<Cursor*> child_cursors(children_count());
+    ElementDeleter child_cursors_deleter(&child_cursors);
+    for (int i = 0; i < children_count(); ++i) {
+      FailureOrOwned<Cursor> child_cursor = child_at(i)->CreateCursor();
+      PROPAGATE_ON_FAILURE(child_cursor);
+      child_cursors[i] = child_cursor.release();
+    }
+    FailureOrOwned<Cursor> cursor = BoundCoalesce(child_cursors);
+    PROPAGATE_ON_FAILURE(cursor);
+    // CoalesceCursor took ownership, so prevent child_cursors_delete
+    // to delete them.
+    child_cursors.clear();
+    return Success(cursor.release());
+  }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(CoalesceOperation);
+};
+
 }  // namespace
 
 FailureOrOwned<Cursor> BoundCoalesce(const vector<Cursor*>& children) {
@@ -127,6 +157,10 @@ FailureOrOwned<Cursor> BoundCoalesce(const vector<Cursor*>& children) {
       all_attributes_projector.Bind(child_schemas);
   PROPAGATE_ON_FAILURE(bound_projector);
   return Success(new CoalesceCursor(children, bound_projector.release()));
+}
+
+Operation* Coalesce(const vector<Operation*>& children) {
+  return new CoalesceOperation(children);
 }
 
 }  // namespace supersonic

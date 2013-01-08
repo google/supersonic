@@ -43,6 +43,7 @@ using std::vector;
 #include "supersonic/expression/infrastructure/expression_utils.h"
 #include "supersonic/testing/comparable_tuple_schema.h"
 #include "supersonic/testing/comparators.h"
+#include "supersonic/testing/repeating_block.h"
 #include "supersonic/utils/strings/join.h"
 #include "supersonic/utils/strings/numbers.h"
 #include "supersonic/utils/strings/stringpiece.h"
@@ -134,24 +135,6 @@ const Expression* CreateTestedExpression(SenaryExpressionCreator factory) {
   return (*factory)(AttributeAt(0), AttributeAt(1),
                     AttributeAt(2), AttributeAt(3),
                     AttributeAt(4), AttributeAt(5));
-}
-
-// Create a block of given size filled cyclically with rows from input_block.
-Block* ReplicateBlock(const Block& input_block, rowcount_t output_size,
-                      BufferAllocator* allocator) {
-  const TupleSchema& schema = input_block.view().schema();
-  scoped_ptr<Block> block(new Block(schema, allocator));
-  block->Reallocate(output_size);
-  vector<rowid_t> input_row_selector;
-  input_row_selector.reserve(output_size);
-  for (rowid_t i = 0; i < output_size; ++i) {
-    input_row_selector.push_back(i % input_block.row_capacity());
-  }
-  ViewCopier view_copier(schema, schema, INPUT_SELECTOR, true);
-  rowcount_t copied = view_copier.Copy(output_size, input_block.view(),
-                                       &input_row_selector[0], 0, block.get());
-  CHECK_EQ(output_size, copied);
-  return block.release();
 }
 
 BufferAllocator* CreateAligningHeapBufferAllocator() {

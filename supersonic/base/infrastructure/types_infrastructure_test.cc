@@ -23,8 +23,8 @@ using std::string;
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/base/exception/result.h"
+#include "supersonic/base/infrastructure/operators.h"
 #include "gtest/gtest.h"
-#include "supersonic/utils/hash/murmur.h"
 
 namespace supersonic {
 
@@ -484,7 +484,7 @@ TEST_F(HasherTest, ShouldHashIntegers) {
 }
 
 inline size_t HashString(const StringPiece& s) {
-  return util_hash::MurmurHash64(s.data(), s.length());
+  return operators::MurmurHash64(s.data(), s.length());
 }
 
 TEST_F(HasherTest, ShouldHashStrings) {

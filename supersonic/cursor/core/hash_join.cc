@@ -266,7 +266,7 @@ class HashJoinCursor : public Cursor {
   Block lhs_result_;
 
   // Copies matched rows from lhs input into lhs_result_ wrt its projector.
-  ViewCopier lhs_result_copier_;
+  SelectiveViewCopier lhs_result_copier_;
 
   // Projector that sets result_view over final result data from lhs and rhs
   // input - over (lhs_result_, rhs_result.view()) pair; see below.
@@ -377,7 +377,7 @@ HashJoinCursor::HashJoinCursor(
       lhs_key_selector_(lhs_key_selector),
       lhs_result_projector_(result_projector.GetSingleSourceProjector(0)),
       lhs_result_(lhs_result_projector_.result_schema(), allocator),
-      lhs_result_copier_(&lhs_result_projector_, INPUT_SELECTOR, false),
+      lhs_result_copier_(&lhs_result_projector_, false),
       result_view_(result_projector.result_schema()),
       lookup_query_(lhs_key_selector_->result_schema()) {
   DCHECK(lhs_key_selector_->source_schema().EqualByType(lhs->schema()));
@@ -670,7 +670,7 @@ class HashIndexOnMaterializedCursor<key_uniqueness>::ResultCursor
   // A view over the result returned to the caller.
   LookupIndexView result_view_;
   // Copies matched rows from index_ into result.
-  ViewCopier index_copier_;
+  SelectiveViewCopier index_copier_;
 
   // The result of a lookup to index_. It contains ids of all rows in the index
   // that match query_.
@@ -724,9 +724,9 @@ ResultCursor(
       result_block_(result_block),
       result_view_(result_block->schema(), query_ids),
       // Shallow copy is safe because index_ outlives ResultCursor.
-      index_copier_(
-          index_.indexed_view().schema(), result_block->schema(),
-          INPUT_SELECTOR, false),
+      index_copier_(index_.indexed_view().schema(),
+                    result_view_.schema(),
+                    false),
       find_result_(Cursor::kDefaultRowCount),
       query_row_id_(0) {
   DCHECK(result_block_->schema().EqualByType(index_.indexed_view().schema()));

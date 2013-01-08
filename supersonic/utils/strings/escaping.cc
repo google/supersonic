@@ -1537,7 +1537,7 @@ bool Base32HexEscape(const string& src, string* dest) {
 }
 
 int CalculateBase32EscapedLen(size_t input_len) {
-  DCHECK_LE(input_len, numeric_limits<size_t>::max() / 8);
+  DCHECK_LE(input_len, std::numeric_limits<size_t>::max() / 8);
   size_t intermediate_result = 8 * input_len + 4;
   size_t len = intermediate_result / 5;
   len = (len + 7) & ~7;

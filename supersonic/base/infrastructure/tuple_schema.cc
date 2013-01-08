@@ -15,8 +15,6 @@
 
 #include "supersonic/base/infrastructure/tuple_schema.h"
 
-#include "supersonic/base/infrastructure/types.h"
-
 namespace supersonic {
 
 bool TupleSchema::CanMerge(const TupleSchema& a, const TupleSchema& b) {
@@ -56,6 +54,7 @@ FailureOr<TupleSchema> TupleSchema::TryMerge(const TupleSchema& a,
 }
 
 bool TupleSchema::EqualByType(const TupleSchema& other) const {
+  if (rep_.get() == other.rep_.get()) return true;
   if (attribute_count() != other.attribute_count())
     return false;
   for (int i = 0; i < attribute_count(); ++i) {
@@ -65,7 +64,7 @@ bool TupleSchema::EqualByType(const TupleSchema& other) const {
   return true;
 }
 
-string TupleSchema::GetHumanReadableSpecification() const {
+string TupleSchema::Rep::GetHumanReadableSpecification() const {
   string result;
   for (int i = 0; i < attribute_count(); ++i) {
     if (i > 0) result += ", ";

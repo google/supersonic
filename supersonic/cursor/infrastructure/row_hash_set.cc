@@ -278,7 +278,7 @@ class RowHashSetImpl {
   // using last_row_id_ and prev_row_id_.
   Table index_;
 
-  TableRowAppender<ViewRowIterator> index_appender_;
+  TableRowAppender<DirectRowSourceReader<ViewRowIterator> > index_appender_;
 
   // View over the index's key columns. Contains keys of all the rows inserted
   // into the index.

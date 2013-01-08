@@ -133,8 +133,7 @@ class ViewCursorWithSelectionVector : public BasicCursor {
         selection_vector_(selection_vector),
         row_count_(row_count),
         read_pointer_(0),
-        copier_(view.schema(), view.schema(), INPUT_SELECTOR,
-                /* deep_copy = */ false) {
+        copier_(view.schema(), /* deep_copy = */ false) {
     source_view_.ResetFrom(view);
   }
 
@@ -153,7 +152,7 @@ class ViewCursorWithSelectionVector : public BasicCursor {
   const rowid_t* const selection_vector_;
   const rowcount_t row_count_;
   rowcount_t read_pointer_;
-  ViewCopier copier_;
+  SelectiveViewCopier copier_;
 
   DISALLOW_COPY_AND_ASSIGN(ViewCursorWithSelectionVector);
 };

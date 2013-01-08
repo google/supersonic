@@ -70,8 +70,7 @@ class ForeignFilterCursor : public BasicCursor {
         input_foreign_key_column_(input_foreign_key_column),
         nonkey_input_projector_(nonkey_input_projector),
         result_projector_(result_projector),
-        input_copier_(nonkey_input_projector_.get(),
-                         INPUT_SELECTOR, false),
+        input_copier_(nonkey_input_projector_.get(), false),
         filter_(filter),
         input_(input),
         input_indirector_(
@@ -182,7 +181,7 @@ class ForeignFilterCursor : public BasicCursor {
   const int input_foreign_key_column_;
   scoped_ptr<const BoundSingleSourceProjector> nonkey_input_projector_;
   scoped_ptr<const BoundMultiSourceProjector> result_projector_;
-  ViewCopier input_copier_;
+  SelectiveViewCopier input_copier_;
   CursorIterator filter_;
   CursorIterator input_;
   Block input_indirector_;

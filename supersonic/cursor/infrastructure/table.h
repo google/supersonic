@@ -30,6 +30,7 @@
 #include "supersonic/base/infrastructure/types_infrastructure.h"
 #include "supersonic/base/infrastructure/view_copier.h"
 #include "supersonic/cursor/infrastructure/basic_operation.h"
+#include "supersonic/cursor/infrastructure/row.h"
 #include "supersonic/cursor/infrastructure/row_copier.h"
 #include "supersonic/cursor/infrastructure/writer.h"
 #include "supersonic/proto/supersonic.pb.h"
@@ -151,7 +152,7 @@ class Table : public BasicOperation {
   }
 
  private:
-  template<typename ConstRow> friend class TableRowAppender;
+  template<typename RowReader> friend class TableRowAppender;
 
   bool Reallocate(rowcount_t new_capacity) {
     bool result = block_->Reallocate(new_capacity);
@@ -164,28 +165,35 @@ class Table : public BasicOperation {
 
   scoped_ptr<Block> block_;
   View view_;
-  ViewCopier view_copier_no_selector_;
+  ViewCopier view_copier_;
   DISALLOW_COPY_AND_ASSIGN(Table);
 };
 
-template<typename ConstRow>
+template<typename RowReader>
 class TableRowAppender {
  public:
   // Creates a new appender for the specified table. Normally, deep_copy
   // should be true, unless it's guaranteed that all variable-length attributes
   // (strings, binary) added to the table via this appender will remain valid
   // for the lifetime of the table.
-  TableRowAppender(Table* table, bool deep_copy)
+  TableRowAppender(
+      Table* table,
+      bool deep_copy,
+      const RowReader& reader = RowReader::Default())
       : table_(table),
+        reader_(reader),
         copier_(table->schema(), deep_copy) {}
-  bool AppendRow(const ConstRow& row) {
+  bool AppendRow(const typename RowReader::ValueType& row) {
     int64 row_id = table_->AddRow();
     if (row_id < 0) return false;
-    return copier_.Copy(row, row_id, table_->block());
+    DirectRowSourceWriter<RowSinkAdapter> writer;
+    RowSinkAdapter sink(table_->block(), row_id);
+    return copier_.Copy(reader_, row, writer, &sink);
   }
  private:
   Table* table_;
-  RowCopier<ConstRow> copier_;
+  const RowReader& reader_;
+  RowCopier<RowReader, DirectRowSourceWriter<RowSinkAdapter> > copier_;
 };
 
 // A convenience class to fill a table programatically, row-by-row,

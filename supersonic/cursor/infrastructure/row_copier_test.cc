@@ -50,8 +50,14 @@ TEST_F(RowCopierTest, RowCopierSimpleCopy) {
                           AddRow(2, "e", "f").
                           Build());
   scoped_ptr<Block> output(CreateOutputBlock(10));
-  RowCopier<RowAdapter> copier(output->schema(), true);
-  EXPECT_EQ(true, copier.Copy(RowAdapter(input->view(), 2), 7, output.get()));
+  RowCopier<
+      DirectRowSourceReader<RowSourceAdapter>,
+      DirectRowSourceWriter<RowSinkAdapter> > copier(output->schema(), true);
+  DirectRowSourceReader<RowSourceAdapter> reader;
+  DirectRowSourceWriter<RowSinkAdapter> writer;
+  RowSourceAdapter source(input->view(), 2);
+  RowSinkAdapter sink(output.get(), 7);
+  EXPECT_EQ(true, copier.Copy(reader, source, writer, &sink));
   View expected(input->view(), 2, 1);
   View observed(output->view(), 7, 1);
   EXPECT_VIEWS_EQUAL(expected, observed);
@@ -73,8 +79,14 @@ TEST_F(RowCopierTest, ViewCopierCopyAlongProjection) {
   Block output(projector.result_schema(), HeapBufferAllocator::Get());
   CHECK(output.Reallocate(10));
 
-  RowCopierWithProjector<RowAdapter> copier(&projector, true);
-  EXPECT_EQ(true, copier.Copy(RowAdapter(input->view(), 2), 7, &output));
+  RowCopierWithProjector<
+      DirectRowSourceReader<RowSourceAdapter>,
+      DirectRowSourceWriter<RowSinkAdapter> > copier(&projector, true);
+  DirectRowSourceReader<RowSourceAdapter> reader;
+  DirectRowSourceWriter<RowSinkAdapter> writer;
+  RowSourceAdapter source(input->view(), 2);
+  RowSinkAdapter sink(&output, 7);
+  EXPECT_EQ(true, copier.Copy(reader, source, writer, &sink));
   View projected_input(output.schema());
   projector.Project(input->view(), &projected_input);
   projected_input.set_row_count(3);
@@ -102,11 +114,19 @@ TEST_F(RowCopierTest, MultiViewCopierCopyAlongProjection) {
   Block output(projector.result_schema(), HeapBufferAllocator::Get());
   CHECK(output.Reallocate(10));
 
-  MultiRowCopier<RowAdapter> copier(&projector, true);
-  RowAdapter row(input->view(), 2);
+  MultiRowCopier<
+      DirectRowSourceReader<RowSourceAdapter>,
+      DirectRowSourceWriter<RowSinkAdapter> > copier(&projector, true);
+  DirectRowSourceReader<RowSourceAdapter> reader;
+  DirectRowSourceWriter<RowSinkAdapter> writer;
+  RowSourceAdapter source(input->view(), 2);
+  RowSinkAdapter sink(&output, 7);
   EXPECT_EQ(true, copier.Copy(
-      util::gtl::Container(&row, &row).As<vector<const RowAdapter*> >(),
-      7, &output));
+      util::gtl::Container(&reader, &reader).
+          As<vector<const DirectRowSourceReader<RowSourceAdapter>*> >(),
+      util::gtl::Container(&source, &source).
+          As<vector<const RowSourceAdapter*> >(),
+      writer, &sink));
 
   // Set up a view over input block's 3rd and 2nd column.
   View projected_input(output.schema());

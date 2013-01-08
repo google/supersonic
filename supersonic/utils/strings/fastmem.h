@@ -72,17 +72,15 @@ inline int fastmemcmp_inlined(const char *a, const char *b, size_t n) {
     return memcmp(a, b, n);
   }
   const char* a_limit = a + n;
-  const size_t sizeof_uint64 = sizeof(uint64);  // NOLINT(runtime/sizeof)
-  while (a + sizeof_uint64 <= a_limit &&
+  while (a + sizeof(uint64) <= a_limit &&
          UNALIGNED_LOAD64(a) == UNALIGNED_LOAD64(b)) {
-    a += sizeof_uint64;
-    b += sizeof_uint64;
+    a += sizeof(uint64);
+    b += sizeof(uint64);
   }
-  const size_t sizeof_uint32 = sizeof(uint32);  // NOLINT(runtime/sizeof)
-  if (a + sizeof_uint32 <= a_limit &&
+  if (a + sizeof(uint32) <= a_limit &&
       UNALIGNED_LOAD32(a) == UNALIGNED_LOAD32(b)) {
-    a += sizeof_uint32;
-    b += sizeof_uint32;
+    a += sizeof(uint32);
+    b += sizeof(uint32);
   }
   while (a < a_limit) {
     int d = static_cast<uint32>(*a++) - static_cast<uint32>(*b++);

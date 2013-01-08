@@ -995,7 +995,7 @@ void FindShortestSeparator(const StringPiece& start,
                            const StringPiece& limit,
                            string* separator) {
   // Find length of common prefix
-  size_t min_length = min(start.size(), limit.size());
+  size_t min_length = std::min(start.size(), limit.size());
   size_t diff_index = 0;
   while ((diff_index < min_length) &&
          (start[diff_index] == limit[diff_index])) {

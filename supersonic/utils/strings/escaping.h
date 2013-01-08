@@ -4,12 +4,6 @@
 // This is a grab-bag file for string utilities involved in escaping and
 // unescaping strings in various ways. Who knew there were so many?
 //
-// NOTE: Although the functions declared here have been imported into
-// the global namespace, the using statements are slated for removal.
-// Do not refer to these symbols without properly namespace-qualifying
-// them with "strings::". Of course you may also use "using" statements
-// within a .cc file.
-//
 // There are more escaping functions in:
 //   webutil/html/tagutils.h (Escaping strings for HTML, PRE, JavaScript, etc.)
 //   webutil/url/url.h (Escaping for URL's, both RFC-2396 and other methods)
@@ -253,8 +247,8 @@ inline string BackslashUnescape(const StringPiece& src,
 
 // ----------------------------------------------------------------------
 // QuotedPrintableUnescape()
-//    Check out http://www.cis.ohio-state.edu/htbin/rfc/rfc2045.html for
-//    more details, only briefly implemented. But from the web...
+//    Check out http://www.ietf.org/rfc/rfc2045.txt for more details,
+//    only briefly implemented. But from the web...
 //    Quoted-printable is an encoding method defined in the MIME
 //    standard. It is used primarily to encode 8-bit text (such as text
 //    that includes foreign characters) into 7-bit US ASCII, creating a
@@ -627,23 +621,5 @@ void CleanStringLineEndings(const string& src, string* dst,
 void CleanStringLineEndings(string* str, bool auto_end_last_line);
 
 }  // namespace strings
-
-// The following functions used to be defined in strutil.h in the top-level
-// namespace, so we alias them here. Do not add new functions here.
-//
-//             Talk to him if you want to help.
-//
-// DEPRECATED(mec): Using these names in the global namespace is deprecated.
-// Use the strings:: names.
-
-using strings::CEscape;
-using strings::CHexEscape;
-using strings::Base64Unescape;
-using strings::WebSafeBase64Unescape;
-using strings::Base64Escape;
-using strings::WebSafeBase64Escape;
-using strings::a2b_hex;
-using strings::b2a_hex;
-using strings::ByteStringToAscii;
 
 #endif  // STRINGS_ESCAPING_H_

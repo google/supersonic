@@ -1,201 +1,83 @@
-// Copyright 2011 Google Inc. All Rights Reserved.
+// Copyright 2009 Google Inc. All Rights Reserved.
 //
-// This is the legacy unified hash library implementation. Its components are
-// being split up into smaller, dedicated libraries. What remains here are
-// things still being migrated.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// To find the implementation of the core Bob Jenkins lookup2 hash, look in
-// jenkins.cc.
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "supersonic/utils/hash/hash.h"
 
-#include "supersonic/utils/integral_types.h"
-#include <glog/logging.h>
-#include "supersonic/utils/logging-inl.h"
-#include "supersonic/utils/hash/jenkins.h"
-#include "supersonic/utils/hash/jenkins_lookup2.h"
+static const uint32 kPrimes32[16] = {
+  65537, 65539, 65543, 65551, 65557, 65563, 65579, 65581,
+  65587, 65599, 65609, 65617, 65629, 65633, 65647, 65651,
+};
 
-// For components that ship code externally (notably the Google Search
-// Appliance) we want to change the fingerprint function so that
-// attackers cannot mount offline attacks to find collisions with
-// google.com internal fingerprints (most importantly, for URL
-// fingerprints).
-#ifdef GOOGLECLIENT
-#error Do not compile this into binaries that we deliver to users!
-#error Instead, use
-#endif
-#ifdef EXTERNAL_FP
-static const uint32 kFingerprintSeed0 = 0xabc;
-static const uint32 kFingerprintSeed1 = 0xdef;
-#else
-static const uint32 kFingerprintSeed0 = 0;
-static const uint32 kFingerprintSeed1 = 102072;
-#endif
+static const uint64 kPrimes64[] = {
+  GG_ULONGLONG(4294967311), GG_ULONGLONG(4294967357),
+  GG_ULONGLONG(4294967371), GG_ULONGLONG(4294967377),
+  GG_ULONGLONG(4294967387), GG_ULONGLONG(4294967389),
+  GG_ULONGLONG(4294967459), GG_ULONGLONG(4294967477),
+  GG_ULONGLONG(4294967497), GG_ULONGLONG(4294967513),
+  GG_ULONGLONG(4294967539), GG_ULONGLONG(4294967543),
+  GG_ULONGLONG(4294967549), GG_ULONGLONG(4294967561),
+  GG_ULONGLONG(4294967563), GG_ULONGLONG(4294967569)
+};
 
-static inline uint32 char2unsigned(char c) {
-  return static_cast<uint32>(static_cast<unsigned char>(c));
+uint32 Hash32StringWithSeedReferenceImplementation(const char *s, uint32 len,
+                                                   uint32 seed) {
+  uint32 n = seed;
+  size_t prime1 = 0, prime2 = 8;  // Indices into kPrimes32
+  union {
+    uint16 n;
+    char bytes[sizeof(uint16)];  // NOLINT
+  } chunk;
+  for (const char *i = s, *const end = s + len; i != end; ) {
+    chunk.bytes[0] = *i++;
+    chunk.bytes[1] = i == end ? 0 : *i++;
+    n = n * kPrimes32[prime1++] ^ chunk.n * kPrimes32[prime2++];
+    prime1 &= 0x0F;
+    prime2 &= 0x0F;
+  }
+  return n;
 }
 
-static inline uint64 char2unsigned64(char c) {
-  return static_cast<uint64>(static_cast<unsigned char>(c));
+uint32 Hash32StringWithSeed(const char *s, uint32 len, uint32 c) {
+  return Hash32StringWithSeedReferenceImplementation(s, len, c);
+}
+
+uint64 Hash64StringWithSeed(const char *s, uint32 len, uint64 seed) {
+  uint64 n = seed;
+  size_t prime1 = 0, prime2 = 8;  // Indices into kPrimes64
+  union {
+    uint32 n;
+    char bytes[sizeof(uint32)];  // NOLINT
+  } chunk;
+  for (const char *i = s, *const end = s + len; i != end; ) {
+    chunk.bytes[0] = *i++;
+    chunk.bytes[1] = i == end ? 0 : *i++;
+    chunk.bytes[2] = i == end ? 0 : *i++;
+    chunk.bytes[3] = i == end ? 0 : *i++;
+    n = n * kPrimes64[prime1++] ^ chunk.n * kPrimes64[prime2++];
+    prime1 &= 0x0F;
+    prime2 &= 0x0F;
+  }
+  return n;
 }
 
 uint64 FingerprintReferenceImplementation(const char *s, uint32 len) {
-  uint32 hi = Hash32StringWithSeed(s, len, kFingerprintSeed0);
-  uint32 lo = Hash32StringWithSeed(s, len, kFingerprintSeed1);
-  return CombineFingerprintHalves(hi, lo);
+  return Hash64StringWithSeed(s, len, 42);
 }
 
-// This is a faster version of FingerprintReferenceImplementation(),
-// making use of the fact that we're hashing the same string twice.
-// The code is tedious to read, but it's just two interleaved copies of
-// Hash32StringWithSeed().
-uint64 FingerprintInterleavedImplementation(const char *s, uint32 len) {
-  uint32 a, b, c = kFingerprintSeed0, d, e, f = kFingerprintSeed1;
-  uint32 keylen;
-
-  a = b = d = e = 0x9e3779b9UL;   // the golden ratio; an arbitrary value
-
-  keylen = len;
-  if (keylen >= 4 * sizeof(a)) {
-    uint32 word32AtOffset0 = Google1At(s);
-    do {
-      a += word32AtOffset0;
-      d += word32AtOffset0;
-      b += Google1At(s + sizeof(a));
-      e += Google1At(s + sizeof(a));
-      c += Google1At(s + sizeof(a) * 2);
-      f += Google1At(s + sizeof(a) * 2);
-      s += 3 * sizeof(a);
-      word32AtOffset0 = Google1At(s);
-      mix(a, b, c);
-      mix(d, e, f);
-      keylen -= 3 * static_cast<uint32>(sizeof(a));
-    } while (keylen >= 4 * sizeof(a));
-    if (keylen >= 3 * sizeof(a)) {
-      a += word32AtOffset0;
-      d += word32AtOffset0;
-      b += Google1At(s + sizeof(a));
-      e += Google1At(s + sizeof(a));
-      c += Google1At(s + sizeof(a) * 2);
-      f += Google1At(s + sizeof(a) * 2);
-      s += 3 * sizeof(a);
-      mix(a, b, c);
-      mix(d, e, f);
-      keylen -= 3 * static_cast<uint32>(sizeof(a));
-      DCHECK_LT(keylen, sizeof(a));
-      c += len;
-      f += len;
-      switch ( keylen ) {           // deal with rest.  Cases fall through
-        case 3 :
-          a += char2unsigned(s[2]) << 16;
-          d += char2unsigned(s[2]) << 16;
-        case 2 :
-          a += char2unsigned(s[1]) << 8;
-          d += char2unsigned(s[1]) << 8;
-        case 1 :
-          a += char2unsigned(s[0]);
-          d += char2unsigned(s[0]);
-      }
-    } else {
-      DCHECK(sizeof(a) <= keylen && keylen < 3 * sizeof(a));
-      c += len;
-      f += len;
-      switch ( keylen ) {           // deal with rest.  Cases fall through
-        case 11:
-          c += char2unsigned(s[10]) << 24;
-          f += char2unsigned(s[10]) << 24;
-        case 10:
-          c += char2unsigned(s[9]) << 16;
-          f += char2unsigned(s[9]) << 16;
-        case 9 :
-          c += char2unsigned(s[8]) << 8;
-          f += char2unsigned(s[8]) << 8;
-        case 8 :
-          b += Google1At(s+4);  a += word32AtOffset0;
-          e += Google1At(s+4);  d += word32AtOffset0;
-          break;
-        case 7 :
-          b += char2unsigned(s[6]) << 16;
-          e += char2unsigned(s[6]) << 16;
-        case 6 :
-          b += char2unsigned(s[5]) << 8;
-          e += char2unsigned(s[5]) << 8;
-        case 5 :
-          b += char2unsigned(s[4]);
-          e += char2unsigned(s[4]);
-        case 4 :
-          a += word32AtOffset0;
-          d += word32AtOffset0;
-      }
-    }
-  } else {
-    if (keylen >= 3 * sizeof(a)) {
-      a += Google1At(s);
-      d += Google1At(s);
-      b += Google1At(s + sizeof(a));
-      e += Google1At(s + sizeof(a));
-      c += Google1At(s + sizeof(a) * 2);
-      f += Google1At(s + sizeof(a) * 2);
-      s += 3 * sizeof(a);
-      mix(a, b, c);
-      mix(d, e, f);
-      keylen -= 3 * static_cast<uint32>(sizeof(a));
-    }
-    c += len;
-    f += len;
-    switch ( keylen ) {           // deal with rest.  Cases fall through
-      case 11:
-        c += char2unsigned(s[10]) << 24;
-        f += char2unsigned(s[10]) << 24;
-      case 10:
-        c += char2unsigned(s[9]) << 16;
-        f += char2unsigned(s[9]) << 16;
-      case 9 :
-        c += char2unsigned(s[8]) << 8;
-        f += char2unsigned(s[8]) << 8;
-      case 8 :
-        b += Google1At(s+4);  a += Google1At(s);
-        e += Google1At(s+4);  d += Google1At(s);
-        break;
-      case 7 :
-        b += char2unsigned(s[6]) << 16;
-        e += char2unsigned(s[6]) << 16;
-      case 6 :
-        b += char2unsigned(s[5]) << 8;
-        e += char2unsigned(s[5]) << 8;
-      case 5 :
-        b += char2unsigned(s[4]);
-        e += char2unsigned(s[4]);
-      case 4 :
-        a += Google1At(s);
-        d += Google1At(s);
-        break;
-      case 3 :
-        a += char2unsigned(s[2]) << 16;
-        d += char2unsigned(s[2]) << 16;
-      case 2 :
-        a += char2unsigned(s[1]) << 8;
-        d += char2unsigned(s[1]) << 8;
-      case 1 :
-        a += char2unsigned(s[0]);
-        d += char2unsigned(s[0]);
-    }
-  }
-  mix(a, b, c);
-  mix(d, e, f);
-  return CombineFingerprintHalves(c, f);
+uint64 Fingerprint(const char *s, uint32 len) {
+  return FingerprintReferenceImplementation(s, len);
 }
 
-// Extern template definitions.
 
-#if defined(__GNUC__)
-#include <ext/hash_set>
-namespace __gnu_cxx {
 
-template class hash_set<string>;
-template class hash_map<string, string>;
-
-}  // namespace __gnu_cxx
-
-#endif

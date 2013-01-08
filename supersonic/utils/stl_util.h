@@ -244,8 +244,7 @@ inline void STLAssignToVectorChar(vector<char>* vec,
   STLAssignToVector(vec, ptr, n);
 }
 
-// A struct that mirrors the GCC4 implementation of a string. See:
-// /usr/crosstool/v8/gcc-4.1.0-glibc-2.2.2/i686-unknown-linux-gnu/include/c++/4.1.0/ext/sso_string_base.h
+// A struct that mirrors the crosstool v16 implementation of a string.
 struct InternalStringRepGCC4 {
   char*  _M_data;
   size_t _M_string_length;
@@ -315,7 +314,7 @@ inline void STLAppendToString(string* str, const char* ptr, size_t n) {
 
 template<typename T, typename Allocator>
 inline T* vector_as_array(vector<T, Allocator>* v) {
-# ifdef NDEBUG
+# if defined NDEBUG && !defined _GLIBCXX_DEBUG
   return &*v->begin();
 # else
   return v->empty() ? NULL : &*v->begin();
@@ -324,7 +323,7 @@ inline T* vector_as_array(vector<T, Allocator>* v) {
 
 template<typename T, typename Allocator>
 inline const T* vector_as_array(const vector<T, Allocator>* v) {
-# ifdef NDEBUG
+# if defined NDEBUG && !defined _GLIBCXX_DEBUG
   return &*v->begin();
 # else
   return v->empty() ? NULL : &*v->begin();

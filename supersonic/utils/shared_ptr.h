@@ -83,9 +83,9 @@
 // Use the std version for MSVC 2010 or later.
 #include <memory>
 
-using std::shared_ptr;
-using std::weak_ptr;
-using std::enable_shared_from_this;
+using std::shared_ptr;  // NOLINT(build/c++11)
+using std::weak_ptr;  // NOLINT(build/c++11)
+using std::enable_shared_from_this;  // NOLINT(build/c++11)
 
 #else
 

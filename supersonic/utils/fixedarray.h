@@ -19,6 +19,17 @@
 #define UTIL_GTL_FIXEDARRAY_H__
 
 #include <stddef.h>
+#include <algorithm>
+using std::copy;
+using std::max;
+using std::min;
+using std::reverse;
+using std::sort;
+using std::swap;
+#include <iterator>
+using std::back_insert_iterator;
+using std::iterator_traits;
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
@@ -73,6 +84,11 @@ class FixedArray {
   // Non-POD types will be default-initialized just like regular vectors or
   // arrays.
   explicit FixedArray(size_type n);
+
+  // Creates an array initialized with the elements from the input
+  // range. The size will always be "std::distance(first, last)".
+  template <typename ForwardIterator>
+  FixedArray(ForwardIterator first, ForwardIterator last);
 
   // Releases any resources.
   ~FixedArray();
@@ -159,6 +175,24 @@ inline FixedArray<T, S>::FixedArray(typename FixedArray<T, S>::size_type n)
     }
   }
 }
+
+template <class T, ssize_t S>
+template <typename ForwardIterator>
+inline FixedArray<T, S>::FixedArray(ForwardIterator first, ForwardIterator last)
+    : size_(std::distance(first, last)),
+      array_((size_ <= kInlineElements
+              ? reinterpret_cast<InnerContainer*>(inline_space_)
+              : new InnerContainer[size_])) {
+  // Construct only the elements actually used.
+  if (array_ == reinterpret_cast<InnerContainer*>(inline_space_)) {
+    for (size_type i = 0; i < size_; ++i) {
+      inline_space_[i].Init();
+    }
+  }
+
+  std::copy(first, last, begin());
+}
+
 
 template <class T, ssize_t S>
 inline FixedArray<T, S>::~FixedArray() {

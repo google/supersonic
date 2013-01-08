@@ -158,8 +158,10 @@ std::pair<ForwardIter, ForwardIter> minmax_element(ForwardIter first,
 
   if (first != last) {
     max = first;
-    if (comp(*max, *min))
+    if (comp(*max, *min)) {
+      using std::swap;
       swap(min, max);
+    }
     ++first;
   }
 
@@ -333,6 +335,7 @@ ForwardIterator unique_partition(ForwardIterator first, ForwardIterator last,
     // result, then extend the range and swap this element into it.
     // Otherwise just continue incrementing 'first'.
     if (!eq(*result, *first)) {
+      using std::swap;
       swap(*++result, *first);
     }
   }

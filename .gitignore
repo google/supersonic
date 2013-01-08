@@ -7,6 +7,22 @@
 
 # Binaries
 supersonic_unittest
+operation_example
+supersonic_guidetest
+test_base_exception
+test_base_infrastructure
+test_base_memory
+test_benchmark_dot
+test_benchmark_infrastructure
+test_benchmark_manager
+test_cursor_base
+test_cursor_core
+test_cursor_infrastructure
+test_expression_core
+test_expression_infrastructure
+test_expression_templated
+test_expression_vector
+*.dot
 
 # Autotools generated files
 Makefile

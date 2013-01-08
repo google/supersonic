@@ -55,6 +55,7 @@ class CopyColumnTest : public testing::Test {
     ColumnCopier copy_column_func = ResolveCopyColumnFunction(
         schema_.attribute(0).type(),
         schema_.attribute(1).nullability(),
+        schema_.attribute(1).nullability(),
         row_selector_type,
         deep_copy);
     const rowcount_t result = copy_column_func(
@@ -182,40 +183,6 @@ TEST_F(CopyColumnTest,
 }
 
 TEST_F(CopyColumnTest,
-       OutputSelectorTest) {
-  SetUpColumnPair(INT64, NOT_NULLABLE, NOT_NULLABLE);
-  const rowcount_t num_row_ids = block_->row_capacity() / 5;
-  scoped_array<rowid_t> row_ids(new rowid_t[num_row_ids]);
-  for (rowid_t i = 0; i < num_row_ids; ++i) {
-    row_ids[i] = i * 5;
-  }
-  CopyInputColumnToOutputColumn(
-      num_row_ids, 0, row_ids.get(), OUTPUT_SELECTOR, true);
-  for (rowid_t i = 0; i < num_row_ids; ++i) {
-    EXPECT_ROWS_EQUAL(Row(*input_, i), Row(*output_, row_ids[i]))
-        << " i = " << i;
-  }
-}
-
-TEST_F(CopyColumnTest,
-       InputOutputSelectorTest) {
-  SetUpColumnPair(INT64, NOT_NULLABLE, NOT_NULLABLE);
-  const rowcount_t num_row_ids = block_->row_capacity() / 5;
-  scoped_array<rowid_t> row_ids(new rowid_t[num_row_ids]);
-  for (int i = 0; i < num_row_ids; ++i) {
-    row_ids[i] = i * 5;
-  }
-  CopyInputColumnToOutputColumn(num_row_ids, 0, row_ids.get(),
-                                INPUT_OUTPUT_SELECTOR, true);
-  for (int i = 0;
-       i < num_row_ids && row_ids[i] < input_->row_count();
-       ++i) {
-    EXPECT_ROWS_EQUAL(Row(*input_, row_ids[i]), Row(*output_, row_ids[i]))
-        << " i = " << i;
-  }
-}
-
-TEST_F(CopyColumnTest,
        ShallowCopy) {
   SetUpColumnPair(STRING, NOT_NULLABLE, NOT_NULLABLE);
   CopyInputColumnToOutputColumn(block_->row_capacity(), 0,
@@ -235,6 +202,7 @@ TEST_F(CopyColumnTest, LimitedMemoryShouldCausePartialSuccess) {
   SetUpColumnPair(STRING, NOT_NULLABLE, NOT_NULLABLE);
   ColumnCopier copy_column_func = ResolveCopyColumnFunction(
       schema_.attribute(0).type(),
+      schema_.attribute(1).nullability(),
       schema_.attribute(1).nullability(),
       NO_SELECTOR,
       true);

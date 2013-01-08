@@ -23,6 +23,7 @@ using std::string;
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
+#include "supersonic/utils/stringprintf.h"
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/infrastructure/block.h"
 #include "supersonic/base/infrastructure/tuple_schema.h"
@@ -59,7 +60,7 @@ void ViewPrinter::AppendViewToStream(const View& view, ostream* s) const {
   }
   if (include_rows_in_representation_) {
     for (size_t i = 0; i < view.row_count(); i++) {
-      *s << Int64ToString(i, "%4d:  ");
+      *s << StringPrintf("%4" PRIuS ":  ", i);
       AppendRowToStream(view, i, s);
       *s << endl;
     }

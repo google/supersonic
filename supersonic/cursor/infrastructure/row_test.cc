@@ -31,7 +31,7 @@ TEST(RowTest, ReturnsCorrectData) {
   scoped_ptr<Block> block(BlockBuilder<INT32, UINT32, INT64>()
       .AddRow(7, 9, __).AddRow(8, __, 10LL).Build());
 
-  RowAdapter adapter(block->view(), 1);
+  RowSourceAdapter adapter(block->view(), 1);
   EXPECT_TUPLE_SCHEMAS_EQUAL(block->view().schema(), adapter.schema());
   EXPECT_TRUE(adapter.type_info(1).name() == string("UINT32"));
 

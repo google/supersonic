@@ -26,22 +26,26 @@
 
 namespace supersonic {
 
-// Takes ownership of the original block.
 class Cursor;
 
+// Create a block of given size filled cyclically with rows from the source.
+Block* ReplicateBlock(const Block& source, rowcount_t row_count,
+                      BufferAllocator* allocator);
+
+// Takes ownership of the original block.
 class RepeatingBlockOperation : public BasicOperation {
  public:
-  RepeatingBlockOperation(Block* block, size_t total_num_rows);
+  RepeatingBlockOperation(Block* block, rowcount_t total_num_rows);
 
   FailureOrOwned<Cursor> CreateCursor() const;
 
  private:
   // Creates new block consisting of repeated rows from the original block.
   // Returns NULL if block can't be created.
-  Block* CreateResizedBlock(Block* original_block, size_t min_num_rows);
+  Block* CreateResizedBlock(Block* original_block, rowcount_t min_num_rows);
 
   scoped_ptr<Block> resized_block_;
-  size_t total_num_rows_;
+  rowcount_t total_num_rows_;
   DISALLOW_COPY_AND_ASSIGN(RepeatingBlockOperation);
 };
 

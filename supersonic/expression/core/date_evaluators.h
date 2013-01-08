@@ -14,7 +14,7 @@
 //
 // Author: onufry@google.com (Onufry Wojtaszczyk)
 //
-// Definintions of the individual operations for expressions defined in
+// Definitions of the individual operations for expressions defined in
 // date_expressions.h
 
 #ifndef SUPERSONIC_EXPRESSION_CORE_DATE_EVALUATORS_H_

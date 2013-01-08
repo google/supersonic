@@ -45,6 +45,24 @@ static __tsan_memory_order tsan_mo(int order) {
   }
 }
 
+// The function transforms compare_exchange success memory order to fail
+// memory order.  See C++11 [atomics.types.operations.req]p21 for details.
+// "When only one memory_order argument is supplied, the value of success is
+// order, and the value of failure is order except that a value of
+// memory_order_acq_rel shall be replaced by the value memory_order_acquire
+// and a value of memory_order_release shall be replaced by the
+// value memory_order_relaxed".
+static __tsan_memory_order tsan_cas_fail_mo(int order) {
+  switch (order) {
+    case memory_order_relaxed: return __tsan_memory_order_relaxed;
+    case memory_order_acquire: return __tsan_memory_order_acquire;
+    case memory_order_release: return __tsan_memory_order_relaxed;
+    case memory_order_acq_rel: return __tsan_memory_order_acquire;
+    case memory_order_seq_cst: return __tsan_memory_order_seq_cst;
+    default:                   return __tsan_memory_order_relaxed;
+  }
+}
+
 template <> struct int_type<unsigned char> { enum { value = true }; };
 template <> struct int_type<signed char> { enum { value = true }; };
 template <> struct int_type<unsigned short> { enum { value = true }; };
@@ -353,7 +371,8 @@ template <typename V> struct atomic_compare_exchange_strong_internal<V, true> {
       __tsan_atomic8 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic8_compare_exchange_strong(
-          (__tsan_atomic8*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic8*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else if (sizeof(*p) == 2) {
@@ -362,7 +381,8 @@ template <typename V> struct atomic_compare_exchange_strong_internal<V, true> {
       __tsan_atomic16 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic16_compare_exchange_strong(
-          (__tsan_atomic16*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic16*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else if (sizeof(*p) == 4) {
@@ -371,7 +391,8 @@ template <typename V> struct atomic_compare_exchange_strong_internal<V, true> {
       __tsan_atomic32 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic32_compare_exchange_strong(
-          (__tsan_atomic32*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic32*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else if (sizeof(*p) == 8) {
@@ -380,7 +401,8 @@ template <typename V> struct atomic_compare_exchange_strong_internal<V, true> {
       __tsan_atomic64 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic64_compare_exchange_strong(
-          (__tsan_atomic64*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic64*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else {
@@ -399,7 +421,8 @@ template <typename V> struct atomic_compare_exchange_weak_internal<V, true> {
       __tsan_atomic8 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic8_compare_exchange_weak(
-          (__tsan_atomic8*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic8*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else if (sizeof(*p) == 2) {
@@ -408,7 +431,8 @@ template <typename V> struct atomic_compare_exchange_weak_internal<V, true> {
       __tsan_atomic16 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic16_compare_exchange_weak(
-          (__tsan_atomic16*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic16*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else if (sizeof(*p) == 4) {
@@ -417,7 +441,8 @@ template <typename V> struct atomic_compare_exchange_weak_internal<V, true> {
       __tsan_atomic32 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic32_compare_exchange_weak(
-          (__tsan_atomic32*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic32*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else if (sizeof(*p) == 8) {
@@ -426,7 +451,8 @@ template <typename V> struct atomic_compare_exchange_weak_internal<V, true> {
       __tsan_atomic64 xch = 0;
       memcpy(&xch, &desired, sizeof(desired));
       r = __tsan_atomic64_compare_exchange_weak(
-          (__tsan_atomic64*)p->address(), &cmp, xch, tsan_mo(order));
+          (__tsan_atomic64*)p->address(), &cmp, xch, tsan_mo(order),
+          tsan_cas_fail_mo(order));
       if (!r)
         memcpy(expected, &cmp, sizeof(*expected));
     } else {

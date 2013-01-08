@@ -143,8 +143,8 @@ class FilterCursor : public BasicCursor {
       : BasicCursor(projector->result_schema(), child_cursor),
         predicate_(predicate),
         predicate_capacity_(predicate->row_capacity()),
-        deep_copier_(projector, INPUT_SELECTOR, true),
-        shallow_copier_(projector, INPUT_SELECTOR, false),
+        deep_copier_(projector, true),
+        shallow_copier_(projector, false),
         input_row_ids_(
             TupleSchema::Singleton("row ids", kRowidDatatype, NOT_NULLABLE),
             allocator),
@@ -254,8 +254,8 @@ class FilterCursor : public BasicCursor {
   // Next().
   rowcount_t predicate_capacity_;
   // Perform actual row copying.
-  ViewCopier deep_copier_;
-  ViewCopier shallow_copier_;
+  SelectiveViewCopier deep_copier_;
+  SelectiveViewCopier shallow_copier_;
 
   // Holds input_row_ids_count_ identifiers of rows that should be copied to the
   // result in a single rowid_t column.
