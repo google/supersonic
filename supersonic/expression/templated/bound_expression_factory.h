@@ -191,6 +191,7 @@ UnaryExpressionFactory* CreateArbitraryInputUnaryFactory(DataType type) {
     case DATETIME: return new SpecializedUnaryFactory<op, DATETIME, to_type>();
     case STRING: return new SpecializedUnaryFactory<op, STRING, to_type>();
     case BINARY: return new SpecializedUnaryFactory<op, BINARY, to_type>();
+    case ENUM: return new SpecializedUnaryFactory<op, ENUM, to_type>();
     case DATA_TYPE:
         return new SpecializedUnaryFactory<op, DATA_TYPE, to_type>();
     default: return CreateNumericInputUnaryFactory<op, to_type>(type);
@@ -225,6 +226,7 @@ UnaryExpressionFactory* CreateArbitraryOutputUnaryFactory(DataType type) {
         return new SpecializedUnaryFactory<op, from_type, DATETIME>();
     case STRING: return new SpecializedUnaryFactory<op, from_type, STRING>();
     case BINARY: return new SpecializedUnaryFactory<op, from_type, BINARY>();
+    case ENUM: return new SpecializedUnaryFactory<op, from_type, ENUM>();
     case DATA_TYPE:
         return new SpecializedUnaryFactory<op, from_type, DATA_TYPE>();
   }

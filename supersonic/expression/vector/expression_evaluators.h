@@ -43,6 +43,7 @@ using std::string;
 
 #include "supersonic/base/infrastructure/bit_pointers.h"
 #include "supersonic/base/infrastructure/types_infrastructure.h"
+#include "supersonic/base/infrastructure/tuple_schema.h"
 #include "supersonic/base/memory/arena.h"
 #include "supersonic/expression/proto/operators.pb.h"
 
@@ -72,7 +73,7 @@ struct TypedToString {
 template<DataType output_type>
 struct TypedParseString {
   typedef typename TypeTraits<output_type>::cpp_type OutputCppType;
-  TypedParseString() {}
+  explicit TypedParseString(const Attribute& attribute) {}
 
   void operator()(StringPiece input, OutputCppType* output, bool_ptr failure) {
     // We're making a copy of the input string here for the very stupid
@@ -80,6 +81,23 @@ struct TypedParseString {
     // TODO(onufry): This should be changed.
     *failure = !ParseTyped<output_type>(input.as_string().c_str(), output);
   }
+};
+
+// Specialization for enums, to parse enum names stored in the attribute.
+template<> struct TypedParseString<ENUM> {
+  typedef typename TypeTraits<ENUM>::cpp_type OutputCppType;
+  explicit TypedParseString(const Attribute& attribute)
+      : enum_definition(attribute.enum_definition()) {}
+
+  void operator()(StringPiece input, OutputCppType* output, bool_ptr failure) {
+    FailureOr<int64> result = enum_definition.NameToNumber(input);
+    if (result.is_success()) {
+      *output = result.get();
+    } else {
+      *failure = result.is_failure();
+    }
+  }
+  EnumDefinition enum_definition;
 };
 
 template<> struct TypedParseString<BINARY> {};

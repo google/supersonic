@@ -20,6 +20,8 @@ enum DataType {
   STRING    = 0;
   BINARY    = 7;
 
+  ENUM      = 13;
+
   DATA_TYPE = 11; // For representing the DataType enum itself.
   NULL_TYPE = 12; // Untyped NULL literal.
 

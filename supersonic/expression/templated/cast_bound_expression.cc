@@ -334,6 +334,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<INT32>() const {
     case DATE:
     case DATETIME:
     case BOOL:
+    case ENUM:
     case DATA_TYPE:
         THROW(IllicitCastFromNumeric(INT32, to_type_, description_));
     // No default.
@@ -360,6 +361,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<UINT32>() const {
     case DATE:
     case DATETIME:
     case BOOL:
+    case ENUM:
     case DATA_TYPE:
         THROW(IllicitCastFromNumeric(UINT32, to_type_, description_));
     // No default.
@@ -487,6 +489,12 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<BOOL>() const {
   scoped_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == BOOL) return Success(child_.release());
   THROW(IllicitCastFromBool(to_type_, description_));
+}
+
+template<>
+FailureOrOwned<BoundExpression> BoundCastCreator::operator()<ENUM>() const {
+  LOG(FATAL) << "Cast on ENUM is not supported. Should have been caught "
+             << "higher up";
 }
 
 template<>

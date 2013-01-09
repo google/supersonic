@@ -1,6 +1,6 @@
 m4_define([supersonic_major], [0])
 m4_define([supersonic_minor], [9])
-m4_define([supersonic_patch], [2])
+m4_define([supersonic_patch], [3])
 
 AC_PREREQ([2.65])
 AC_INIT([supersonic], [supersonic.major.supersonic_minor.supersonic_patch])
@@ -26,6 +26,12 @@ AM_PROG_AR
 LT_INIT
 AC_PROG_LIBTOOL
 
+AX_CHECK_COMPILE_FLAG([-funsigned-char], [CXXFLAGS="$CXXFLAGS -funsigned-char"])
+AX_CHECK_COMPILE_FLAG([-O3], [CXXFLAGS="$CXXFLAGS -O3"])
+AX_CHECK_COMPILE_FLAG([-mmmx], [CXXFLAGS="$CXXFLAGS -mmmx"])
+AX_CHECK_COMPILE_FLAG([-msse], [CXXFLAGS="$CXXFLAGS -msse"])
+AX_CHECK_COMPILE_FLAG([-msse2], [CXXFLAGS="$CXXFLAGS -msse2"])
+
 # Checks for programs.
 AC_LANG([C++])
 AC_PROG_CXX
@@ -41,6 +47,8 @@ PKG_CHECK_MODULES(PROTO, protobuf)
 
 # Check for boost.
 AX_BOOST_BASE
+AX_BOOST_SYSTEM
+AX_BOOST_TIMER
 
 # Checks for header files.
 AC_CHECK_HEADERS([limits.h stddef.h stdint.h stdlib.h string.h string \

@@ -155,6 +155,21 @@ template<> struct BasicTypeTraits<BOOL> {
   }
 };
 
+template<> struct BasicTypeTraits<ENUM> {
+  typedef int64 cpp_type;
+  typedef int64 hold_type;
+  static const bool is_variable_length = false;
+  static const bool is_numeric = false;
+  static const bool is_integer = false;
+  static const bool is_floating_point = false;
+  static hold_type CppTypeToHoldType(cpp_type data) {
+    return data;
+  }
+  static cpp_type HoldTypeToCppType(hold_type data) {
+    return data;
+  }
+};
+
 template<> struct BasicTypeTraits<STRING>
     : public BasicVariableLengthTypeTraits {};  // NOLINT
 

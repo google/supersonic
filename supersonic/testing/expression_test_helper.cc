@@ -426,6 +426,19 @@ void TestEvaluationFailure(const Block* block,
 
 // ------------------------ Schema tests -------------------------------
 
+// Helper, to provide some default content for ENUMs.
+void AddAttribute(const string& name, DataType type, Nullability nullability,
+                  TupleSchema* schema) {
+  if (type == ENUM) {
+    EnumDefinition enum_definition;
+    enum_definition.AddEntry(1, "FIRST");
+    enum_definition.AddEntry(5, "FIFTH");
+    schema->add_attribute(Attribute(name, enum_definition, nullability));
+  } else {
+    schema->add_attribute(Attribute(name, type, nullability));
+  }
+}
+
 // Encapsulates a schema containing all the possible DataTypes, and a method
 // for accessing a column of the required type.
 class SchemaHolder {
@@ -433,14 +446,12 @@ class SchemaHolder {
   SchemaHolder() {
     TupleSchema* schema = new TupleSchema();
     DataType types[kNumberOfTypes] = {INT32, UINT32, INT64, UINT64, FLOAT,
-      DOUBLE, BOOL, DATE, DATETIME, STRING, BINARY, DATA_TYPE};
+      DOUBLE, BOOL, DATE, DATETIME, STRING, BINARY, DATA_TYPE, ENUM};
     for (int i = 0; i < kNumberOfTypes; ++i) {
-      schema->add_attribute(Attribute(SimpleItoa(i), types[i],
-                                      NOT_NULLABLE));
+      AddAttribute(SimpleItoa(i), types[i], NOT_NULLABLE, schema);
     }
     for (int i = 0; i < kNumberOfTypes; ++i) {
-      schema->add_attribute(Attribute(SimpleItoa(i + 12),
-                                      types[i], NULLABLE));
+      AddAttribute(SimpleItoa(i + 12), types[i], NULLABLE, schema);
     }
     schema_.reset(schema);
   }
@@ -463,6 +474,7 @@ class SchemaHolder {
       case STRING: return 9;
       case BINARY: return 10;
       case DATA_TYPE: return 11;
+      case ENUM: return 12;
       // No default statement to cause a compiler error if new DataTypes are
       // added.
     }
@@ -482,7 +494,7 @@ class SchemaHolder {
  private:
   // TODO(onufry): this constant should be defined in ../public/types.h and
   // used from there.
-  static const int kNumberOfTypes = 12;
+  static const int kNumberOfTypes = 13;
   scoped_ptr<const TupleSchema> schema_;
 
   DISALLOW_COPY_AND_ASSIGN(SchemaHolder);

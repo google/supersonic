@@ -24,7 +24,7 @@ using std::endl;
 
 #include "gtest/gtest.h"
 #include "supersonic/utils/integral_types.h"
-#include "supersonic/public/supersonic.h"
+#include "supersonic/supersonic.h"
 
 using supersonic::TupleSchema;
 using supersonic::Attribute;

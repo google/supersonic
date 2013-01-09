@@ -156,6 +156,16 @@ ExpressionResult CreateConstExpression<DATA_TYPE>(const Constant& c) {
   }
 }
 
+template<>
+ExpressionResult CreateConstExpression<ENUM>(const Constant& c) {
+  THROW(new Exception(
+      ERROR_NOT_IMPLEMENTED,
+      "ENUM constants are not currently supported. (It's challenging to "
+      "define a good format to specify the values, in which type information "
+      "would be separated from data - and e.g. shared between multiple "
+      "constants."));
+}
+
 struct ConstExpressionFactory {
   explicit ConstExpressionFactory(const Constant& constant)
       : constant(constant) {}

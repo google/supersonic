@@ -1,13 +1,1 @@
-News for version 0.9.2:
-
-Major changes include adding a large set of unit tests and a cursor benchmarking
-feature with utilities for writing benchmarks with some examples. The library
-now also uses Googlemock for testing.
-
-There have also been some bug fixes:
- - BUG ID: 5 [https://code.google.com/p/supersonic/issues/detail?id=5]
-   Can't link libboost_system when building [FIXED]
-
-Other fixes:
- - Fixed a temporary file bug which caused Supersonic to crash on successful
- file creation.
+See ChangeLog file for information about version differences.

@@ -1,3 +1,18 @@
+News for version 0.9.3 [released: 2013-01-10]
+
+Issues fixes:
+ * BUG ID 9: [https://code.google.com/p/supersonic/issues/detail?id=9]
+   fastmemcmp_inlined is incorrect
+ * BUG ID 8: [https://code.google.com/p/supersonic/issues/detail?id=8]
+   make file under vmware virtual machine
+ * TupleSchema complexity: Projection had O(n^2) complexity on attribute count.
+
+Features:
+ * Cleanup of ViewCopier interface.
+ * Supersonic build in -O3 mode and without -g (no debuging symbols) by default.
+ * guide/join.cc example is simpler now.
+
+--------------------------------------------------------------------------------
 News for version 0.9.2:
 
 Major changes include adding a large set of unit tests and a cursor benchmarking

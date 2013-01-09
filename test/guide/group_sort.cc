@@ -39,7 +39,7 @@ using std::pair;
 
 #include "gtest/gtest.h"
 
-#include "supersonic/public/supersonic.h"
+#include "supersonic/supersonic.h"
 #include "supersonic/cursor/core/sort.h"
 #include "supersonic/cursor/infrastructure/ordering.h"
 #include "supersonic/utils/strings/stringpiece.h"

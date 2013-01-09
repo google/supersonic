@@ -43,8 +43,8 @@ const size_t kGroupNum = 50;
 Operation* CreateGroup() {
   MTRandom random(0);
   BlockBuilder<STRING, INT32> builder;
-  for (int i = 0; i < kInputRowCount; ++i) {
-    builder.AddRow(StringPrintf("test_string_%ld", i % kGroupNum),
+  for (int64 i = 0; i < kInputRowCount; ++i) {
+    builder.AddRow(StringPrintf("test_string_%lld", i % kGroupNum),
                    random.Rand32());
   }
 
@@ -59,7 +59,7 @@ Operation* CreateGroup() {
 Operation* CreateCompute() {
   MTRandom random(0);
   BlockBuilder<INT32, INT64, DOUBLE> builder;
-  for (int i = 0; i < kInputRowCount; ++i) {
+  for (int64 i = 0; i < kInputRowCount; ++i) {
     builder.AddRow(random.Rand32(), random.Rand64(), random.RandDouble());
   }
 
@@ -78,8 +78,8 @@ SortOrder* CreateExampleSortOrder() {
 Operation* CreateSort(size_t input_row_count) {
   MTRandom random(0);
   BlockBuilder<INT32, STRING> builder;
-  for (int i = 0; i < input_row_count; ++i) {
-    builder.AddRow(random.Rand32(), StringPrintf("test_string_%d", i));
+  for (int64 i = 0; i < input_row_count; ++i) {
+    builder.AddRow(random.Rand32(), StringPrintf("test_string_%lld", i));
   }
 
   return Sort(
@@ -118,12 +118,12 @@ Operation* SimpleTreeExample() {
   // col0, col1  , col2  , col3, col4
   // name, salary, intern, age , boss_name
   BlockBuilder<STRING, INT32, BOOL, INT32, STRING> builder;
-  for (int i = 0; i < kInputRowCount; ++i) {
-    builder.AddRow(StringPrintf("Name%d", i),
+  for (int64 i = 0; i < kInputRowCount; ++i) {
+    builder.AddRow(StringPrintf("Name%lld", i),
                    (random.Rand16() % 80) * 100,
                    random.Rand16() % 1000 == 0 && i > kGroupNum,
                    (random.Rand16() % 60) + 20,
-                   StringPrintf("Name%ld", i % kGroupNum));
+                   StringPrintf("Name%lld", i % kGroupNum));
   }
 
   scoped_ptr<Operation> named_columns(
@@ -182,7 +182,7 @@ void Run() {
       SimpleTreeExample()));
 
   GraphVisualisationOptions options(DOT_FILE);
-  for (int i = 0; i < operations.size(); ++i) {
+  for (int64 i = 0; i < operations.size(); ++i) {
     options.file_name = File::JoinPath(
         FLAGS_output_directory, StrCat("benchmark_", i, ".dot"));
 

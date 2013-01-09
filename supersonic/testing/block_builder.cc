@@ -59,9 +59,20 @@ TupleSchema GetSchemaWithOptimizedNullabilityWithSomeForcedNullable(
 
 namespace internal {
 
-Block* CloneViewAndOptimizeNullabilityWithSomeForcedNullable(
+Block* CloneView(const View& view) {
+  scoped_ptr<Block> copy(new Block(view.schema(), HeapBufferAllocator::Get()));
+  CHECK(copy->Reallocate(view.row_count()));
+  const ViewCopier block_copier(view.schema(), true);
+  CHECK_EQ(view.row_count(),
+           block_copier.Copy(view.row_count(), view, 0, copy.get()));
+  return copy.release();
+}
+
+Block* CloneViewAndOptimizeNullability(
     const View& view,
     const vector<bool>& is_column_forced_nullable) {
+  // TODO(user): we might need some more systematic way to remove
+  // nullability; perhaps an expression.
   TupleSchema result_schema =
       GetSchemaWithOptimizedNullabilityWithSomeForcedNullable(
           view, is_column_forced_nullable);
@@ -77,21 +88,7 @@ Block* CloneViewAndOptimizeNullabilityWithSomeForcedNullable(
     }
   }
   shadow.set_row_count(view.row_count());
-  // Now, copy the shadow's content into a new block.
-  scoped_ptr<Block> copy(new Block(result_schema, HeapBufferAllocator::Get()));
-  CHECK(copy->Reallocate(shadow.row_count()));
-
-  // TODO(user): we might need some more systematic way to remove
-  // nullability; perhaps an expression.
-  const ViewCopier block_copier(shadow.schema(), true);
-  CHECK_EQ(shadow.row_count(),
-           block_copier.Copy(shadow.row_count(), shadow, 0, copy.get()));
-  return copy.release();
-}
-
-Block* CloneViewAndOptimizeNullability(const View& view) {
-  return CloneViewAndOptimizeNullabilityWithSomeForcedNullable(
-      view, vector<bool>(view.schema().attribute_count(), false));
+  return CloneView(shadow);
 }
 
 }  // namespace internal

@@ -46,6 +46,7 @@ UnaryExpressionFactory* FingerprintFactory(DataType type) {
     case BINARY: return new SpecializedUnaryFactory<op, BINARY, UINT64>();
     case FLOAT: return NULL;
     case DOUBLE: return NULL;
+    case ENUM: return new SpecializedUnaryFactory<op, ENUM, UINT64>();
     case DATA_TYPE: return NULL;
   }
   LOG(FATAL);  // This will never be exectuted.
@@ -72,6 +73,8 @@ BinaryExpressionFactory* HashFactory(DataType type) {
       return new SpecializedBinaryFactory<op, DATETIME, UINT64, UINT64>();
     case BOOL:
       return new SpecializedBinaryFactory<op, BOOL, UINT64, UINT64>();
+    case ENUM:
+      return new SpecializedBinaryFactory<op, ENUM, UINT64, UINT64>();
     case STRING:
       return new SpecializedBinaryFactory<op, STRING, UINT64, UINT64>();
     case BINARY:

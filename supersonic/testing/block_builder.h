@@ -54,14 +54,15 @@ class View;
 
 namespace internal {
 
+// Makes a deep copy of the specified view, and returns it in a new block.
+Block* CloneView(const View& view);
+
 // Makes a copy of the specified view, and returns it in a new block.
 // The ownership is transferred to the caller. All nullable columns for which
 // no nulls have been found are transformed into non-nullable columns.
-Block* CloneViewAndOptimizeNullability(const View& view);
-
-// The same with above, except that you can specify some columns to be nullable
-// independent whether it has a null or not.
-Block* CloneViewAndOptimizeNullabilityWithSomeForcedNullable(
+// Columns can be forced to be nullable independent whether they have nulls
+// or not, using the is_column_forced_nullable vector.
+Block* CloneViewAndOptimizeNullability(
     const View& view, const vector<bool>& is_column_forced_nullable);
 
 // Helper function to set value or null from a value reference.
@@ -101,7 +102,7 @@ inline TupleSchema CreateReferenceNullableSchema(
 
 }  // namespace internal
 
-// Builder that can create blocks with up to 12 columns.
+// Builder that can create blocks with up to 20 columns.
 template <int A = UNDEF, int B = UNDEF, int C = UNDEF, int D = UNDEF,
           int E = UNDEF, int F = UNDEF, int G = UNDEF, int H = UNDEF,
           int I = UNDEF, int J = UNDEF, int K = UNDEF, int L = UNDEF,
@@ -120,6 +121,18 @@ class BlockBuilder {
                HeapBufferAllocator::Get()),
         writer_(&table_),
         is_column_forced_nullable_(20, false) {}
+
+  BlockBuilder(const TupleSchema& schema)
+      : table_(schema, HeapBufferAllocator::Get()),
+        writer_(&table_),
+        is_column_forced_nullable_() {
+    TupleSchema reference_schema =
+        internal::CreateReferenceNullableSchema(A, B, C, D, E, F,
+                                                G, H, I, J, K, L,
+                                                M, N, O, P, Q, R,
+                                                S, T);
+    CHECK(schema.EqualByType(reference_schema));
+  }
 
   // Adds a row. Caller can use built-in types instead of ValueRef objects.
   // Number of arguments passed to AddRow must equal number of parameters passed
@@ -172,15 +185,21 @@ class BlockBuilder {
   // Returns a copy of the prebuilt block. Ownership is passed to the caller.
   Block* Build() const {
     writer_.CheckSuccess();
-    return supersonic::internal::
-        CloneViewAndOptimizeNullabilityWithSomeForcedNullable(
+    if (has_explicit_schema()) {
+      return internal::CloneView(table_.view());
+    } else {
+      return internal::CloneViewAndOptimizeNullability(
         table_.view(),
         is_column_forced_nullable_);
+    }
   }
 
   // Forces a column to be nullable, even though no NULL is present in the
-  // column.
+  // column. The block builder must not have explicitly specified schema.
   This& ForceNullable(int column_number) {
+    CHECK(!has_explicit_schema())
+        << "This builder has an explicitly provided schema; can't force-"
+        << "nullable individual columns";
     CHECK_GE(column_number, 0);
     CHECK_LT(column_number, 20);
     is_column_forced_nullable_[column_number] = true;
@@ -188,6 +207,12 @@ class BlockBuilder {
   }
 
  private:
+  // Specifies whether the schema of this block has been explicitly specified
+  // in the constructor. (Otherwise, a default schema will be provided, based
+  // on the templated types, and the actual data nullability).
+  bool has_explicit_schema() const {
+    return is_column_forced_nullable_.empty();
+  }
 
   // Internal table where rows are incrementally added.
   Table table_;

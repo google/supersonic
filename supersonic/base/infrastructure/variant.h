@@ -82,6 +82,7 @@ class VariantDatum {
     TypeTraits<FLOAT>::hold_type value_float_;
     TypeTraits<DOUBLE>::hold_type value_double_;
     TypeTraits<BOOL>::hold_type value_bool_;
+    TypeTraits<ENUM>::hold_type value_enum_;
     TypeTraits<DATE>::hold_type value_date_;
     TypeTraits<DATETIME>::hold_type value_datetime_;
     TypeTraits<DATA_TYPE>::hold_type value_data_type_;
@@ -132,6 +133,11 @@ inline const TypeTraits<DOUBLE>::hold_type& VariantDatum::value<DOUBLE>()
 template <>
 inline const TypeTraits<BOOL>::hold_type& VariantDatum::value<BOOL>() const {
   return value_bool_;
+}
+
+template <>
+inline const TypeTraits<ENUM>::hold_type& VariantDatum::value<ENUM>() const {
+  return value_enum_;
 }
 
 template <>

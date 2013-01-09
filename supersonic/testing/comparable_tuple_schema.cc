@@ -47,6 +47,16 @@ testing::AssertionResult ComparableTupleSchema::Compare(
           << GetTypeInfo(schema_.attribute(i).type()).name() << " vs "
           << GetTypeInfo(other.schema_.attribute(i).type()).name();
     }
+    if (schema_.attribute(i).type() == ENUM) {
+      // compare enum values.
+      FailureOrVoid enum_equals = EnumDefinition::VerifyEquals(
+          other.schema_.attribute(i).enum_definition(),
+          schema_.attribute(i).enum_definition());
+      if (enum_equals.is_failure()) {
+        return testing::AssertionFailure()
+            << enum_equals.exception().ToString();
+      }
+    }
   }
 
   return testing::AssertionSuccess();
@@ -60,7 +70,7 @@ testing::AssertionResult ComparableTupleSchema::CompareStrict(
     return result;
   }
 
-  // Additionally compare types and nullability.
+  // Additionally compare names and nullability.
   for (size_t i = 0; i < schema_.attribute_count(); i++) {
     if (schema_.attribute(i).name() != other.schema_.attribute(i).name()) {
       return testing::AssertionFailure()

@@ -96,7 +96,12 @@ void ViewPrinter::AppendRowToStream(const View& view,
     } else {
       VariantConstPointer value = column.data_plus_offset(row_id);
       string result;
-      GetDefaultPrinterFn(column.type_info().type())(value, &result);
+      if (column.type_info().type() == ENUM) {
+        *s << SucceedOrDie(column.attribute().enum_definition().
+                  NumberToName(*value.as<ENUM>()));
+      } else {
+        GetDefaultPrinterFn(column.type_info().type())(value, &result);
+      }
 #ifndef NDEBUG
       if (column.type_info().type() == BOOL) {
         const uint8 int_value =

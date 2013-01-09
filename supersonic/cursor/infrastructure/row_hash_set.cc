@@ -407,7 +407,8 @@ void RowHashSetImpl::FindUnique(
 void RowHashSetImpl::FindMany(
     const View& query, const bool_const_ptr selection_vector,
     FindMultiResult* result) const {
-  result->set_equal_row_ids(&equal_row_ids_.front());
+  result->set_equal_row_ids((equal_row_ids_.empty()) ? NULL :
+                            &equal_row_ids_.front());
   // For each query row, the matching row (if any) is also the head of a group
   // of possibly many Rows.
   FindInternal(query, selection_vector, result->mutable_row_ids());

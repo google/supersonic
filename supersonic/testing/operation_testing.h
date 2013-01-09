@@ -272,7 +272,10 @@ class TestDataBuilder : public AbstractTestDataBuilder {
  public:
   typedef TestDataBuilder<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P,
                           R, S, T, U> This;
-  TestDataBuilder() {}
+  TestDataBuilder() : block_builder_() {}
+
+  explicit TestDataBuilder(const TupleSchema& schema)
+      : block_builder_(schema) {}
 
   // Takes ownership of the factory.
   This& ReturnException(const ReturnCode error_code) {

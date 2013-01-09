@@ -78,6 +78,12 @@ template<> void PrintTyped<BOOL>(const bool& value, string* const target) {
   target->append((value) ? "TRUE" : "FALSE");
 }
 
+template<> void PrintTyped<ENUM>(const int64& value, string* const target) {
+  // NOTE: usually, this default won't be used; the higher-level function
+  // (e.g. ViewPrinter) will handle ENUMs in a special way.
+  return PrintTyped<INT64>(value, target);
+}
+
 template<> void PrintTyped<STRING>(const StringPiece& value,
                                    string* const target) {
   value.AppendToString(target);
@@ -263,6 +269,11 @@ bool DefaultParser(const char* value, const VariantPointer target) {
   DCHECK(value != NULL);
   DCHECK(!target.is_null());
   return ParseTyped<type>(value, target.as<type>());
+}
+
+template<>
+bool DefaultParser<ENUM>(const char* value, const VariantPointer target) {
+  LOG(FATAL) << "Parser for ENUM is not defined";
 }
 
 template<>
@@ -498,6 +509,11 @@ typename Op::RuntimeFunction ResolveComparatorForHomogeneousTypes(
     case DATA_TYPE:
       // TODO(user): inqeuality (as opposed to equality) should fail.
       return ResolveComparatorForKnownTypes<Op, DATA_TYPE, DATA_TYPE>(
+          left_not_null, right_not_null);
+    case ENUM:
+      // For the purpose of default ordering (e.g. when ORDER BY uses an
+      // ENUM column), enums sort and compare by the value number (not name).
+      return ResolveComparatorForKnownTypes<Op, ENUM, ENUM>(
           left_not_null, right_not_null);
     default:
       LOG(FATAL) << "Comparator undefined for type "

@@ -3,7 +3,7 @@ Supersonic-Specific Installation Notes
 
 This code in its current version should work on any Unix-like system.
 The following libraries should be installed before proceeding to the usual
-"config, make, make install".
+"config, make -j 16, make install".
 
 1. GLog
 http://code.google.com/p/google-glog/
@@ -59,7 +59,7 @@ Instruction Set 1:
   tar zxf glog-0.3.2.tar.gz && \
   mv glog-0.3.2 glog && \
   rm glog-0.3.2.tar.gz && \
-  (cd glog && ./configure && make)
+  (cd glog && ./configure && make -j 16)
 #
 # b) gflags
 #
@@ -67,7 +67,7 @@ Instruction Set 1:
   tar zxf gflags-2.0.tar.gz && \
   mv gflags-2.0 gflags && \
   rm gflags-2.0.tar.gz && \
-  (cd gflags && ./configure && make)
+  (cd gflags && ./configure && make -j 16)
 #
 # c) protobuf
 #
@@ -75,14 +75,14 @@ Instruction Set 1:
   tar zxf protobuf-2.4.1.tar.gz && \
   mv protobuf-2.4.1 protobuf && \
   rm protobuf-2.4.1.tar.gz && \
-  (cd protobuf && ./configure && make)
+  (cd protobuf && ./configure && make -j 16)
 #
 # d) re2 - If you don't have mercurial installed on your system, this won't
 #    work.
 #    In that case you'll have to fetch the libary in some other way.
 #
   hg clone https://re2.googlecode.com/hg re2 && \
-  (cd re2 && make)
+  (cd re2 && make -j 16)
 #
 #
 # 3) Go back to supersonic
@@ -121,7 +121,7 @@ Instruction Set 1:
 #
 # 5) And finally...
 #
-  ./configure && make && make check
+  ./configure && make -j 16 && make check
 
 If you see an "X tests passed." message, you've made it!
 

@@ -121,6 +121,7 @@ ReturnType TypeSpecialization(const DataType type,
     case DATETIME:  return functor.template operator()<DATETIME>();
     case STRING:    return functor.template operator()<STRING>();
     case BINARY:    return functor.template operator()<BINARY>();
+    case ENUM:      return functor.template operator()<ENUM>();
     case DATA_TYPE: return functor.template operator()<DATA_TYPE>();
   }
   LOG(FATAL) << "Unknown DataType: " << type;
@@ -155,6 +156,7 @@ ReturnType IntegerTypeSpecialization(
     case DATETIME:
     case STRING:
     case BINARY:
+    case ENUM:
     case DATA_TYPE:
       THROW(new Exception(
           ERROR_INVALID_ARGUMENT_TYPE,
@@ -184,6 +186,7 @@ ReturnType NumericTypeSpecialization(
     case DATETIME:
     case STRING:
     case BINARY:
+    case ENUM:
     case DATA_TYPE:
       THROW(new Exception(
           ERROR_INVALID_ARGUMENT_TYPE,
@@ -477,7 +480,8 @@ AttributePrinter GetDefaultPrinterFn(DataType type);
 // Returns true if successfully parsed a non-NULL value and modified the
 // target; false otherwise. NULL pointers and unparsable numbers translate
 // to NULL.
-// NOTE: this function is not defined for variable-length types.
+// NOTE: this function is not defined for variable-length types, and for
+// the ENUM type.
 AttributeParser GetDefaultParserFn(DataType type);
 
 // Returns a function that can be used in a sort comparator. Normally,

@@ -299,7 +299,8 @@ struct ColumnUnaryComputer<OPERATOR_PARSE_STRING_QUIET, STRING,
     const StringPiece* input_data = input.typed_data<STRING>();
     OutputCppType* result_data = output->mutable_typed_data<output_type>();
 
-    typename operators::TypedParseString<output_type> parse_operator;
+    typename operators::TypedParseString<output_type> parse_operator(
+        output->content().attribute());
     // Failure is a dummy variable, ignored, as this is a quiet operator.
     uint32 failure;
     if (!SelectivityIsGreaterThan(
@@ -341,7 +342,8 @@ struct ColumnUnaryComputer<OPERATOR_PARSE_STRING_NULLING, STRING,
     const StringPiece* input_data = input.typed_data<STRING>();
     OutputCppType* result_data = output->mutable_typed_data<output_type>();
 
-    typename operators::TypedParseString<output_type> parse_operator;
+    typename operators::TypedParseString<output_type> parse_operator(
+        output->content().attribute());
 
     // We go row by row, because we have to fill in selection data.
     for (int i = 0; i < row_count; ++i) {

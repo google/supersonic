@@ -26,10 +26,13 @@ enum DataType {
   STRING   = 0;
   BINARY   = 7;
 
+  // Note: tag ID 12 left for NULL_TYPE, used in common/proto already.
+  ENUM     = 13;
+
   // A special metatype.
   DATA_TYPE = 11;
 
-  // Note: next available: 12
+  // Note: next available: 14
 }
 
 // Possible return values from cursor repositioning methods and related
@@ -66,6 +69,11 @@ enum ReturnCode {
   ERROR_ATTRIBUTE_IS_NULLABLE         = 406;  // While expecting not-nullable.
   ERROR_INVALID_ARGUMENT_VALUE        = 407;  // Outside function domain.
   ERROR_ATTRIBUTE_AMBIGUOUS           = 408;  // Many attributes match name.
+
+  ERROR_DUPLICATE_ENUM_VALUE_NUMBER   = 420;
+  ERROR_DUPLICATE_ENUM_VALUE_NAME     = 421;
+  ERROR_UNDEFINED_ENUM_VALUE_NUMBER   = 422;
+  ERROR_UNDEFINED_ENUM_VALUE_NAME     = 423;
 
   // Referential integrity errors.
   ERROR_FOREIGN_KEY_INVALID           = 501;

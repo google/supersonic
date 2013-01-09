@@ -66,6 +66,7 @@ class TypeInfoResolver {
     AddMapping<FLOAT>();
     AddMapping<DOUBLE>();
     AddMapping<BOOL>();
+    AddMapping<ENUM>();
     AddMapping<STRING>();
     AddMapping<DATETIME>();
     AddMapping<DATE>();

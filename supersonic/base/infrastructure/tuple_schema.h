@@ -35,29 +35,86 @@ using std::vector;
 #include "supersonic/base/exception/exception_macros.h"
 #include "supersonic/base/exception/result.h"
 #include "supersonic/base/infrastructure/types.h"
+#include "supersonic/base/memory/arena.h"
 #include "supersonic/proto/supersonic.pb.h"
 #include "supersonic/utils/shared_ptr.h"
 
 namespace supersonic {
 
+class EnumDefinition {
+ public:
+  EnumDefinition();
+  FailureOrVoid AddEntry(const int64 number, StringPiece name);
+  FailureOr<StringPiece> NumberToName(int64 number) const;
+  FailureOr<int64> NameToNumber(StringPiece name) const;
+  size_t entry_count() const;
+  static FailureOrVoid VerifyEquals(const EnumDefinition& a,
+                                    const EnumDefinition& b);
+
+ private:
+  class Rep {
+   public:
+    explicit Rep(BufferAllocator* buffer_allocator);
+    void CopyFrom(const Rep& other);
+    FailureOrVoid Add(const int64 number, StringPiece name);
+    FailureOr<StringPiece> NumberToName(int64 number) const;
+    FailureOr<int64> NameToNumber(StringPiece name) const;
+    size_t entry_count() const { return name_to_number_.size(); }
+    BufferAllocator* buffer_allocator() const { return buffer_allocator_; }
+
+    static FailureOrVoid VerifyEquals(const Rep& a, const Rep& b);
+
+   private:
+    BufferAllocator* const buffer_allocator_;
+    Arena arena_;
+    map<StringPiece, int64> name_to_number_;
+    map<int64, StringPiece> number_to_name_;
+    DISALLOW_COPY_AND_ASSIGN(Rep);
+  };
+  shared_ptr<Rep> rep_;
+  // Copyable. Use value semantics.
+};
+
 // Describes a single attribute in a tuple (its name and type).
 class Attribute {
  public:
+  // Creates an attribute with specified options. For ENUM attributes, you
+  // probably want to use the other constructor instead, as this one would
+  // create empty ENUM.
   Attribute(const string& name,
             const DataType type,
             const Nullability nullability)
       : name_(name),
         type_(type),
-        nullability_(nullability) {}
+        nullability_(nullability),
+        enum_definition_() {}
+
+  // Creates an ENUM attribute with the specified definition.
+  Attribute(const string& name,
+            const EnumDefinition enum_definition,
+            const Nullability nullability)
+      : name_(name),
+        type_(ENUM),
+        nullability_(nullability),
+        enum_definition_(enum_definition) {}
+
+  ~Attribute();
+
   const string& name() const { return name_; }
   const DataType type() const { return type_; }
   const Nullability nullability() const { return nullability_; }
   // Tells whether this attribute can can have null values.
   const bool is_nullable() const { return nullability_ == NULLABLE; }
+  EnumDefinition enum_definition() const {
+    DCHECK_EQ(ENUM, type_);
+    return enum_definition_;
+  }
  private:
   string name_;
   DataType type_;
   Nullability nullability_;
+  // Empty, lightweight (just an empty shared_ptr) for non-ENUM types.
+  EnumDefinition enum_definition_;
 };
 
 // Represents the schema for a tuple, which is an ordered list of named and
