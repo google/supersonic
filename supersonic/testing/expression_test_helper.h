@@ -112,6 +112,8 @@ void TestStatefulEvaluation(const Block* block,
 
 // A tester that takes an expression instead of an expression factory. This is
 // expected to be used in other testing functions, not in tests themselves.
+// TODO(user): transform Creators to functors (so that they can be nested),
+// and then remove this function from the header file.
 void TestEvaluationCommon(const Block* block, bool stateful_expression,
                           const Expression* expression_ptr);
 

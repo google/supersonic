@@ -17,11 +17,12 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <queue>
-using std::priority_queue;
+#include "supersonic/utils/std_namespace.h"
 #include <stack>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -156,7 +157,7 @@ class MergeUnionAllCursor : public Cursor {
   // Equals to true if result_ was returned to caller and we can clear it.
   bool clear_result_;
 
-  scoped_ptr<const BoundSortOrder> sort_order_;
+  std::unique_ptr<const BoundSortOrder> sort_order_;
   PointerVector<CursorRowIterator> inputs_;
 
   // Internal placeholder for result rows.
@@ -341,7 +342,7 @@ class MergeUnionAllOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const SortOrder> sort_order_;
+  std::unique_ptr<const SortOrder> sort_order_;
 };
 
 }  // namespace
@@ -349,7 +350,7 @@ class MergeUnionAllOperation : public BasicOperation {
 Operation* MergeUnionAll(const SortOrder* sort_order_raw,
                          const vector<Operation*>& inputs) {
   // If there are no inputs, there'll be nowhere to take the schema from.
-  scoped_ptr<const SortOrder> sort_order(sort_order_raw);
+  std::unique_ptr<const SortOrder> sort_order(sort_order_raw);
   if (inputs.empty()) {
     return Generate(0);
   }
@@ -362,7 +363,7 @@ Operation* MergeUnionAll(const SortOrder* sort_order_raw,
 FailureOrOwned<Cursor> BoundMergeUnionAll(const BoundSortOrder* sort_order,
                                           vector<Cursor*> inputs,
                                           BufferAllocator* buffer_allocator) {
-  scoped_ptr<MergeUnionAllCursor> cursor(
+  std::unique_ptr<MergeUnionAllCursor> cursor(
       new MergeUnionAllCursor(sort_order, inputs, buffer_allocator));
   PROPAGATE_ON_FAILURE(cursor->Init());
   return Success(cursor.release());

@@ -16,6 +16,8 @@
 
 #include "supersonic/expression/vector/ternary_column_computers.h"
 
+#include <memory>
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -185,7 +187,7 @@ class TernaryComputersTestBlockWrapper {
     return builder.Build();
   }
 
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
 };
 
 TEST(TernaryColumnComputersTest, TrivialFailureCheckReturnsZero) {

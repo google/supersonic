@@ -19,9 +19,7 @@
 #define SUPERSONIC_TESTING_COMPARABLE_TUPLE_SCHEMA_H_
 
 #include <iosfwd>
-using std::ostream;
 #include <ostream>
-using std::endl;
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/testing/streamable.h"
@@ -38,7 +36,7 @@ class ComparableTupleSchema : public Streamable {
       : schema_(schema),
         view_printer_(true, true) {}
 
-  virtual void AppendToStream(ostream* s) const;
+  virtual void AppendToStream(std::ostream* s) const;
 
   // Evaluates as bool. Includes detailed explanation if not equal.
   // Uses CompareStrict method.

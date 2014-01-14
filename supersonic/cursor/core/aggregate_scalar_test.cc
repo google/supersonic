@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -60,7 +62,8 @@ TEST_F(ScalarAggregateCursorTest, AggregateIntegers) {
   test.SetExpectedResult(TestDataBuilder<INT32, INT32, UINT64, UINT64, UINT64>()
                          .AddRow(13, 26, 5, 4, 3)
                          .Build());
-  scoped_ptr<AggregationSpecification> aggregator(new AggregationSpecification);
+  std::unique_ptr<AggregationSpecification> aggregator(
+      new AggregationSpecification);
   aggregator->AddAggregation(MAX, "col0", "max");
   aggregator->AddAggregation(SUM, "col0", "sum");
   aggregator->AddAggregation(COUNT, "", "count(*)");
@@ -75,7 +78,8 @@ TEST_F(ScalarAggregateCursorTest, AggregateEmptyInput) {
   test.SetExpectedResult(TestDataBuilder<INT32, INT32, UINT64, UINT64, UINT64>()
                          .AddRow(__, __, 0, 0, 0)
                          .Build());
-  scoped_ptr<AggregationSpecification> aggregator(new AggregationSpecification);
+  std::unique_ptr<AggregationSpecification> aggregator(
+      new AggregationSpecification);
   aggregator->AddAggregation(MAX, "col0", "max");
   aggregator->AddAggregation(SUM, "col0", "sum");
   aggregator->AddAggregation(COUNT, "", "count(*)");
@@ -90,7 +94,8 @@ TEST_F(ScalarAggregateCursorTest, AggregateStrings) {
   test.SetInput(sample_input_builder_.Build());
   test.SetExpectedResult(sample_output_builder_.Build());
 
-  scoped_ptr<AggregationSpecification> aggregator(new AggregationSpecification);
+  std::unique_ptr<AggregationSpecification> aggregator(
+      new AggregationSpecification);
   aggregator->AddAggregation(MAX, "col0", "max");
   aggregator->AddAggregation(COUNT, "", "count(*)");
   aggregator->AddAggregation(COUNT, "col0", "count");
@@ -102,9 +107,9 @@ TEST_F(ScalarAggregateCursorTest, AggregateStringsWithSpyTransform) {
   CreateSampleData();
   Cursor* input = sample_input_builder_.BuildCursor();
 
-  scoped_ptr<Cursor> expected_result(sample_output_builder_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(sample_output_builder_.BuildCursor());
 
-  scoped_ptr<AggregationSpecification> aggregation(
+  std::unique_ptr<AggregationSpecification> aggregation(
       new AggregationSpecification);
   aggregation->AddAggregation(MAX, "col0", "max");
   aggregation->AddAggregation(COUNT, "", "count(*)");
@@ -114,10 +119,10 @@ TEST_F(ScalarAggregateCursorTest, AggregateStringsWithSpyTransform) {
   FailureOrOwned<Aggregator> aggregator = Aggregator::Create(
         *aggregation, input->schema(), HeapBufferAllocator::Get(), 1);
   ASSERT_TRUE(aggregator.is_success());
-  scoped_ptr<Cursor> aggregate(BoundScalarAggregate(aggregator.release(),
-                                                    input));
+  std::unique_ptr<Cursor> aggregate(
+      BoundScalarAggregate(aggregator.release(), input));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   aggregate->ApplyToChildren(spy_transformer.get());
   aggregate.reset(spy_transformer->Transform(aggregate.release()));
@@ -129,16 +134,16 @@ TEST_F(ScalarAggregateCursorTest, TransformTest) {
   // Empty input cursor.
   Cursor* input = sample_input_builder_.BuildCursor();
 
-  scoped_ptr<AggregationSpecification> aggregation(
+  std::unique_ptr<AggregationSpecification> aggregation(
       new AggregationSpecification);
 
   FailureOrOwned<Aggregator> aggregator = Aggregator::Create(
         *aggregation, input->schema(), HeapBufferAllocator::Get(), 1);
   ASSERT_TRUE(aggregator.is_success());
-  scoped_ptr<Cursor> aggregate(BoundScalarAggregate(aggregator.release(),
-                                                    input));
+  std::unique_ptr<Cursor> aggregate(
+      BoundScalarAggregate(aggregator.release(), input));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   aggregate->ApplyToChildren(spy_transformer.get());
 

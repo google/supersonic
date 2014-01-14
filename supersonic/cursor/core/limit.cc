@@ -16,14 +16,9 @@
 #include "supersonic/cursor/core/limit.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"

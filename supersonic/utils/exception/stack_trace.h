@@ -20,7 +20,7 @@
 #define DATAWAREHOUSE_COMMON_EXCEPTION_STACK_TRACE_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 

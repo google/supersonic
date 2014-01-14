@@ -18,6 +18,8 @@
 
 #include "supersonic/benchmark/dot/dot_drawer.h"
 
+#include <memory>
+
 #include "supersonic/benchmark/proto/benchmark.pb.h"
 #include "supersonic/benchmark/infrastructure/cursor_statistics.h"
 #include "supersonic/benchmark/infrastructure/node.h"
@@ -107,10 +109,9 @@ string CodeForNode(
   string table_start = "<table border=\"0\" "
                        "align=\"right\" "
                        "cellpadding=\"0\">";
-  string label = StrCat(
-      description.empty() ? cursor_name : description,
-      table_delim,
-      JoinStrings<vector<string>>(node_params, table_delim));
+  string label =
+      StrCat(description.empty() ? cursor_name : description, table_delim,
+             strings::Join<vector<string>>(node_params, table_delim));
 
   return Substitute(
       "$0 [shape=$1, label=<$2<tr><td bgcolor=\"grey\">$3</td></tr></table>>]",
@@ -126,7 +127,7 @@ inline string CodeForEdge(
     const string& from,
     const string& to,
     const vector<string>& edge_params) {
-  string label = JoinStrings<vector<string>>(edge_params, "\\n");
+  string label = strings::Join<vector<string>>(edge_params, "\\n");
   return Substitute("$0->$1 [label=\"$2\"];", from, to, label);
 }
 
@@ -352,15 +353,14 @@ class FileOutputWriter : public DOTOutputWriter {
 
  private:
   string file_name_;
-  scoped_ptr<FileCloser> out_file_closer_;
+  std::unique_ptr<FileCloser> out_file_closer_;
 };
 
 void FileOutputWriter::WriteDOT(const string& dot) {
   if (file_name_.size() == 0) {
         LOG(FATAL) << "Empty file name provided!";
       }
-  out_file_closer_.reset(
-      new FileCloser(File::OpenOrDie(file_name_.c_str(), "w")));
+      out_file_closer_.reset(new FileCloser(File::OpenOrDie(file_name_, "w")));
   CHECK_GT((*out_file_closer_)->Write(dot.c_str(), dot.size()), 0)
       << "Error writing to file: " << file_name_;
   CHECK(out_file_closer_->Close())

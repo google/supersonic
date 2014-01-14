@@ -35,37 +35,50 @@ bool HumanReadableNumBytes::LessThan(const string &a, const string &b) {
 }
 
 bool HumanReadableNumBytes::ToInt64(const string &str, int64 *num_bytes) {
-  const char *cstr = str.c_str();
-  bool neg = (*cstr == '-');
-  if (neg) {
-    cstr++;
-  }
   char *end;
-  double d = strtod(cstr, &end);
+  double d = strtod(str.c_str(), &end);
   // If this didn't consume the entire string, fail.
   if ((end - str.c_str()) + 1 < str.size())
     return false;
   int64 scale = 1;
   switch (*end) {
     // NB: an int64 can only go up to <8 EB.
-    case 'E':  scale <<= 10;   // Fall through...
-    case 'P':  scale <<= 10;
-    case 'T':  scale <<= 10;
-    case 'G':  scale <<= 10;
-    case 'M':  scale <<= 10;
+    case 'E':
+      scale <<= 10;
+      FALLTHROUGH_INTENDED;
+    case 'P':
+      scale <<= 10;
+      FALLTHROUGH_INTENDED;
+    case 'T':
+      scale <<= 10;
+      FALLTHROUGH_INTENDED;
+    case 'G':
+      scale <<= 10;
+      FALLTHROUGH_INTENDED;
+    case 'M':
+      scale <<= 10;
+      FALLTHROUGH_INTENDED;
     case 'K':
-    case 'k':  scale <<= 10;
+    case 'k':
+      scale <<= 10;
+      FALLTHROUGH_INTENDED;
     case 'B':
-    case '\0': break;          // To here.
+    case '\0':
+      break;
     default:
       return false;
   }
   d *= scale;
-  if (d > kint64max || d < 0)
-    return false;
-  *num_bytes = static_cast<int64>(d + 0.5);
-  if (neg) {
-    *num_bytes = -*num_bytes;
+  if (d > 0) {
+    // Note that double(kint64max) is 2^63 exactly, so we cannot convert such
+    // a value back to an int64.
+    if (d + 0.5 >= kint64max)
+      return false;
+    *num_bytes = static_cast<int64>(d + 0.5);
+  } else {
+    if (d - 0.5 < kint64min)
+      return false;
+    *num_bytes = static_cast<int64>(d - 0.5);
   }
   return true;
 }
@@ -78,17 +91,34 @@ bool HumanReadableNumBytes::ToDouble(const string &str, double *num_bytes) {
     return false;
   const char scale = *end;
   switch (scale) {
-    case 'Y':  d *= 1024.0;   // That's a yotta bytes!
-    case 'Z':  d *= 1024.0;
-    case 'E':  d *= 1024.0;
-    case 'P':  d *= 1024.0;
-    case 'T':  d *= 1024.0;
-    case 'G':  d *= 1024.0;
-    case 'M':  d *= 1024.0;
+    case 'Y':
+      d *= 1024.0;  // That's a yotta bytes!
+      FALLTHROUGH_INTENDED;
+    case 'Z':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
+    case 'E':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
+    case 'P':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
+    case 'T':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
+    case 'G':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
+    case 'M':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
     case 'K':
-    case 'k':  d *= 1024.0;
+    case 'k':
+      d *= 1024.0;
+      FALLTHROUGH_INTENDED;
     case 'B':
-    case '\0': break;         // to here.
+    case '\0':
+      break;  // to here.
     default:
       return false;
   }
@@ -282,12 +312,20 @@ string HumanReadableElapsedTime::ToShortString(double seconds) {
   }
 
   // Start with us and keep going up to years.
-  if (seconds < 0.001) {
-    StringAppendF(&human_readable, "%0.3g us", seconds * 1000000.0);
+  // The comparisons must account for rounding to prevent the format breaking
+  // the tested condition and returning, e.g., "1e+03 us" instead of "1 ms".
+  const double microseconds = seconds * 1.0e6;
+  if (microseconds < 999.5) {
+    StringAppendF(&human_readable, "%0.3g us", microseconds);
     return human_readable;
   }
-  if (seconds < 1.0) {
-    StringAppendF(&human_readable, "%0.3g ms", seconds * 1000.0);
+  double milliseconds = seconds * 1e3;
+  if (milliseconds >= .995 && milliseconds < 1) {
+    // Round half to even in StringAppendF would convert this to 0.999 ms.
+    milliseconds = 1.0;
+  }
+  if (milliseconds < 999.5) {
+    StringAppendF(&human_readable, "%0.3g ms", milliseconds);
     return human_readable;
   }
   if (seconds < 60.0) {

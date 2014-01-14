@@ -19,19 +19,19 @@
 #ifndef SUPERSONIC_CURSOR_CORE_OWNERSHIP_TAKER_H_
 #define SUPERSONIC_CURSOR_CORE_OWNERSHIP_TAKER_H_
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
 
 #include "supersonic/base/exception/exception_macros.h"
 #include "supersonic/cursor/base/cursor.h"
-#include "supersonic/cursor/proto/cursors.pb.h"
 #include "supersonic/cursor/base/operation.h"
+#include "supersonic/cursor/proto/cursors.pb.h"
 
 namespace supersonic {
 
@@ -63,8 +63,8 @@ class OwnershipTaker : public Cursor {
       : owned_(owned),
         child_(child) {}
   // Defining owned_ field first, so it will outlive child_.
-  scoped_ptr<Owned> owned_;
-  const scoped_ptr<Cursor> child_;
+  std::unique_ptr<Owned> owned_;
+  const std::unique_ptr<Cursor> child_;
   DISALLOW_COPY_AND_ASSIGN(OwnershipTaker);
 };
 
@@ -124,7 +124,7 @@ Cursor* TakeOwnership(Cursor* child, A* a, B* b, C* c, D* d, E* e, F* f) {
 // The operation gets deleted when the cursor is deleted. You should not use
 // the operation directly after having passed it to this function.
 inline FailureOrOwned<Cursor> TurnIntoCursor(Operation* operation) {
-  scoped_ptr<Operation> operation_ptr(operation);
+  std::unique_ptr<Operation> operation_ptr(operation);
   FailureOrOwned<Cursor> result = operation_ptr->CreateCursor();
   PROPAGATE_ON_FAILURE(result);
   return Success(TakeOwnership(result.release(), operation_ptr.release()));

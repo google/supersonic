@@ -16,10 +16,9 @@
 #include "supersonic/base/infrastructure/projector.h"
 
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/exception/failureor.h"
@@ -122,8 +121,8 @@ class RenamingProjector : public SingleSourceProjector {
         source_(source) {
     set<string> unique(aliases.begin(), aliases.end());
     CHECK_EQ(aliases.size(), unique.size())
-        << "The provided list of aliases isn't unique: "
-        << JoinStrings(aliases, ", ");
+        << "The provided list of aliases isn't unique: " << strings::Join(
+                                                                aliases, ", ");
   }
 
   virtual FailureOrOwned<const BoundSingleSourceProjector> Bind(
@@ -368,7 +367,7 @@ string CompoundMultiSourceProjector::ToString(bool verbose) const {
     projectors_str[i] = StrCat(
         projectors_[i].first, ": ", projectors_[i].second->ToString(verbose));
   }
-  return JoinStrings(projectors_str, ", ");
+  return strings::Join(projectors_str, ", ");
 }
 
 pair<BoundMultiSourceProjector*, BoundSingleSourceProjector*> DecomposeNth(

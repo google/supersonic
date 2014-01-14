@@ -18,12 +18,7 @@
 #include <string.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <cstdlib>
 
 #include <gflags/gflags.h>

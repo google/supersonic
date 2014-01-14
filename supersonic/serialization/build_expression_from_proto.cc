@@ -18,10 +18,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
+
+#include "config.h"
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -41,6 +44,9 @@ using std::vector;
 #include "supersonic/expression/core/elementary_expressions.h"
 #include "supersonic/expression/core/math_expressions.h"
 #include "supersonic/expression/core/projecting_expressions.h"
+#ifdef HAVE_RE2_RE2_H
+#include "supersonic/expression/core/regexp_expressions.h"
+#endif  // HAVE_RE2_RE2_H
 #include "supersonic/expression/core/string_expressions.h"
 #include "supersonic/expression/infrastructure/terminal_expressions.h"
 #include "supersonic/expression/templated/bound_expression_factory.h"
@@ -264,7 +270,7 @@ static ExpressionResult MakeNaryOperation(
         "received zero."));
   }
 
-  scoped_ptr<ExpressionList> list(new ExpressionList());
+  std::unique_ptr<ExpressionList> list(new ExpressionList());
   for (int i = 0; i < args->size(); ++i) {
     list->add(args->at(i).release());
   }
@@ -341,6 +347,7 @@ std::vector<CppType> BuildConstantsVectorFromProto(
 }
 
 ExpressionResult MakeRegexpOperation(const OperationDescription& regexp_descr) {
+#ifdef HAVE_RE2_RE2_H
   if (regexp_descr.argument_size() != 2) {
     THROW(new Exception(
         ERROR_BAD_PROTO,
@@ -377,10 +384,16 @@ ExpressionResult MakeRegexpOperation(const OperationDescription& regexp_descr) {
                  << " passed over to MakeRegexpOperation. Should be one of "
                  << "REGEXP_FULL, REGEXP_PARTIAL or REGEXP_EXTRACT.";
   }
+#else
+  THROW(new Exception(
+        ERROR_BAD_PROTO,
+        "Supersonic complied without re2. Regexp expressions not supported."));
+#endif
 }
 
 ExpressionResult MakeRegexpReplaceOperation(
     const OperationDescription& regexp_descr) {
+#ifdef HAVE_RE2_RE2_H
   if (regexp_descr.argument_size() != 3) {
     THROW(new Exception(
         ERROR_BAD_PROTO,
@@ -412,6 +425,11 @@ ExpressionResult MakeRegexpReplaceOperation(
 
   return Success(RegexpReplace(left.release(), c.string_value(),
                                right.release()));
+#else
+  THROW(new Exception(
+        ERROR_BAD_PROTO,
+        "Supersonic complied without re2. Regexp expressions not supported."));
+#endif
 }
 
 ExpressionResult MakeInOperation(const OperationDescription& in_description) {
@@ -426,7 +444,7 @@ ExpressionResult MakeInOperation(const OperationDescription& in_description) {
       BuildExpressionFromProto(in_description.argument(0));
   // No context here, as the error actually occurred in the child.
   PROPAGATE_ON_FAILURE(needle_result);
-  scoped_ptr<ExpressionList> haystack(new ExpressionList());
+  std::unique_ptr<ExpressionList> haystack(new ExpressionList());
   for (int i = 1; i < in_description.argument_size(); ++i) {
     ExpressionResult child_result =
         BuildExpressionFromProto(in_description.argument(i));
@@ -717,7 +735,7 @@ ExpressionResult BuildFunctionCallFromProto(
 }
 
 ExpressionResult BuildTupleFromProto(const Tuple& tuple_descr) {
-  scoped_ptr<CompoundExpression> result(new CompoundExpression());
+  std::unique_ptr<CompoundExpression> result(new CompoundExpression());
   for (int i = 0; i < tuple_descr.expression_size(); i++) {
     const Tuple::TupleExpression& expr = tuple_descr.expression(i);
     ExpressionResult expression = BuildExpressionFromProto(expr.expression());

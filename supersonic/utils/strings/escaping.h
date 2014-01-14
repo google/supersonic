@@ -1,5 +1,4 @@
 // Copyright 2006 Google Inc. All Rights Reserved.
-// Authors: Numerous. Principal maintainers are csilvers and zunger.
 //
 // This is a grab-bag file for string utilities involved in escaping and
 // unescaping strings in various ways. Who knew there were so many?
@@ -8,7 +7,7 @@
 //   webutil/html/tagutils.h (Escaping strings for HTML, PRE, JavaScript, etc.)
 //   webutil/url/url.h (Escaping for URL's, both RFC-2396 and other methods)
 //   template/template_modifiers.h (All sorts of stuff)
-//   util/regex/re2/re2.h (Escaping for literals within regular expressions
+//   util/regexp/re2/re2.h (Escaping for literals within regular expressions
 //                         - see RE2::QuoteMeta).
 // And probably many more places, as well.
 
@@ -17,7 +16,7 @@
 
 #include <stddef.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -131,13 +130,13 @@ string UnescapeCEscapeString(const string& src);
 //    Errors: Sets the description of the first encountered error in
 //    'error'. To disable error reporting, set 'error' to NULL.
 // ----------------------------------------------------------------------
-bool CUnescape(const StringPiece& source, char* dest, int* dest_len,
+bool CUnescape(StringPiece source, char* dest, int* dest_len,
                string* error);
 
-bool CUnescape(const StringPiece& source, string* dest, string* error);
+bool CUnescape(StringPiece source, string* dest, string* error);
 
 // A version with no error reporting.
-inline bool CUnescape(const StringPiece& source, string* dest) {
+inline bool CUnescape(StringPiece source, string* dest) {
   return CUnescape(source, dest, NULL);
 }
 
@@ -153,97 +152,193 @@ inline bool CUnescape(const StringPiece& source, string* dest) {
 //
 // ----------------------------------------------------------------------
 
-bool CUnescapeForNullTerminatedString(const StringPiece& source,
+bool CUnescapeForNullTerminatedString(StringPiece source,
                                       char* dest,
                                       int* dest_len,
                                       string* error);
 
-bool CUnescapeForNullTerminatedString(const StringPiece& source,
+bool CUnescapeForNullTerminatedString(StringPiece source,
                                       string* dest,
                                       string* error);
 
 // A version with no error reporting.
-inline bool CUnescapeForNullTerminatedString(const StringPiece& source,
+inline bool CUnescapeForNullTerminatedString(StringPiece source,
                                              string* dest) {
   return CUnescapeForNullTerminatedString(source, dest, NULL);
 }
-
-// ----------------------------------------------------------------------
-// CEscapeString()
-// CHexEscapeString()
-// Utf8SafeCEscapeString()
-// Utf8SafeCHexEscapeString()
-//    Copies 'src' to 'dest', escaping dangerous characters using
-//    C-style escape sequences. This is very useful for preparing query
-//    flags. 'src' and 'dest' should not overlap. The 'Hex' version uses
-//    hexadecimal rather than octal sequences. The 'Utf8Safe' version
-//    doesn't touch UTF-8 bytes.
-//    Returns the number of bytes written to 'dest' (not including the \0)
-//    or -1 if there was insufficient space.
-//
-//    Currently only \n, \r, \t, ", ', \ and !ascii_isprint() chars are escaped.
-// ----------------------------------------------------------------------
-int CEscapeString(const char* src, int src_len, char* dest, int dest_len);
-int CHexEscapeString(const char* src, int src_len, char* dest, int dest_len);
-int Utf8SafeCEscapeString(const char* src, int src_len, char* dest,
-                          int dest_len);
-int Utf8SafeCHexEscapeString(const char* src, int src_len, char* dest,
-                             int dest_len);
 
 // ----------------------------------------------------------------------
 // CEscape()
 // CHexEscape()
 // Utf8SafeCEscape()
 // Utf8SafeCHexEscape()
-//    More convenient form of CEscapeString: returns result as a "string".
-//    This version is slower than CEscapeString() because it does more
-//    allocation.  However, it is much more convenient to use in
-//    non-speed-critical code like logging messages etc.
-// ----------------------------------------------------------------------
-string CEscape(const StringPiece& src);
-string CHexEscape(const StringPiece& src);
-string Utf8SafeCEscape(const StringPiece& src);
-string Utf8SafeCHexEscape(const StringPiece& src);
-
-// ----------------------------------------------------------------------
-// BackslashEscape()
-//    Given a string and a list of characters to escape, replace any
-//    instance of one of those characters with \ + that character. For
-//    example, when exporting maps to /varz, label values need to have
-//    all dots escaped. Appends the result to dest.
-// BackslashUnescape()
-//    Replace \ + any of the indicated "unescape me" characters with just
-//    that character. Appends the result to dest.
+//    Escapes 'src' using C-style escape sequences.  This is useful for
+//    preparing query flags.  The 'Hex' version uses hexadecimal rather than
+//    octal sequences.  The 'Utf8Safe' version does not touch UTF-8 bytes.
 //
-//    IMPORTANT:
-//    This function does not escape \ by default, so if you do not include
-//    it in the chars to escape you will most certainly get an undesirable
-//    result. That is, it won't be a reversible operation:
-//      string src = "foo\\:bar";
-//      BackslashUnescape(BackslashEscape(src, ":"), ":") == "foo\\\\:bar"
-//    On the other hand, for all strings "src", the following is true:
-//      BackslashUnescape(BackslashEscape(src, ":\\"), ":\\") == src
+//    Escaped chars: \n, \r, \t, ", ', \, and !ascii_isprint().
 // ----------------------------------------------------------------------
-void BackslashEscape(const StringPiece& src,
-                     const strings::CharSet& to_escape,
-                     string* dest);
-void BackslashUnescape(const StringPiece& src,
-                       const strings::CharSet& to_unescape,
-                       string* dest);
+string CEscape(StringPiece src);
+string CHexEscape(StringPiece src);
+string Utf8SafeCEscape(StringPiece src);
+string Utf8SafeCHexEscape(StringPiece src);
 
-inline string BackslashEscape(const StringPiece& src,
-                              const strings::CharSet& to_escape) {
+// ----------------------------------------------------------------------
+// BackslashEscape(), BackslashUnescape(), BackslashUnescapedFind()
+//
+//     - Use backslashes to selectively escape or unescape a set of
+//       delimiter characters.
+//
+// SYNOPSIS:
+//
+//   #include "strings/escaping.h"
+//
+//   #include "strings/charset.h"
+//   #include "strings/stringpiece.h"
+//
+//   namespace strings {
+//     void BackslashEscape(StringPiece src,
+//                          const strings::CharSet& delims,
+//                          string* dest);
+//     void BackslashUnescape(StringPiece src,
+//                            const strings::CharSet& delims,
+//                            string* dest);
+//     stringpiece_ssize_type BackslashUnescapedFind(
+//         StringPiece src,
+//         const strings::CharSet& delims);
+//   }
+//
+// PARAMS:
+//
+//   StringPiece src
+//      The source to be escaped or unescaped.
+//
+//   strings::CharSet& delims
+//      A strings::CharSet of characters to be considered escaped or
+//      unescaped by the operation.
+//
+//      NOTE: Please use the explicit strings::CharSet(StringPiece)
+//      constructor, as in:
+//
+//        strings::BackslashEscape(src, strings::CharSet(":,&\\"), &dest);
+//
+//   string* dest
+//      Destination string Appended to by strings::BackslashEscape and
+//      strings::BackslashUnescape.
+//
+// DESCRIPTION:
+//
+//  void BackslashEscape(StringPiece src, const strings::CharSet& delims,
+//                       string* dest);
+//
+//    Replace any instance of a member 'c' of the strings::CharSet with
+//    { '\\', c }.
+//    For example, when exporting maps to /varz, label values need to
+//    have all dots escaped.  Appends the result to dest.
+//
+//  void BackslashUnescape(StringPiece src, const strings::CharSet& delims,
+//                         string* dest);
+//
+//    For all member characters 'c' in the specified 'delims',
+//    replace any appearance of the 2-character sequence { '\\', c } in
+//    the specified 'src' with just { c }.
+//    Does not unescape backslashes unless '\\' is a member of 'delims'.
+//    Appends the result to the specified 'dest'.
+//
+//  stringpiece_ssize_type BackslashUnescapedFind(
+//      StringPiece src,
+//      const strings::CharSet& delims);
+//
+//    Return the position in src of the first unescaped instance of any of
+//    the indicated characters, or StringPiece::npos (converted to a
+//    stringpiece_ssize_type) if no unescaped members of 'delims' are found.
+//
+// NOTE:
+//
+//    These functions do not escape or unescape backslash '\' by default.
+//
+//    For all strings, strings::BackslashUnescape is the exact inverse of
+//    the strings::BackslashEscape with the matching 'delims' argument.
+//    That is, for any StringPiece 'str' and any strings::CharSet 'delims':
+//
+//        string RoundTrip(StringPiece src, const strings::CharSet& delims) {
+//          string encoded = strings::BackslashEscape(src, delims);
+//          return strings::BackslashUnescape(encoded, delims);
+//        }
+//
+//        ASSERT_EQ(src, RoundTrip(str, delims));  // always true
+//
+//    Note that this is true whether 'delims' contains backslash or not.
+//
+// EXAMPLES:
+//
+//    Example 1:
+//      Join arbitrary string fields with ':'.
+//      Any ':' occurring in any of the fields will be escaped.
+//
+//    vector<string> fields = ...;
+//    const strings::CharSet kDelims = ":";
+//    string encoded;
+//    const char* sep = "";
+//    for (int i = 0; i < fields.size(); ++i) {
+//      const string& field = fields[i];
+//      StrAppend(&encoded, sep);
+//      strings::BackslashEscape(field, kDelims, &encoded);
+//      sep = ":";
+//    }
+//
+//    Example 2:
+//      Find the field boundaries in such an encoded string.
+//
+//      StringPiece encoded_sp = ...;  // from example 1
+//      const strings::CharSet kDelims = ":";
+//      vector<StringPiece> fields;
+//      while (!encoded_sp.empty()) {
+//        stringpiece_ssize_type pos =
+//            strings::BackslashUnescapedFind(encoded_sp, kDelims);
+//        if (pos == StringPiece::npos) {
+//          pos = encoded_sp.size();
+//        }
+//        fields.push_back(encoded_sp.substr(0, pos));
+//        if (pos < encoded_sp.size()) {
+//          ++pos;
+//        }
+//        encoded_sp.remove_prefix(pos);
+//      }
+//
+//    Example 3:
+//      Unescape the fields identified in Example 2.
+//
+//      vector<StringPiece> encoded_fields = ...;  // from example 2
+//      const strings::CharSet kDelims = ":";
+//      vector<string> decoded_fields;
+//      for (int i = 0; i < encoded_fields.size(); ++i) {
+//         StringPiece enc = encoded_fields[i];
+//         string f;
+//         strings::BackslashUnescape(enc, kDelims, &f);
+//         decoded_fields.push_back(f);
+//      }
+//
+// ----------------------------------------------------------------------
+void BackslashEscape(StringPiece src, const CharSet& delims, string* dest);
+void BackslashUnescape(StringPiece src, const CharSet& delims, string* dest);
+stringpiece_ssize_type BackslashUnescapedFind(StringPiece src,
+                                              const CharSet& delims);
+
+// Convenience overload of BackslashEscape that returns a string value.
+inline string BackslashEscape(StringPiece src, const CharSet& delims) {
   string s;
-  BackslashEscape(src, to_escape, &s);
+  BackslashEscape(src, delims, &s);
   return s;
 }
 
-inline string BackslashUnescape(const StringPiece& src,
-                                const strings::CharSet& to_unescape) {
+// Convenience overload of BackslashUnescape that returns a string value.
+inline string BackslashUnescape(StringPiece src, const CharSet& delims) {
   string s;
-  BackslashUnescape(src, to_unescape, &s);
+  BackslashUnescape(src, delims, &s);
   return s;
 }
+
 
 // ----------------------------------------------------------------------
 // QuotedPrintableUnescape()
@@ -457,14 +552,14 @@ void FiveBytesToEightBase32Digits(const unsigned char* in_bytes, char* out);
 //
 //   The versions that receive a string for the output will append to it.
 // ----------------------------------------------------------------------
-void EscapeFileName(const StringPiece& src, string* dst);
-void UnescapeFileName(const StringPiece& src, string* dst);
-inline string EscapeFileName(const StringPiece& src) {
+void EscapeFileName(StringPiece src, string* dst);
+void UnescapeFileName(StringPiece src, string* dst);
+inline string EscapeFileName(StringPiece src) {
   string r;
   EscapeFileName(src, &r);
   return r;
 }
-inline string UnescapeFileName(const StringPiece& src) {
+inline string UnescapeFileName(StringPiece src) {
   string r;
   UnescapeFileName(src, &r);
   return r;
@@ -534,7 +629,7 @@ void b2a_hex(const unsigned char* from, string* to, int num);
 //    Return value: 2*'num' characters of ascii string
 // ----------------------------------------------------------------------
 string b2a_hex(const char* from, int num);
-string b2a_hex(const StringPiece& b);
+string b2a_hex(StringPiece b);
 
 // ----------------------------------------------------------------------
 // b2a_bin()

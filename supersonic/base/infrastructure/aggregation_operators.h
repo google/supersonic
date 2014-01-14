@@ -33,18 +33,12 @@
 #include <string.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
-#include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/types.h"
 #include "supersonic/base/infrastructure/types_infrastructure.h"
 #include "supersonic/base/memory/memory.h"
@@ -69,7 +63,7 @@ struct AssignmentOperator {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     *result = val;
     return true;
   }
@@ -82,7 +76,7 @@ struct AssignmentOperator<STRING, STRING, true> {
 
   inline bool operator()(const StringPiece& val,
                          StringPiece* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     Buffer* buffer = buffer_ptr->get();
     if (!buffer) {
       buffer = allocator_->Allocate(val.length());
@@ -118,7 +112,7 @@ struct AssignmentOperator<BINARY, BINARY, true> {
 
   inline bool operator()(const StringPiece& val,
                          StringPiece* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     // The BINARY and STRING logic is identical, so we delegate.
     return string_assignment_operator_(val, result, buffer_ptr);
   }
@@ -138,7 +132,7 @@ struct AssignmentOperator<InputType, STRING, deep_copy> {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          StringPiece* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     string val_string;
     PrintTyped<InputType>(val, &val_string);
     return string_assigment_operator_(val_string, result, buffer_ptr);
@@ -156,7 +150,7 @@ struct AssignmentOperator<STRING, STRING, false> {
 
   inline bool operator()(const StringPiece& val,
                          StringPiece* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     *result = val;
     return true;
   }
@@ -172,7 +166,7 @@ struct AggregationOperator {
   // store the variable length data.
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr);
+                         std::unique_ptr<Buffer>* buffer_ptr);
 };
 
 template<DataType InputType, DataType OutputType, bool deep_copy>
@@ -185,7 +179,7 @@ struct AggregationOperator<SUM, InputType, OutputType, deep_copy> {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     *result += val;
     return true;
   }
@@ -198,7 +192,7 @@ struct AggregationOperator<MAX, InputType, OutputType, deep_copy> {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     if (ThreeWayCompare<OutputType, InputType, false>(*result, val)
         == RESULT_LESS) {
       return assigment_operator_(val, result, buffer_ptr);
@@ -219,7 +213,7 @@ struct AggregationOperator<MIN, InputType, OutputType, deep_copy> {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     if (ThreeWayCompare<InputType, OutputType, false>(val, *result)
         == RESULT_LESS) {
       return assigment_operator_(val, result, buffer_ptr);
@@ -249,7 +243,7 @@ struct AggregationOperator<CONCAT, InputType, STRING, deep_copy> {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          StringPiece* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     Buffer* buffer = buffer_ptr->get();
     // If the buffer is NULL, we expect the string passed in to be empty.
     DCHECK(buffer != NULL || result->length() == 0);
@@ -301,7 +295,7 @@ struct AggregationOperator<FIRST, InputType, OutputType, deep_copy> {
   // the next entries we need not do anything.
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     return true;
   }
 };
@@ -313,7 +307,7 @@ struct AggregationOperator<LAST, InputType, OutputType, deep_copy> {
 
   inline bool operator()(const typename TypeTraits<InputType>::cpp_type& val,
                          typename TypeTraits<OutputType>::cpp_type* result,
-                         scoped_ptr<Buffer>* buffer_ptr) {
+                         std::unique_ptr<Buffer>* buffer_ptr) {
     return assigment_operator_(val, result, buffer_ptr);
   }
 

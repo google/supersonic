@@ -8,17 +8,23 @@
 #define STRINGS_STRCAT_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
+#include "supersonic/utils/macros.h"
 #include "supersonic/utils/strings/numbers.h"
 #include "supersonic/utils/strings/stringpiece.h"
 
 // The AlphaNum type was designed to be used as the parameter type for StrCat().
-// I suppose that any routine accepting either a string or a number could accept
-// it.  The basic idea is that by accepting a "const AlphaNum &" as an argument
+// Any routine accepting either a string or a number may accept it.
+// The basic idea is that by accepting a "const AlphaNum &" as an argument
 // to your function, your callers will automagically convert bools, integers,
 // and floating point values to strings for you.
+//
+// NOTE: Use of AlphaNum outside of the //strings package is unsupported except
+// for the specific case of function parameters of type "AlphaNum" or "const
+// AlphaNum &". In particular, instantiating AlphaNum directly as a stack
+// variable is not supported.
 //
 // Conversion from 8-bit values is not accepted because if it were, then an
 // attempt to pass ':' instead of ":" might result in a 58 ending up in your
@@ -68,9 +74,20 @@ struct AlphaNum {
   AlphaNum(double f)  // NOLINT(runtime/explicit)
     : piece(digits, strlen(DoubleToBuffer(f, digits))) {}
 
-  AlphaNum(const char *c_str) : piece(c_str) {}  // NOLINT(runtime/explicit)
+  AlphaNum(const char *c_str) : piece(c_str) {}   // NOLINT(runtime/explicit)
   AlphaNum(const StringPiece &pc) : piece(pc) {}  // NOLINT(runtime/explicit)
-  AlphaNum(const string &s) : piece(s) {}  // NOLINT(runtime/explicit)
+
+#if defined(HAS_GLOBAL_STRING)
+  template <class Allocator>
+  AlphaNum(const basic_string<char, std::char_traits<char>,
+                              Allocator> &str)
+      : piece(str) {}
+#endif
+  template <class Allocator>
+  AlphaNum(const std::basic_string<char, std::char_traits<char>,
+                                   Allocator> &str)  // NOLINT(runtime/explicit)
+      : piece(str) {}
+
 
   StringPiece::size_type size() const { return piece.size(); }
   const char *data() const { return piece.data(); }
@@ -78,6 +95,8 @@ struct AlphaNum {
  private:
   // Use ":" not ':'
   AlphaNum(char c);  // NOLINT(runtime/explicit)
+
+  DISALLOW_COPY_AND_ASSIGN(AlphaNum);
 };
 
 extern AlphaNum gEmptyAlphaNum;
@@ -105,7 +124,9 @@ extern AlphaNum gEmptyAlphaNum;
 //    be a reference into str.
 // ----------------------------------------------------------------------
 
-string StrCat(const AlphaNum &a);
+inline string StrCat(const AlphaNum &a) {
+  return string(a.data(), a.size());
+}
 string StrCat(const AlphaNum &a, const AlphaNum &b);
 string StrCat(const AlphaNum &a, const AlphaNum &b, const AlphaNum &c);
 string StrCat(const AlphaNum &a, const AlphaNum &b, const AlphaNum &c,

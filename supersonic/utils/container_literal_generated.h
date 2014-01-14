@@ -1384,6 +1384,695 @@ Container(const char* const& e1, const char* const& e2, const char* const& e3,
 }
 
 template <typename T>
+inline internal::ContainerImpl<T, 51> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51) {
+  const T* elem_ptrs[51] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51 };
+  return internal::ContainerImpl<T, 51>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 51>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 52> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52) {
+  const T* elem_ptrs[52] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52 };
+  return internal::ContainerImpl<T, 52>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 52>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 53> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53) {
+  const T* elem_ptrs[53] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53 };
+  return internal::ContainerImpl<T, 53>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 53>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 54> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54) {
+  const T* elem_ptrs[54] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54 };
+  return internal::ContainerImpl<T, 54>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 54>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 55> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55) {
+  const T* elem_ptrs[55] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55 };
+  return internal::ContainerImpl<T, 55>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 55>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 56> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56) {
+  const T* elem_ptrs[56] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56 };
+  return internal::ContainerImpl<T, 56>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 56>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 57> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57) {
+  const T* elem_ptrs[57] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57 };
+  return internal::ContainerImpl<T, 57>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 57>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 58> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58) {
+  const T* elem_ptrs[58] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58 };
+  return internal::ContainerImpl<T, 58>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 58>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 59> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59) {
+  const T* elem_ptrs[59] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59 };
+  return internal::ContainerImpl<T, 59>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 59>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58, const char* const& e59) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58, e59);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 60> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60) {
+  const T* elem_ptrs[60] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60 };
+  return internal::ContainerImpl<T, 60>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 60>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58, const char* const& e59, const char* const& e60) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58, e59, e60);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 61> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61) {
+  const T* elem_ptrs[61] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61 };
+  return internal::ContainerImpl<T, 61>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 61>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58, const char* const& e59, const char* const& e60,
+    const char* const& e61) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58, e59, e60, e61);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 62> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61, const T& e62) {
+  const T* elem_ptrs[62] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61, &e62 };
+  return internal::ContainerImpl<T, 62>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 62>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58, const char* const& e59, const char* const& e60,
+    const char* const& e61, const char* const& e62) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58, e59, e60, e61, e62);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 63> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61, const T& e62,
+    const T& e63) {
+  const T* elem_ptrs[63] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61, &e62, &e63 };
+  return internal::ContainerImpl<T, 63>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 63>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58, const char* const& e59, const char* const& e60,
+    const char* const& e61, const char* const& e62, const char* const& e63) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58, e59, e60, e61, e62, e63);
+}
+
+template <typename T>
+inline internal::ContainerImpl<T, 64> Container(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61, const T& e62,
+    const T& e63, const T& e64) {
+  const T* elem_ptrs[64] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61, &e62, &e63, &e64 };
+  return internal::ContainerImpl<T, 64>(elem_ptrs);
+}
+
+inline internal::ContainerImpl<const char*, 64>
+Container(const char* const& e1, const char* const& e2, const char* const& e3,
+    const char* const& e4, const char* const& e5, const char* const& e6,
+    const char* const& e7, const char* const& e8, const char* const& e9,
+    const char* const& e10, const char* const& e11, const char* const& e12,
+    const char* const& e13, const char* const& e14, const char* const& e15,
+    const char* const& e16, const char* const& e17, const char* const& e18,
+    const char* const& e19, const char* const& e20, const char* const& e21,
+    const char* const& e22, const char* const& e23, const char* const& e24,
+    const char* const& e25, const char* const& e26, const char* const& e27,
+    const char* const& e28, const char* const& e29, const char* const& e30,
+    const char* const& e31, const char* const& e32, const char* const& e33,
+    const char* const& e34, const char* const& e35, const char* const& e36,
+    const char* const& e37, const char* const& e38, const char* const& e39,
+    const char* const& e40, const char* const& e41, const char* const& e42,
+    const char* const& e43, const char* const& e44, const char* const& e45,
+    const char* const& e46, const char* const& e47, const char* const& e48,
+    const char* const& e49, const char* const& e50, const char* const& e51,
+    const char* const& e52, const char* const& e53, const char* const& e54,
+    const char* const& e55, const char* const& e56, const char* const& e57,
+    const char* const& e58, const char* const& e59, const char* const& e60,
+    const char* const& e61, const char* const& e62, const char* const& e63,
+    const char* const& e64) {
+  return Container<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11,
+      e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24, e25,
+      e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38, e39,
+      e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52, e53,
+      e54, e55, e56, e57, e58, e59, e60, e61, e62, e63, e64);
+}
+
+template <typename T>
 inline internal::NewContainerImpl<T, 1> NewContainer(const T& e1) {
   const T* elem_ptrs[1] = { &e1 };
   return internal::NewContainerImpl<T, 1>(elem_ptrs);
@@ -2761,6 +3450,701 @@ NewContainer(const char* const& e1, const char* const& e2,
       e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
       e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
       e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 51> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51) {
+  const T* elem_ptrs[51] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51 };
+  return internal::NewContainerImpl<T, 51>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 51>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 52> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52) {
+  const T* elem_ptrs[52] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52 };
+  return internal::NewContainerImpl<T, 52>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 52>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 53> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53) {
+  const T* elem_ptrs[53] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53 };
+  return internal::NewContainerImpl<T, 53>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 53>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 54> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54) {
+  const T* elem_ptrs[54] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54 };
+  return internal::NewContainerImpl<T, 54>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 54>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 55> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55) {
+  const T* elem_ptrs[55] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55 };
+  return internal::NewContainerImpl<T, 55>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 55>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 56> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56) {
+  const T* elem_ptrs[56] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56 };
+  return internal::NewContainerImpl<T, 56>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 56>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 57> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57) {
+  const T* elem_ptrs[57] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57 };
+  return internal::NewContainerImpl<T, 57>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 57>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 58> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58) {
+  const T* elem_ptrs[58] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58 };
+  return internal::NewContainerImpl<T, 58>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 58>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 59> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59) {
+  const T* elem_ptrs[59] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59 };
+  return internal::NewContainerImpl<T, 59>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 59>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58, const char* const& e59) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58, e59);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 60> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60) {
+  const T* elem_ptrs[60] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60 };
+  return internal::NewContainerImpl<T, 60>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 60>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58, const char* const& e59,
+    const char* const& e60) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58, e59, e60);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 61> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61) {
+  const T* elem_ptrs[61] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61 };
+  return internal::NewContainerImpl<T, 61>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 61>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58, const char* const& e59,
+    const char* const& e60, const char* const& e61) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58, e59, e60, e61);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 62> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61, const T& e62) {
+  const T* elem_ptrs[62] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61, &e62 };
+  return internal::NewContainerImpl<T, 62>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 62>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58, const char* const& e59,
+    const char* const& e60, const char* const& e61, const char* const& e62) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58, e59, e60, e61, e62);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 63> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61, const T& e62,
+    const T& e63) {
+  const T* elem_ptrs[63] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61, &e62, &e63 };
+  return internal::NewContainerImpl<T, 63>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 63>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58, const char* const& e59,
+    const char* const& e60, const char* const& e61, const char* const& e62,
+    const char* const& e63) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58, e59, e60, e61, e62, e63);
+}
+
+template <typename T>
+inline internal::NewContainerImpl<T, 64> NewContainer(const T& e1, const T& e2,
+    const T& e3, const T& e4, const T& e5, const T& e6, const T& e7,
+    const T& e8, const T& e9, const T& e10, const T& e11, const T& e12,
+    const T& e13, const T& e14, const T& e15, const T& e16, const T& e17,
+    const T& e18, const T& e19, const T& e20, const T& e21, const T& e22,
+    const T& e23, const T& e24, const T& e25, const T& e26, const T& e27,
+    const T& e28, const T& e29, const T& e30, const T& e31, const T& e32,
+    const T& e33, const T& e34, const T& e35, const T& e36, const T& e37,
+    const T& e38, const T& e39, const T& e40, const T& e41, const T& e42,
+    const T& e43, const T& e44, const T& e45, const T& e46, const T& e47,
+    const T& e48, const T& e49, const T& e50, const T& e51, const T& e52,
+    const T& e53, const T& e54, const T& e55, const T& e56, const T& e57,
+    const T& e58, const T& e59, const T& e60, const T& e61, const T& e62,
+    const T& e63, const T& e64) {
+  const T* elem_ptrs[64] = { &e1, &e2, &e3, &e4, &e5, &e6, &e7, &e8, &e9, &e10,
+      &e11, &e12, &e13, &e14, &e15, &e16, &e17, &e18, &e19, &e20, &e21, &e22,
+      &e23, &e24, &e25, &e26, &e27, &e28, &e29, &e30, &e31, &e32, &e33, &e34,
+      &e35, &e36, &e37, &e38, &e39, &e40, &e41, &e42, &e43, &e44, &e45, &e46,
+      &e47, &e48, &e49, &e50, &e51, &e52, &e53, &e54, &e55, &e56, &e57, &e58,
+      &e59, &e60, &e61, &e62, &e63, &e64 };
+  return internal::NewContainerImpl<T, 64>(elem_ptrs);
+}
+
+inline internal::NewContainerImpl<const char*, 64>
+NewContainer(const char* const& e1, const char* const& e2,
+    const char* const& e3, const char* const& e4, const char* const& e5,
+    const char* const& e6, const char* const& e7, const char* const& e8,
+    const char* const& e9, const char* const& e10, const char* const& e11,
+    const char* const& e12, const char* const& e13, const char* const& e14,
+    const char* const& e15, const char* const& e16, const char* const& e17,
+    const char* const& e18, const char* const& e19, const char* const& e20,
+    const char* const& e21, const char* const& e22, const char* const& e23,
+    const char* const& e24, const char* const& e25, const char* const& e26,
+    const char* const& e27, const char* const& e28, const char* const& e29,
+    const char* const& e30, const char* const& e31, const char* const& e32,
+    const char* const& e33, const char* const& e34, const char* const& e35,
+    const char* const& e36, const char* const& e37, const char* const& e38,
+    const char* const& e39, const char* const& e40, const char* const& e41,
+    const char* const& e42, const char* const& e43, const char* const& e44,
+    const char* const& e45, const char* const& e46, const char* const& e47,
+    const char* const& e48, const char* const& e49, const char* const& e50,
+    const char* const& e51, const char* const& e52, const char* const& e53,
+    const char* const& e54, const char* const& e55, const char* const& e56,
+    const char* const& e57, const char* const& e58, const char* const& e59,
+    const char* const& e60, const char* const& e61, const char* const& e62,
+    const char* const& e63, const char* const& e64) {
+  return NewContainer<const char*>(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10,
+      e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24,
+      e25, e26, e27, e28, e29, e30, e31, e32, e33, e34, e35, e36, e37, e38,
+      e39, e40, e41, e42, e43, e44, e45, e46, e47, e48, e49, e50, e51, e52,
+      e53, e54, e55, e56, e57, e58, e59, e60, e61, e62, e63, e64);
 }
 
 }  // namespace gtl

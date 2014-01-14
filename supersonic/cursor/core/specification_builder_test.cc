@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/specification_builder.h"
 
+#include <memory>
+
 #include "supersonic/proto/specification.pb.h"
 #include "supersonic/proto/supersonic.pb.h"
 #include "supersonic/testing/operation_testing.h"
@@ -66,7 +68,7 @@ TEST(SpecificationBuilderTest, ExtendedSortSpecificationTest) {
         new_key->set_column_order(order);
         new_key->set_attribute_name(path);
       }
-      scoped_ptr<ExtendedSortSpecification> actual(builder.Build());
+      std::unique_ptr<ExtendedSortSpecification> actual(builder.Build());
       ASSERT_PROTO_EQ(expected, *actual);
     }
   }

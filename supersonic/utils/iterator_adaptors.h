@@ -1,18 +1,20 @@
 // Copyright 2005 Google Inc. All Rights Reserved.
 //
-// This file defines some iterator adapters for working
-// on containers where the value_type is pair<>, such as either
-// hash_map<K,V>, or list<pair<>>.
+// This file defines some iterator adapters for working on:
+// - containers where the value_type is pair<>, such as either
+//   std::unordered_map<K,V>, or list<pair<>>.
+// - containers where the value_type is a pointer like type.
+// - containers that you need to iterate backwards.
 //
 #ifndef UTIL_GTL_ITERATOR_ADAPTORS_H_
 #define UTIL_GTL_ITERATOR_ADAPTORS_H_
 
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/template_util.h"
-#include "supersonic/utils/type_traits.h"   // For remove_pointer
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"   // For remove_pointer
 
 namespace util {
 namespace gtl {
@@ -30,21 +32,16 @@ template<typename It, typename Val>
 struct adaptor_helper {
   typedef Val                                             value_type;
   typedef typename base::if_<
-             base::type_equals_<
-               typename iterator_traits<It>::reference,
-               typename iterator_traits<It>::value_type&
-             >::value,
-             Val*,
-             const Val*>::type                            pointer;
+      base::type_equals_<typename std::iterator_traits<It>::reference,
+                         typename std::iterator_traits<It>::value_type&>::value,
+      Val*, const Val*>::type pointer;
   typedef typename base::if_<
-             base::type_equals_<
-               typename iterator_traits<It>::reference,
-               typename iterator_traits<It>::value_type&
-             >::value,
-             Val&,
-             const Val&>::type                            reference;
-  typedef typename iterator_traits<It>::difference_type   difference_type;
-  typedef typename iterator_traits<It>::iterator_category iterator_category;
+      base::type_equals_<typename std::iterator_traits<It>::reference,
+                         typename std::iterator_traits<It>::value_type&>::value,
+      Val&, const Val&>::type reference;
+  typedef typename std::iterator_traits<It>::difference_type difference_type;
+  typedef typename std::iterator_traits<It>::iterator_category
+      iterator_category;
 };
 
 // ptr_adaptor_helper is similar to adaptor_helper, but the second argument is a
@@ -58,8 +55,9 @@ struct ptr_adaptor_helper {
   typedef typename base::remove_pointer<PtrVal>::type     value_type;
   typedef const PtrVal&                                   pointer;
   typedef typename base::remove_pointer<PtrVal>::type&    reference;
-  typedef typename iterator_traits<It>::difference_type   difference_type;
-  typedef typename iterator_traits<It>::iterator_category iterator_category;
+  typedef typename std::iterator_traits<It>::difference_type difference_type;
+  typedef typename std::iterator_traits<It>::iterator_category
+      iterator_category;
 };
 
 }  // namespace gtl
@@ -74,25 +72,25 @@ struct ptr_adaptor_helper {
 // It is equivalent to calling it->first on every value.
 // Example:
 //
-// hash_map<string, int> values;
+// std::unordered_map<string, int> values;
 // values["foo"] = 1;
 // values["bar"] = 2;
-// for (iterator_first<hash_map<string, int>::iterator> x = values.begin();
+// for (iterator_first<std::unordered_map<string, int>::iterator> x = values.begin();
 //      x != values.end(); ++x) {
 //   printf("%s", x->c_str());
 // }
-template<typename It,
-         typename _Val = typename iterator_traits<It>::value_type::first_type>
+template <typename It, typename Val = typename std::iterator_traits<
+                           It>::value_type::first_type>
 class iterator_first {
  private:
   // Helper template to define our necessary typedefs.
-  typedef typename util::gtl::adaptor_helper<It, _Val> helper;
+  typedef typename util::gtl::adaptor_helper<It, Val> helper;
 
   // The internal iterator.
   It it_;
 
  public:
-  typedef iterator_first<It, _Val>                    iterator;
+  typedef iterator_first<It, Val>                     iterator;
   typedef typename helper::iterator_category          iterator_category;
   typedef typename helper::value_type                 value_type;
   typedef typename helper::pointer                    pointer;
@@ -100,12 +98,12 @@ class iterator_first {
   typedef typename helper::difference_type            difference_type;
 
   iterator_first() : it_() {}
-  iterator_first(const It& it) : it_(it) {}
+  iterator_first(const It& it) : it_(it) {}  // NOLINT(runtime/explicit)
 
   // Allow "upcasting" from iterator_first<T*const*> to
   // iterator_first<const T*const*>.
   template<typename OtherIt>
-  iterator_first(const iterator_first<OtherIt, _Val>& other)
+  iterator_first(const iterator_first<OtherIt, Val>& other)
       : it_(other.base()) {}
 
   // Provide access to the wrapped iterator.
@@ -127,8 +125,7 @@ class iterator_first {
     return it.it_ + d;
   }
   difference_type operator-(const iterator& x) const { return it_ - x.it_; }
-  reference operator[](const difference_type& d) { return it_[d].first; }
-  value_type operator[](const difference_type& d) const { return it_[d].first; }
+  reference operator[](const difference_type& d) const { return it_[d].first; }
 
   friend bool operator<(const iterator& a, const iterator& b) {
     return a.it_ < b.it_;
@@ -161,26 +158,26 @@ inline iterator_first<It> make_iterator_first(const It& it) {
 // It is equivalent to calling it->second on every value.
 // Example:
 //
-// hash_map<string, int> values;
+// std::unordered_map<string, int> values;
 // values["foo"] = 1;
 // values["bar"] = 2;
-// for (iterator_second<hash_map<string, int>::iterator> x = values.begin();
+// for (iterator_second<std::unordered_map<string, int>::iterator> x = values.begin();
 //      x != values.end(); ++x) {
 //   int v = *x;
 //   printf("%d", v);
 // }
-template<typename It,
-         typename _Val = typename iterator_traits<It>::value_type::second_type>
+template <typename It, typename Val = typename std::iterator_traits<
+                           It>::value_type::second_type>
 class iterator_second {
  private:
   // Helper template to define our necessary typedefs.
-  typedef typename util::gtl::adaptor_helper<It, _Val> helper;
+  typedef typename util::gtl::adaptor_helper<It, Val> helper;
 
   // The internal iterator.
   It it_;
 
  public:
-  typedef iterator_second<It, _Val>                   iterator;
+  typedef iterator_second<It, Val>                    iterator;
   typedef typename helper::iterator_category          iterator_category;
   typedef typename helper::value_type                 value_type;
   typedef typename helper::pointer                    pointer;
@@ -188,12 +185,12 @@ class iterator_second {
   typedef typename helper::difference_type            difference_type;
 
   iterator_second() : it_() {}
-  iterator_second(const It& it) : it_(it) {}
+  iterator_second(const It& it) : it_(it) {}  // NOLINT(runtime/explicit)
 
   // Allow "upcasting" from iterator_second<T*const*> to
   // iterator_second<const T*const*>.
   template<typename OtherIt>
-  iterator_second(const iterator_second<OtherIt, _Val>& other)
+  iterator_second(const iterator_second<OtherIt, Val>& other)
       : it_(other.base()) {}
 
   // Provide access to the wrapped iterator.
@@ -215,8 +212,7 @@ class iterator_second {
     return it.it_ + d;
   }
   difference_type operator-(const iterator& x) const { return it_ - x.it_; }
-  reference operator[](const difference_type& d) { return it_[d].second; }
-  value_type operator[](const difference_type& d) const { return it_[d].second;}
+  reference operator[](const difference_type& d) const { return it_[d].second;}
 
   friend bool operator<(const iterator& a, const iterator& b) {
     return a.it_ < b.it_;
@@ -240,7 +236,6 @@ class iterator_second {
   bool operator!=(const It& x) const      { return it_ != x; }
 };
 
-
 // Helper function to construct an iterator.
 template<typename It>
 inline iterator_second<It> make_iterator_second(const It& it) {
@@ -263,7 +258,7 @@ inline iterator_second<It> make_iterator_second(const It& it) {
 //   MyClass(const string& s);
 //   string DebugString() const;
 // };
-// typedef hash_map<string, linked_ptr<MyClass> > MyMap;
+// typedef std::unordered_map<string, linked_ptr<MyClass> > MyMap;
 // typedef iterator_second_ptr<MyMap::iterator> MyMapValuesIterator;
 // MyMap values;
 // values["foo"].reset(new MyClass("foo"));
@@ -271,9 +266,8 @@ inline iterator_second<It> make_iterator_second(const It& it) {
 // for (MyMapValuesIterator it = values.begin(); it != values.end(); ++it) {
 //   printf("%s", it->DebugString().c_str());
 // }
-template<typename It,
-         typename _PtrVal =
-           typename iterator_traits<It>::value_type::second_type>
+template <typename It, typename _PtrVal = typename std::iterator_traits<
+                           It>::value_type::second_type>
 class iterator_second_ptr {
  private:
   // Helper template to define our necessary typedefs.
@@ -291,7 +285,7 @@ class iterator_second_ptr {
   typedef typename helper::difference_type            difference_type;
 
   iterator_second_ptr() : it_() {}
-  iterator_second_ptr(const It& it) : it_(it) {}
+  iterator_second_ptr(const It& it) : it_(it) {}  // NOLINT(runtime/explicit)
 
   // Allow "upcasting" from iterator_second_ptr<T*const*> to
   // iterator_second_ptr<const T*const*>.
@@ -318,8 +312,7 @@ class iterator_second_ptr {
     return it.it_ + d;
   }
   difference_type operator-(const iterator& x) const { return it_ - x.it_; }
-  reference operator[](const difference_type& d) { return *(it_[d].second); }
-  value_type operator[](const difference_type& d) const {
+  reference operator[](const difference_type& d) const {
     return *(it_[d].second);
   }
 
@@ -375,9 +368,8 @@ inline iterator_second_ptr<It> make_iterator_second_ptr(const It& it) {
 // }
 //
 // Without iterator_ptr you would have to do (*it)->DebugString()
-
-template<typename It,
-         typename _PtrVal = typename iterator_traits<It>::value_type>
+template <typename It,
+          typename _PtrVal = typename std::iterator_traits<It>::value_type>
 class iterator_ptr {
  private:
   // Helper template to define our necessary typedefs.
@@ -395,7 +387,7 @@ class iterator_ptr {
   typedef typename helper::difference_type            difference_type;
 
   iterator_ptr() : it_() {}
-  iterator_ptr(const It& it) : it_(it) {}
+  iterator_ptr(const It& it) : it_(it) {}  // NOLINT(runtime/explicit)
 
   // Allow "upcasting" from iterator_ptr<T*const*> to
   // iterator_ptr<const T*const*>.
@@ -422,8 +414,7 @@ class iterator_ptr {
     return it.it_ + d;
   }
   difference_type operator-(const iterator& x) const { return it_ - x.it_; }
-  reference operator[](const difference_type& d) { return *(it_[d]); }
-  value_type operator[](const difference_type& d) const { return *(it_[d]); }
+  reference operator[](const difference_type& d) const { return *(it_[d]); }
 
   friend bool operator<(const iterator& a, const iterator& b) {
     return a.it_ < b.it_;
@@ -453,96 +444,339 @@ inline iterator_ptr<It> make_iterator_ptr(const It& it) {
   return iterator_ptr<It>(it);
 }
 
+namespace util {
+namespace gtl {
+namespace internal {
 
-template<typename map_type,
-         typename iterator_type,
-         typename const_iterator_type>
-class iterator_view_helper {
- public:
-  explicit iterator_view_helper(map_type& map) : map_(map) { }
-
-  iterator_type begin() {
-    iterator_type it = map_.begin();
-    return it;
-  }
-
-  iterator_type end() {
-    iterator_type it = map_.end();
-    return it;
-  }
-
-  const_iterator_type begin() const {
-    const_iterator_type it = static_cast<const map_type&>(map_).begin();
-    return it;
-  }
-
-  const_iterator_type end() const {
-    const_iterator_type it = static_cast<const map_type&>(map_).end();
-    return it;
-  }
-
-  const_iterator_type cbegin() const { return this->begin(); }
-  const_iterator_type cend() const { return this->end(); }
-
+// Template that uses SFINAE to inspect Container abilities:
+// . Set has_size_type true, iff T::size_type is defined
+// . Define size_type as T::size_type if defined, or size_t otherwise
+template<typename C>
+struct container_traits {
  private:
-  map_type& map_;
+  // Provide Yes and No to make the SFINAE tests clearer.
+  typedef base::small_  Yes;
+  typedef base::big_    No;
+
+  // Test for availability of C::size_typae.
+  template<typename U>
+  static Yes test_size_type(typename U::size_type*);
+  template<typename>
+  static No test_size_type(...);
+
+  // Conditional provisioning of a size_type which defaults to size_t.
+  template<bool Cond, typename U = void>
+  struct size_type_def {
+    typedef typename U::size_type type;
+  };
+  template<typename U>
+  struct size_type_def<false, U> {
+    typedef size_t type;
+  };
+
+ public:
+  // Determine whether C::size_type is available.
+  static const bool has_size_type = sizeof(test_size_type<C>(0)) == sizeof(Yes);
+
+  // Provide size_type as either C::size_type if available, or as size_t.
+  typedef typename size_type_def<has_size_type, C>::type size_type;
 };
 
-// key_view and value_view provide pretty ways to iterate either the
-// keys or the values of a map using range based for loops.
+template<typename C>
+struct IterGenerator {
+  typedef C container_type;
+  typedef typename C::iterator iterator;
+  typedef typename C::const_iterator const_iterator;
+
+  static iterator begin(container_type& c) {  // NOLINT(runtime/references)
+    return c.begin();
+  }
+  static iterator end(container_type& c) {  // NOLINT(runtime/references)
+    return c.end();
+  }
+  static const_iterator begin(const container_type& c) { return c.begin(); }
+  static const_iterator end(const container_type& c) { return c.end(); }
+};
+
+template<typename SubIterGenerator>
+struct ReversingIterGeneratorAdaptor {
+  typedef typename SubIterGenerator::container_type container_type;
+  typedef std::reverse_iterator<typename SubIterGenerator::iterator> iterator;
+  typedef std::reverse_iterator<typename SubIterGenerator::const_iterator>
+      const_iterator;
+
+  static iterator begin(container_type& c) {  // NOLINT(runtime/references)
+    return iterator(SubIterGenerator::end(c));
+  }
+  static iterator end(container_type& c) {  // NOLINT(runtime/references)
+    return iterator(SubIterGenerator::begin(c));
+  }
+  static const_iterator begin(const container_type& c) {
+    return const_iterator(SubIterGenerator::end(c));
+  }
+  static const_iterator end(const container_type& c) {
+    return const_iterator(SubIterGenerator::begin(c));
+  }
+};
+
+
+// C:             the container type
+// Iter:          the type of mutable iterator to generate
+// ConstIter:     the type of constant iterator to generate
+// IterGenerator: a policy type that returns native iterators from a C
+template<typename C, typename Iter, typename ConstIter,
+         typename IterGenerator = util::gtl::internal::IterGenerator<C> >
+class iterator_view_helper {
+ public:
+  typedef C container_type;
+  typedef Iter iterator;
+  typedef ConstIter const_iterator;
+  typedef typename std::iterator_traits<iterator>::value_type value_type;
+  typedef typename util::gtl::internal::container_traits<C>::size_type
+      size_type;
+
+  explicit iterator_view_helper(
+      container_type& c)  // NOLINT(runtime/references)
+      : c_(&c) {
+  }
+
+  iterator begin() { return iterator(IterGenerator::begin(container())); }
+  iterator end() { return iterator(IterGenerator::end(container())); }
+  const_iterator begin() const {
+    return const_iterator(IterGenerator::begin(container()));
+  }
+  const_iterator end() const {
+    return const_iterator(IterGenerator::end(container()));
+  }
+  const_iterator cbegin() const { return begin(); }
+  const_iterator cend() const { return end(); }
+  const container_type& container() const { return *c_; }
+  container_type& container() { return *c_; }
+
+  bool empty() const { return begin() == end(); }
+  size_type size() const { return c_->size(); }
+
+ private:
+  // TODO(user): Investigate making ownership be via IterGenerator.
+  container_type* c_;
+};
+
+// TODO(user): Investigate unifying const_iterator_view_helper
+// with iterator_view_helper.
+template<typename C, typename ConstIter,
+         typename IterGenerator = util::gtl::internal::IterGenerator<C> >
+class const_iterator_view_helper {
+ public:
+  typedef C container_type;
+  typedef ConstIter const_iterator;
+  typedef typename std::iterator_traits<const_iterator>::value_type value_type;
+  typedef typename util::gtl::internal::container_traits<C>::size_type
+      size_type;
+
+  explicit const_iterator_view_helper(const container_type& c) : c_(&c) { }
+
+  // Allow implicit conversion from the corresponding iterator_view_helper.
+  // Erring on the side of constness should be allowed. E.g.:
+  //    MyMap m;
+  //    key_view_type<MyMap>::type keys = key_view(m);  // ok
+  //    key_view_type<const MyMap>::type const_keys = key_view(m);  // ok
+  template<typename Iter>
+  const_iterator_view_helper(
+      const iterator_view_helper<container_type, Iter, const_iterator,
+                                 IterGenerator>& v)
+      : c_(&v.container()) { }
+
+  const_iterator begin() const {
+    return const_iterator(IterGenerator::begin(container()));
+  }
+  const_iterator end() const {
+    return const_iterator(IterGenerator::end(container()));
+  }
+  const_iterator cbegin() const { return begin(); }
+  const_iterator cend() const { return end(); }
+  const container_type& container() const { return *c_; }
+
+  bool empty() const { return begin() == end(); }
+  size_type size() const { return c_->size(); }
+
+ private:
+  const container_type* c_;
+};
+
+}  // namespace internal
+}  // namespace gtl
+}  // namespace util
+
+// Traits to provide a typedef abstraction for the return value
+// of the key_view() and value_view() functions, such that
+// they can be declared as:
+//
+//    template <typename C>
+//    typename key_view_type<C>::type key_view(C& c);
+//
+//    template <typename C>
+//    typename value_view_type<C>::type value_view(C& c);
+//
+// This abstraction allows callers of these functions to use readable
+// type names, and allows the maintainers of iterator_adaptors.h to
+// change the return types if needed without updating callers.
+
+template<typename C>
+struct key_view_type {
+  typedef util::gtl::internal::iterator_view_helper<
+      C,
+      iterator_first<typename C::iterator>,
+      iterator_first<typename C::const_iterator> > type;
+};
+
+template<typename C>
+struct key_view_type<const C> {
+  typedef util::gtl::internal::const_iterator_view_helper<
+      C,
+      iterator_first<typename C::const_iterator> > type;
+};
+
+template<typename C>
+struct value_view_type {
+  typedef util::gtl::internal::iterator_view_helper<
+      C,
+      iterator_second<typename C::iterator>,
+      iterator_second<typename C::const_iterator> > type;
+};
+
+template<typename C>
+struct value_view_type<const C> {
+  typedef util::gtl::internal::const_iterator_view_helper<
+      C,
+      iterator_second<typename C::const_iterator> > type;
+};
+
+// The key_view and value_view functions provide pretty ways to iterate either
+// the keys or the values of a map using range based for loops.
+//
 // Example:
-//    hash_map<int, string> my_map;
+//    std::unordered_map<int, string> my_map;
 //    ...
 //    for (string val : value_view(my_map)) {
 //      ...
 //    }
-template<typename map_type>
-iterator_view_helper<
-    map_type,
-    iterator_first<typename map_type::iterator>,
-    iterator_first<typename map_type::const_iterator> >
-key_view(map_type& map) {
-  return iterator_view_helper
-      <map_type,
-       iterator_first<typename map_type::iterator>,
-       iterator_first<typename map_type::const_iterator> >(map);
+
+template<typename C>
+typename key_view_type<C>::type
+key_view(C& map) {  // NOLINT(runtime/references)
+  return typename key_view_type<C>::type(map);
 }
 
-template<typename map_type>
-iterator_view_helper<
-    const map_type&,
-    iterator_first<typename map_type::const_iterator>,
-    iterator_first<typename map_type::const_iterator> >
-key_view(const map_type& map) {
-  return iterator_view_helper
-      <const map_type&,
-       iterator_first<typename map_type::const_iterator>,
-       iterator_first<typename map_type::const_iterator> >(map);
+template<typename C>
+typename key_view_type<const C>::type key_view(const C& map) {
+  return typename key_view_type<const C>::type(map);
 }
 
-template<typename map_type>
-iterator_view_helper<
-    map_type,
-    iterator_second<typename map_type::iterator>,
-    iterator_second<typename map_type::const_iterator> >
-value_view(map_type& map) {
-  return iterator_view_helper
-      <map_type,
-       iterator_second<typename map_type::iterator>,
-       iterator_second<typename map_type::const_iterator> >(map);
+template<typename C>
+typename value_view_type<C>::type
+value_view(C& map) {  // NOLINT(runtime/references)
+  return typename value_view_type<C>::type(map);
 }
 
-template<typename map_type>
-iterator_view_helper<
-    const map_type&,
-    iterator_second<typename map_type::const_iterator>,
-    iterator_second<typename map_type::const_iterator> >
-value_view(const map_type& map) {
-  return iterator_view_helper
-      <const map_type&,
-       iterator_second<typename map_type::const_iterator>,
-       iterator_second<typename map_type::const_iterator> >(map);
+template<typename C>
+typename value_view_type<const C>::type value_view(const C& map) {
+  return typename value_view_type<const C>::type(map);
 }
 
+namespace util {
+namespace gtl {
+
+// Abstract container view that dereferences pointer elements.
+//
+// Example:
+//   vector<string*> elements;
+//   for (const string& element : deref_view(elements)) {
+//     ...
+//   }
+//
+// Note: If you pass a temporary container to deref_view, be careful that the
+// temporary container outlives the deref_view to avoid dangling references.
+// This is fine:  PublishAll(deref_view(Make());
+// This is not:   for (const auto& v : deref_view(Make())) { Publish(v); }
+
+template<typename C>
+struct deref_view_type {
+  typedef internal::iterator_view_helper<
+      C,
+      iterator_ptr<typename C::iterator>,
+      iterator_ptr<typename C::const_iterator> > type;
+};
+
+template<typename C>
+struct deref_view_type<const C> {
+  typedef internal::const_iterator_view_helper<
+      C,
+      iterator_ptr<typename C::const_iterator> > type;
+};
+
+template<typename C>
+typename deref_view_type<C>::type
+deref_view(C& map) {  // NOLINT(runtime/references)
+  return typename deref_view_type<C>::type(map);
+}
+
+template<typename C>
+typename deref_view_type<const C>::type deref_view(const C& map) {
+  return typename deref_view_type<const C>::type(map);
+}
+
+// Abstract container view that iterates backwards.
+//
+// Example:
+//   vector<string> elements;
+//   for (const string& element : reversed_view(elements)) {
+//     ...
+//   }
+//
+// Note: If you pass a temporary container to reversed_view_type, be careful
+// that the temporary container outlives the reversed_view to avoid dangling
+// references. This is fine:  PublishAll(reversed_view(Make());
+// This is not:   for (const auto& v : reversed_view(Make())) { Publish(v); }
+
+template<typename C>
+struct reversed_view_type {
+ private:
+  typedef internal::ReversingIterGeneratorAdaptor<
+      internal::IterGenerator<C> > policy;
+
+ public:
+  typedef internal::iterator_view_helper<
+      C,
+      typename policy::iterator,
+      typename policy::const_iterator,
+      policy> type;
+};
+
+template<typename C>
+struct reversed_view_type<const C> {
+ private:
+  typedef internal::ReversingIterGeneratorAdaptor<
+      internal::IterGenerator<C> > policy;
+
+ public:
+  typedef internal::const_iterator_view_helper<
+     C,
+     typename policy::const_iterator,
+     policy> type;
+};
+
+template<typename C>
+typename reversed_view_type<C>::type
+reversed_view(C& c) {  // NOLINT(runtime/references)
+  return typename reversed_view_type<C>::type(c);
+}
+
+template<typename C>
+typename reversed_view_type<const C>::type reversed_view(const C& c) {
+  return typename reversed_view_type<const C>::type(c);
+}
+
+}  // namespace gtl
+}  // namespace util
 
 #endif  // UTIL_GTL_ITERATOR_ADAPTORS_H_

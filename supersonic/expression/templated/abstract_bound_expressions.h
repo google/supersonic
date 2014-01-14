@@ -21,14 +21,10 @@
 #define SUPERSONIC_EXPRESSION_TEMPLATED_ABSTRACT_BOUND_EXPRESSIONS_H_
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -99,7 +95,7 @@ FailureOrOwned<BoundExpression> AbstractBoundUnary(
     BoundExpression* argument_ptr,
     BufferAllocator* allocator,
     rowcount_t max_row_count) {
-  scoped_ptr<BoundExpression> argument(argument_ptr);
+  std::unique_ptr<BoundExpression> argument(argument_ptr);
   PROPAGATE_ON_FAILURE(
       CheckAttributeCount(UnaryExpressionTraits<op>::name(),
                           argument->result_schema(), 1));
@@ -163,8 +159,8 @@ FailureOrOwned<BoundExpression> CreateAbstractBoundBinaryExpression(
     BoundExpression* right_ptr,
     BufferAllocator* allocator,
     rowcount_t max_row_count) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   const string op_name = BinaryExpressionTraits<op>::name();
   PROPAGATE_ON_FAILURE(CheckAttributeCount(op_name, left->result_schema(), 1));
   PROPAGATE_ON_FAILURE(CheckAttributeCount(op_name, right->result_schema(), 1));

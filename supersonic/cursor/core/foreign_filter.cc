@@ -16,14 +16,10 @@
 #include "supersonic/cursor/core/foreign_filter.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -179,8 +175,8 @@ class ForeignFilterCursor : public BasicCursor {
  private:
   const int filter_key_column_;
   const int input_foreign_key_column_;
-  scoped_ptr<const BoundSingleSourceProjector> nonkey_input_projector_;
-  scoped_ptr<const BoundMultiSourceProjector> result_projector_;
+  std::unique_ptr<const BoundSingleSourceProjector> nonkey_input_projector_;
+  std::unique_ptr<const BoundMultiSourceProjector> result_projector_;
   SelectiveViewCopier input_copier_;
   CursorIterator filter_;
   CursorIterator input_;
@@ -248,8 +244,8 @@ class ForeignFilterOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const SingleSourceProjector> filter_key_;
-  scoped_ptr<const SingleSourceProjector> foreign_key_;
+  std::unique_ptr<const SingleSourceProjector> filter_key_;
+  std::unique_ptr<const SingleSourceProjector> foreign_key_;
   DISALLOW_COPY_AND_ASSIGN(ForeignFilterOperation);
 };
 
@@ -267,7 +263,7 @@ Cursor* BoundForeignFilter(const int filter_key_column,
                            const int input_foreign_key_column,
                            Cursor* filter,
                            Cursor* input) {
-  scoped_ptr<BoundSingleSourceProjector> input_projector(
+  std::unique_ptr<BoundSingleSourceProjector> input_projector(
       new BoundSingleSourceProjector(input->schema()));
   for (int i = 0; i < input->schema().attribute_count(); ++i) {
     if (i != input_foreign_key_column) input_projector->Add(i);
@@ -278,7 +274,7 @@ Cursor* BoundForeignFilter(const int filter_key_column,
       TupleSchema::Singleton("$parentFK$", kRowidDatatype, NOT_NULLABLE));
   sources.push_back(&key_schema);
   sources.push_back(&input_projector->result_schema());
-  scoped_ptr<BoundMultiSourceProjector> result_projector(
+  std::unique_ptr<BoundMultiSourceProjector> result_projector(
       new BoundMultiSourceProjector(sources));
   int input_attribute_index = 0;
   for (int i = 0; i < input->schema().attribute_count(); ++i) {

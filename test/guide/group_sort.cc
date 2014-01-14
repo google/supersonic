@@ -21,21 +21,14 @@
 // upon including creating StringPiece objects using a memory arena.
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <map>
 using std::map;
-using std::multimap;
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 
 #include "gtest/gtest.h"
 
@@ -45,7 +38,7 @@ using std::pair;
 #include "supersonic/utils/strings/stringpiece.h"
 
 // Include some map utilities to use for result verification.
-#include "supersonic/utils/map-util.h"
+#include "supersonic/utils/map_util.h"
 
 using supersonic::TupleSchema;
 using supersonic::View;
@@ -144,7 +137,7 @@ class GroupingTest : public testing::Test {
   // This helper method will prepare the aggregation much like we did in
   // the aggregation example in primer.cc .
   void PrepareAggregation() {
-    scoped_ptr<AggregationSpecification> specification(
+    std::unique_ptr<AggregationSpecification> specification(
         new AggregationSpecification());
 
     // Aggregation specification will now contain two end results.
@@ -158,7 +151,7 @@ class GroupingTest : public testing::Test {
     // Referring to a column using its index may often be unnecessarily obscure;
     // in this case it would also be better-style to use ProjectNamedAttribute.
     // Still, we use it here merely to demonstrate the possibility.
-    scoped_ptr<CompoundSingleSourceProjector> projector(
+    std::unique_ptr<CompoundSingleSourceProjector> projector(
         new CompoundSingleSourceProjector());
 
     projector->add(ProjectNamedAttributeAs("full_time", "Works full time?"));
@@ -166,11 +159,9 @@ class GroupingTest : public testing::Test {
 
     // Finally, we create the aggregation and store the resulting cursor
     // as a test fixture's field.
-    scoped_ptr<Operation> aggregation(
-        GroupAggregate(projector.release(),
-                       specification.release(),
-                       /* use default aggregation options */ NULL,
-                       ScanView(*input_view)));
+    std::unique_ptr<Operation> aggregation(GroupAggregate(
+        projector.release(), specification.release(),
+        /* use default aggregation options */ NULL, ScanView(*input_view)));
 
     result_cursor.reset(SucceedOrDie(aggregation->CreateCursor()));
   }
@@ -190,7 +181,7 @@ class GroupingTest : public testing::Test {
     input_view->mutable_column(4)->Reset(full_time, NULL);
   }
 
-  typedef pair<bool, StringPiece> key_type;
+  typedef std::pair<bool, StringPiece> key_type;
 
   // The following method will perform the aggregation programatically using
   // STL sets and maps and compare the results.
@@ -199,11 +190,11 @@ class GroupingTest : public testing::Test {
                    const StringPiece* depts,
                    const bool* full_times,
                    unsigned input_row_count) {
-    map<key_type, int32> min_sal;
-    map<key_type, int32> max_age;
+    std::map<key_type, int32> min_sal;
+    std::map<key_type, int32> max_age;
 
     // Find the expected output row count.
-    set<key_type> key_set;
+    std::set<key_type> key_set;
     for (unsigned i = 0; i < input_row_count; ++i) {
       key_set.insert(key_type(full_times[i], depts[i]));
     }
@@ -219,8 +210,8 @@ class GroupingTest : public testing::Test {
         min_sal[key] = salaries[i];
         max_age[key] = ages[i];
       } else {
-        min_sal[key] = min(min_sal[key], salaries[i]);
-        max_age[key] = max(max_age[key], ages[i]);
+        min_sal[key] = std::min(min_sal[key], salaries[i]);
+        max_age[key] = std::max(max_age[key], ages[i]);
       }
     }
 
@@ -251,10 +242,10 @@ class GroupingTest : public testing::Test {
   }
 
   // Supersonic objects.
-  scoped_ptr<Cursor> result_cursor;
-  scoped_ptr<Arena> arena;
+  std::unique_ptr<Cursor> result_cursor;
+  std::unique_ptr<Arena> arena;
   TupleSchema schema;
-  scoped_ptr<View> input_view;
+  std::unique_ptr<View> input_view;
 };
 
 TEST_F(GroupingTest, SmallGroupingTest) {
@@ -296,11 +287,11 @@ TEST_F(GroupingTest, LargeRandomGroupingTest) {
   const unsigned row_count = 10000;
 
   // We allocate on heap to not exceed max stack frame size (e.g. 16KB).
-  scoped_ptr<StringPiece[]> names(new StringPiece[row_count]);
-  scoped_ptr<int32[]> ages(new int32[row_count]);
-  scoped_ptr<int32[]> salaries(new int32[row_count]);
-  scoped_ptr<StringPiece[]> depts(new StringPiece[row_count]);
-  scoped_ptr<bool[]> full_times(new bool[row_count]);
+  std::unique_ptr<StringPiece[]> names(new StringPiece[row_count]);
+  std::unique_ptr<int32[]> ages(new int32[row_count]);
+  std::unique_ptr<int32[]> salaries(new int32[row_count]);
+  std::unique_ptr<StringPiece[]> depts(new StringPiece[row_count]);
+  std::unique_ptr<bool[]> full_times(new bool[row_count]);
 
   const unsigned kNamePoolSize = 7;
   const unsigned kDeptPoolSize = 15;
@@ -373,15 +364,15 @@ class SortingTest : public testing::Test {
   void PrepareSort() {
     // First, we'll need to specify the column by which the sorting should be
     // carried out. To do it we once again employ a single source projector.
-    scoped_ptr<const SingleSourceProjector>
-        projector(ProjectNamedAttribute("grade"));
+    std::unique_ptr<const SingleSourceProjector> projector(
+        ProjectNamedAttribute("grade"));
 
     // The created projector will have to be passed to a SortOrder object
     // together with the order type - either ascending or descending.
     // We could have also specified several projectors to run a multi-level
     // sort, in that case the order of attribute addition would be the same as
     // the order of sorting by the specified columns.
-    scoped_ptr<SortOrder> sort_order(new SortOrder());
+    std::unique_ptr<SortOrder> sort_order(new SortOrder());
     sort_order->add(projector.release(), ASCENDING);
 
     // We also have to specify a memory limit for sorting - if there
@@ -406,10 +397,9 @@ class SortingTest : public testing::Test {
     // to sort data by several columns one should use the aforementioned
     // approach with specifying multiple projectors rather than combining Sort()
     // operations.
-    scoped_ptr<Operation> sort(Sort(sort_order.release(),
-                                    /* identity projection */ NULL,
-                                    mem_limit,
-                                    ScanView(*input_view)));
+    std::unique_ptr<Operation> sort(Sort(sort_order.release(),
+                                         /* identity projection */ NULL,
+                                         mem_limit, ScanView(*input_view)));
 
     result_cursor.reset(SucceedOrDie(sort->CreateCursor()));
   }
@@ -423,7 +413,7 @@ class SortingTest : public testing::Test {
     input_view->mutable_column(1)->Reset(grades, NULL);
   }
 
-  typedef pair<int32, double> entry;
+  typedef std::pair<int32, double> entry;
   typedef map<entry, int32>::const_iterator entry_it;
 
   void TestResults(const int32* ids,
@@ -444,8 +434,8 @@ class SortingTest : public testing::Test {
     // We start by creating a target block. We need to specify a tuple schema
     // and a buffer allocator. As we know how many rows to expect beforehand,
     // we should preallocate the block's memory.
-    scoped_ptr<Block> result_space(new Block(schema,
-                                             HeapBufferAllocator::Get()));
+    std::unique_ptr<Block> result_space(
+        new Block(schema, HeapBufferAllocator::Get()));
     result_space->Reallocate(row_count);
 
     // We now prepare a view copier to handle memory juggling for us.
@@ -460,7 +450,7 @@ class SortingTest : public testing::Test {
     unsigned offset = 0;
 
     // Create a result view much like before.
-    scoped_ptr<ResultView> rv(new ResultView(result_cursor->Next(1024)));
+    std::unique_ptr<ResultView> rv(new ResultView(result_cursor->Next(1024)));
 
     while (!rv->is_done()) {
       const View& view = rv->view();
@@ -534,9 +524,9 @@ class SortingTest : public testing::Test {
   }
 
   // Supersonic objects.
-  scoped_ptr<Cursor> result_cursor;
+  std::unique_ptr<Cursor> result_cursor;
   TupleSchema schema;
-  scoped_ptr<View> input_view;
+  std::unique_ptr<View> input_view;
 };
 
 TEST_F(SortingTest, SmallSortingTest) {
@@ -554,8 +544,8 @@ TEST_F(SortingTest, LargeSortingTest) {
   // Data set for sorting.
   const unsigned row_count = 100000;
   // We allocate on heap to not exceed max stack frame size (e.g. 16KB).
-  scoped_ptr<int32[]> ids(new int32[row_count]);
-  scoped_ptr<double[]> grades(new double[row_count]);
+  std::unique_ptr<int32[]> ids(new int32[row_count]);
+  std::unique_ptr<double[]> grades(new double[row_count]);
 
   for (int i = 0; i < row_count; ++i) {
     ids[i] = i + 1;

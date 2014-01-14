@@ -17,6 +17,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/bit_pointers.h"
@@ -49,12 +51,12 @@ class TerminalExpressionTest : public testing::Test {
         .Build();
   }
 
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
 };
 
 TEST_F(TerminalExpressionTest, NullsAreNull) {
-  scoped_ptr<BoundExpressionTree> null(DefaultBind(input().schema(), 100,
-                                                   Null(DOUBLE)));
+  std::unique_ptr<BoundExpressionTree> null(
+      DefaultBind(input().schema(), 100, Null(DOUBLE)));
   EXPECT_TUPLE_SCHEMAS_EQUAL(TupleSchema::Singleton("NULL", DOUBLE, NULLABLE),
                              null->result_schema());
   const View& result = DefaultEvaluate(null.get(), input());
@@ -64,8 +66,8 @@ TEST_F(TerminalExpressionTest, NullsAreNull) {
 }
 
 TEST_F(TerminalExpressionTest, SequenceProgresses) {
-  scoped_ptr<BoundExpressionTree> sequence(DefaultBind(input().schema(), 100,
-                                                       Sequence()));
+  std::unique_ptr<BoundExpressionTree> sequence(
+      DefaultBind(input().schema(), 100, Sequence()));
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       TupleSchema::Singleton("SEQUENCE", INT64, NOT_NULLABLE),
       sequence->result_schema());
@@ -80,9 +82,9 @@ TEST_F(TerminalExpressionTest, SequenceProgresses) {
 }
 
 TEST_F(TerminalExpressionTest, RandInt32WithMTRandom) {
-  scoped_ptr<RandomBase> gen(new MTRandom(0));
-  scoped_ptr<BoundExpressionTree> random(DefaultBind(input().schema(), 100,
-                                                     RandInt32(gen->Clone())));
+  std::unique_ptr<RandomBase> gen(new MTRandom(0));
+  std::unique_ptr<BoundExpressionTree> random(
+      DefaultBind(input().schema(), 100, RandInt32(gen->Clone())));
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       TupleSchema::Singleton("RANDINT32", INT32, NOT_NULLABLE),
       random->result_schema());
@@ -97,8 +99,8 @@ TEST_F(TerminalExpressionTest, RandInt32WithMTRandom) {
 }
 
 TEST_F(TerminalExpressionTest, ConstInt32) {
-  scoped_ptr<BoundExpressionTree> values(DefaultBind(input().schema(), 100,
-                                                     ConstInt32(100)));
+  std::unique_ptr<BoundExpressionTree> values(
+      DefaultBind(input().schema(), 100, ConstInt32(100)));
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       TupleSchema::Singleton("CONST_INT32", INT32, NOT_NULLABLE),
       values->result_schema());
@@ -111,8 +113,8 @@ TEST_F(TerminalExpressionTest, ConstInt32) {
 }
 
 TEST_F(TerminalExpressionTest, ConstString) {
-  scoped_ptr<BoundExpressionTree> values(DefaultBind(
-      input().schema(), 100, ConstString("Supersonic")));
+  std::unique_ptr<BoundExpressionTree> values(
+      DefaultBind(input().schema(), 100, ConstString("Supersonic")));
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       TupleSchema::Singleton("CONST_STRING", STRING, NOT_NULLABLE),
       values->result_schema());
@@ -125,19 +127,19 @@ TEST_F(TerminalExpressionTest, ConstString) {
 }
 
 TEST_F(TerminalExpressionTest, ToString) {
-  scoped_ptr<const Expression> str_exp(ConstString("Supersonic"));
+  std::unique_ptr<const Expression> str_exp(ConstString("Supersonic"));
   EXPECT_EQ("<STRING>'Supersonic'", str_exp->ToString(true));
   EXPECT_EQ("'Supersonic'", str_exp->ToString(false));
 
-  scoped_ptr<const Expression> bool_exp(ConstBool(true));
+  std::unique_ptr<const Expression> bool_exp(ConstBool(true));
   EXPECT_EQ("<BOOL>TRUE", bool_exp->ToString(true));
   EXPECT_EQ("TRUE", bool_exp->ToString(false));
 
-  scoped_ptr<const Expression> int_exp(ConstInt32(4));
+  std::unique_ptr<const Expression> int_exp(ConstInt32(4));
   EXPECT_EQ("<INT32>4", int_exp->ToString(true));
   EXPECT_EQ("4", int_exp->ToString(false));
 
-  scoped_ptr<const Expression> null_exp(Null(INT32));
+  std::unique_ptr<const Expression> null_exp(Null(INT32));
   EXPECT_EQ("<INT32>NULL", null_exp->ToString(true));
   EXPECT_EQ("NULL", null_exp->ToString(false));
 }

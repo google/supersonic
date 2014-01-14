@@ -32,7 +32,7 @@
 
 #include <stdlib.h> // For strtol* functions.
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/port.h"

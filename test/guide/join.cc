@@ -20,13 +20,11 @@
 
 #include <map>
 using std::map;
-using std::multimap;
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 
 #include "gtest/gtest.h"
 
@@ -36,7 +34,7 @@ using std::pair;
 #include "supersonic/utils/strings/stringpiece.h"
 
 // Include some map utilities to use for result verification.
-#include "supersonic/utils/map-util.h"
+#include "supersonic/utils/map_util.h"
 
 using supersonic::Attribute;
 using supersonic::Block;
@@ -196,10 +194,10 @@ class HashJoinTest : public testing::Test {
     // we will get to that shortly.
     //
     // We now prepare single source projectors (key selectors) for both tables.
-    scoped_ptr<const SingleSourceProjector> book_selector(
+    std::unique_ptr<const SingleSourceProjector> book_selector(
         ProjectNamedAttribute("author_id_ref"));
 
-    scoped_ptr<const SingleSourceProjector> author_selector(
+    std::unique_ptr<const SingleSourceProjector> author_selector(
         ProjectNamedAttribute("author_id"));
 
     // We now need a multisource projector to describe precisely what kind of
@@ -210,7 +208,7 @@ class HashJoinTest : public testing::Test {
     // and so, in order to avoid duplicates, we can specify prefixes which
     // should be slapped onto those columns - one for each schema, come
     // up with new names ourselves or simply decide to toss some of them away.
-    scoped_ptr<CompoundMultiSourceProjector> result_projector(
+    std::unique_ptr<CompoundMultiSourceProjector> result_projector(
         new CompoundMultiSourceProjector());
 
     // The add() function used by the multi source projector, unlike its single
@@ -220,12 +218,12 @@ class HashJoinTest : public testing::Test {
     // method, but it would have the ugly side effect of generating both
     // columns we join on, which is clearly superfluous. We might also want
     // to decide to omit other columns from our projection.
-    scoped_ptr<CompoundSingleSourceProjector> result_book_projector(
+    std::unique_ptr<CompoundSingleSourceProjector> result_book_projector(
         new CompoundSingleSourceProjector());
     result_book_projector->add(ProjectNamedAttribute("title"));
     result_book_projector->add(ProjectNamedAttribute("date_published"));
 
-    scoped_ptr<CompoundSingleSourceProjector> result_author_projector(
+    std::unique_ptr<CompoundSingleSourceProjector> result_author_projector(
         new CompoundSingleSourceProjector());
     result_author_projector->add(
         ProjectNamedAttributeAs("name", "author_name"));
@@ -255,7 +253,7 @@ class HashJoinTest : public testing::Test {
     // table, we can give green light to optimisations.
     //
     // We are now ready to create the operation.
-    scoped_ptr<Operation> hash_join(
+    std::unique_ptr<Operation> hash_join(
         new HashJoinOperation(/* join type */ INNER,
                               /* select left */ book_selector.release(),
                               /* select right */ author_selector.release(),
@@ -321,7 +319,7 @@ class HashJoinTest : public testing::Test {
     // Side note: DATETIME expressions actually have a ConstDateTime method
     // for creating objects directly from StringPieces, but a shortcut for
     // DATEs has not been implemented.
-    scoped_ptr<const Expression> date_or_null(
+    std::unique_ptr<const Expression> date_or_null(
         ParseStringNulling(DATE, ConstString(date_published)));
     bool date_published_is_null = false;
     FailureOr<int32> data_published_as_int32 =
@@ -340,22 +338,22 @@ class HashJoinTest : public testing::Test {
 
   // Maps of author names and book titles by ids (authors) and author reference
   // ids (books).
-  typedef map<int32, StringPiece> author_name_map;
-  typedef multimap<int32, StringPiece> book_title_map;
+  typedef std::map<int32, StringPiece> author_name_map;
+  typedef std::multimap<int32, StringPiece> book_title_map;
 
   // Utilities for storing pairs of (name, title).
-  typedef pair<StringPiece, StringPiece> author_book_entry;
-  typedef set<author_book_entry> author_book_set;
+  typedef std::pair<StringPiece, StringPiece> author_book_entry;
+  typedef std::set<author_book_entry> author_book_set;
 
   void TestResults() {
     // We will now check if the results match out expectations. Firstly, we
     // have to poll for the rows and put them in a memory block.
-    scoped_ptr<Block> result_space(new Block(result_cursor->schema(),
-                                             HeapBufferAllocator::Get()));
+    std::unique_ptr<Block> result_space(
+        new Block(result_cursor->schema(), HeapBufferAllocator::Get()));
 
     ViewCopier copier(result_cursor->schema(), /* deep copy */ true);
     rowcount_t offset = 0;
-    scoped_ptr<ResultView> rv(new ResultView(result_cursor->Next(-1)));
+    std::unique_ptr<ResultView> rv(new ResultView(result_cursor->Next(-1)));
 
     while (!rv->is_done()) {
       const View& view = rv->view();
@@ -397,7 +395,7 @@ class HashJoinTest : public testing::Test {
         int32 ref = book_table->view().column(1).typed_data<INT32>()[i];
         StringPiece title = book_table->view().column(2)
                                               .typed_data<STRING>()[i];
-        book_titles.insert(pair<int32, StringPiece>(ref, title));
+        book_titles.insert(std::make_pair(ref, title));
       }
     }
 
@@ -437,14 +435,14 @@ class HashJoinTest : public testing::Test {
   }
 
   // Supersonic objects.
-  scoped_ptr<Cursor> result_cursor;
+  std::unique_ptr<Cursor> result_cursor;
 
   TupleSchema author_schema;
   TupleSchema book_schema;
 
-  scoped_ptr<Table> author_table;
-  scoped_ptr<TableRowWriter> author_table_writer;
-  scoped_ptr<Table> book_table;
+  std::unique_ptr<Table> author_table;
+  std::unique_ptr<TableRowWriter> author_table_writer;
+  std::unique_ptr<Table> book_table;
 
   // Sequence counters.
   int32 author_count;

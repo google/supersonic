@@ -30,24 +30,21 @@
 #include <stddef.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
-#include "supersonic/utils/mutex.h"
+#include "google/protobuf/stubs/common.h"
+namespace supersonic { using google::protobuf::Mutex; }
+namespace supersonic { using google::protobuf::MutexLock; }
+namespace supersonic { using google::protobuf::MutexLockMaybe; }
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/strings/stringpiece.h"
-#include "supersonic/utils/singleton.h"
 
 namespace supersonic {
 
@@ -246,7 +243,8 @@ class HeapBufferAllocator : public BufferAllocator {
 
   // Returns a singleton instance of the heap allocator.
   static HeapBufferAllocator* Get() {
-    return Singleton<HeapBufferAllocator>::get();
+    static HeapBufferAllocator* allocator = new HeapBufferAllocator();
+    return allocator;
   }
 
   virtual size_t Available() const {
@@ -257,8 +255,6 @@ class HeapBufferAllocator : public BufferAllocator {
   // Allocates memory that is aligned to 16 way.
   // Use if you want to boost SIMD operations on the memory area.
   const bool aligned_mode_;
-
-  friend class Singleton<HeapBufferAllocator>;
 
   // A friend declaration for testing purposes. The function is in
   // datawarehouse/supersonic/testing/expression_test_helper.cc.
@@ -536,7 +532,7 @@ class SoftQuotaBypassingBufferAllocator : public BufferAllocator {
     const size_t usage = allocator_.GetUsage();
     size_t available = allocator_.Available();
     if (bypassed_amount_ > usage) {
-      available = max(bypassed_amount_ - usage, available);
+      available = std::max(bypassed_amount_ - usage, available);
     }
     return available;
   }
@@ -548,7 +544,7 @@ class SoftQuotaBypassingBufferAllocator : public BufferAllocator {
   // with increased minimal size is more likely to fail because of exceeding
   // hard quota, so we also fall back to the original minimal size.
   size_t AdjustMinimal(size_t requested, size_t minimal) const {
-    return min(requested, max(minimal, Available()));
+    return min(requested, std::max(minimal, Available()));
   }
   virtual Buffer* AllocateInternal(size_t requested,
                                    size_t minimal,

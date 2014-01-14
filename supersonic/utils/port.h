@@ -14,11 +14,24 @@
 
 #if defined(__APPLE__)
 #include <unistd.h>         // for getpagesize() on mac
-#elif defined(OS_CYGWIN)
+#elif defined(OS_CYGWIN) || defined(ANDROID)
 #include <malloc.h>         // for memalign()
+#elif defined(_MSC_VER)
+#include <stdio.h>          // declare snprintf/vsnprintf before overriding
 #endif
 
 #include "supersonic/utils/integral_types.h"
+
+// We support MSVC++ 8.0 and later.
+//
+// MSVC++ 8: we will discontinue support on 2014-01-14.
+//
+// MSVC++ 9: we will discontinue support on 2014-01-28.
+//
+// MSVC++ 10, MSVC++ 11: good for now.
+#if defined(_MSC_VER) && _MSC_VER < 1400
+#error "Using this package with msvc requires _MSVC_VER of 1400 or higher"
+#endif
 
 // Must happens before inttypes.h inclusion */
 #if defined(__APPLE__)
@@ -38,6 +51,13 @@
 
 // _BIG_ENDIAN
 #include <endian.h>
+
+// GLIBC-related macros.
+#include <features.h>
+
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(a, b) 0  // not a GLIBC system
+#endif
 
 // The uint mess:
 // mysql.h sets _GNU_SOURCE which sets __USE_MISC in <features.h>
@@ -64,7 +84,9 @@ typedef unsigned long ulong;
 #include <cstddef>              // For _GLIBCXX macros
 #endif
 
-#if !defined(HAVE_TLS) && defined(_GLIBCXX_HAVE_TLS) && defined(__x86_64__)
+#if !defined(HAVE_TLS) && \
+  (defined(GOOGLE_LIBCXX) || defined(_GLIBCXX_HAVE_TLS)) && \
+  (defined(__x86_64__) || defined(__powerpc64__))
 #define HAVE_TLS 1
 #endif
 
@@ -100,13 +122,13 @@ typedef unsigned long ulong;
 #define bswap_32(x) OSSwapInt32(x)
 #define bswap_64(x) OSSwapInt64(x)
 
-#elif defined(__GLIBC__)
+#elif defined(__GLIBC__) || defined(__CYGWIN__)
 #include <byteswap.h>  // IWYU pragma: export
 
 #else
 
 static inline uint16 bswap_16(uint16 x) {
-  return ((x & 0xFF) << 8) | ((x & 0xFF00) >> 8);
+  return static_cast<uint16>(((x & 0xFF) << 8) | ((x & 0xFF00) >> 8));
 }
 #define bswap_16(x) bswap_16(x)
 static inline uint32 bswap_32(uint32 x) {
@@ -401,12 +423,38 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 // See http://people.redhat.com/drepper/tls.pdf for the gory details.
 #define ATTRIBUTE_INITIAL_EXEC __attribute__ ((tls_model ("initial-exec")))
 
+// Tell the compiler either that a particular function parameter
+// should be a non-null pointer, or that all pointer arguments should
+// be non-null.
 //
-// Tell the compiler that some function parameters should be non-null pointers.
 // Note: As the GCC manual states, "[s]ince non-static C++ methods
 // have an implicit 'this' argument, the arguments of such methods
 // should be counted from two, not one."
 //
+// Args are indexed starting at 1.
+// For non-static class member functions, the implicit "this" argument
+// is arg 1, and the first explicit argument is arg 2.
+// For static class member functions, there is no implicit "this", and
+// the first explicit argument is arg 1.
+//
+//   /* arg_a cannot be NULL, but arg_b can */
+//   void Function(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//
+//   class C {
+//     /* arg_a cannot be NULL, but arg_b can */
+//     void Method(void* arg_a, void* arg_b) ATTRIBUTE_NONNULL(2);
+//
+//     /* arg_a cannot be NULL, but arg_b can */
+//     static void StaticMethod(void* argc_a, void* arg_b) ATTRIBUTE_NONNULL(1);
+//   };
+//
+// If no arguments are provided, then all pointer arguments should be non-null.
+//
+//  /* No pointer arguments may be null. */
+//  void Function(void* arg_a, void* arg_b, int arg_c) ATTRIBUTE_NONNULL();
+//
+// NOTE: The GCC nonnull attribute actually accepts a list of arguments, but
+// ATTRIBUTE_NONNULL does not.
 #define ATTRIBUTE_NONNULL(arg_index) __attribute__((nonnull(arg_index)))
 
 //
@@ -419,12 +467,23 @@ inline void* memrchr(const void* bytes, int find_char, size_t len) {
 // calls _exit from a cloned subprocess, deliberately accesses buffer
 // out of bounds or does other scary things with memory.
 #ifdef ADDRESS_SANITIZER
-#define ATTRIBUTE_NO_ADDRESS_SAFETY_ANALYSIS \
-    __attribute__((no_address_safety_analysis))
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS \
+    __attribute__((no_sanitize_address))
 #else
-#define ATTRIBUTE_NO_ADDRESS_SAFETY_ANALYSIS
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS
 #endif
 
+// Tell MemorySanitizer to relax the handling of a given function. All "Use of
+// uninitialized value" warnings from such functions will be suppressed, and all
+// values loaded from memory will be considered fully initialized.
+// This is similar to the ADDRESS_SANITIZER attribute above, but deals with
+// initializedness rather than addressability issues.
+#ifdef MEMORY_SANITIZER
+#define ATTRIBUTE_NO_SANITIZE_MEMORY \
+    __attribute__((no_sanitize_memory))
+#else
+#define ATTRIBUTE_NO_SANITIZE_MEMORY
+#endif
 
 #ifndef HAVE_ATTRIBUTE_SECTION  // may have been pre-set to 0, e.g. for Darwin
 #define HAVE_ATTRIBUTE_SECTION 1
@@ -532,7 +591,7 @@ enum PrefetchHint {
 // prefetch is a no-op for this target. Feel free to add more sections above.
 #endif
 
-extern inline void prefetch(const char *x, int hint) {
+extern inline void prefetch(const void *x, int hint) {
 #if defined(__llvm__)
   // In the gcc version of prefetch(), hint is only a constant _after_ inlining
   // (assumed to have been successful).  llvm views things differently, and
@@ -591,7 +650,7 @@ extern inline void prefetch(const char *x, int hint) {
 
 #ifdef __cplusplus
 // prefetch intrinsic (bring data to L1 without polluting L2 cache)
-extern inline void prefetch(const char *x) {
+extern inline void prefetch(const void *x) {
   return prefetch(x, 0);
 }
 #endif  // ifdef __cplusplus
@@ -646,9 +705,9 @@ inline void *aligned_malloc(size_t size, int minimum_alignment) {
     return valloc(size);
   // give up
   return NULL;
-#elif defined(OS_CYGWIN)
+#elif defined(ANDROID) || defined(OS_ANDROID) || defined(OS_CYGWIN)
   return memalign(minimum_alignment, size);
-#else  // !__APPLE__ && !OS_CYGWIN
+#else  // !ANDROID && !OS_ANDROID && !__APPLE__ && !OS_CYGWIN
   void *ptr = NULL;
   if (posix_memalign(&ptr, minimum_alignment, size) != 0)
     return NULL;
@@ -681,7 +740,7 @@ inline void aligned_free(void *aligned_memory) {
 #define ATTRIBUTE_STACK_ALIGN_FOR_OLD_LIBC
 #define REQUIRE_STACK_ALIGN_TRAMPOLINE (0)
 #define MUST_USE_RESULT
-extern inline void prefetch(const char *x) {}
+extern inline void prefetch(const void *x) {}
 #define PREDICT_FALSE(x) x
 #define PREDICT_TRUE(x) x
 
@@ -824,16 +883,10 @@ typedef unsigned int uint;
 #endif
 
 // VC++ doesn't understand "ssize_t"
+// <windows.h> from above includes <BaseTsd.h> and <BaseTsd.h> defines SSIZE_T
 #ifndef HAVE_SSIZET
 #define HAVE_SSIZET 1
-// The following correctly defines ssize_t on most (all?) VC++ versions:
-//   #include <BaseTsd.h>
-//   typedef SSIZE_T ssize_t;
-// However, several projects in googleclient already use plain 'int', e.g.,
-//   googleclient/posix/unistd.h
-//   googleclient/earth/client/libs/base/types.h
-// so to avoid conflicts with those definitions, we do the same here.
-typedef int ssize_t;
+typedef SSIZE_T ssize_t;
 #endif
 
 #define strtoq   _strtoi64
@@ -843,23 +896,28 @@ typedef int ssize_t;
 #define atoll    _atoi64
 
 
-// VC++ 6 and before ship without an ostream << operator for 64-bit ints
-#if (_MSC_VER <= 1200)
-#include <iosfwd>
-using std::ostream;
-inline ostream& operator<< (ostream& os, const unsigned __int64& num ) {
-  // Fake operator; doesn't actually do anything.
-  LOG(FATAL) << "64-bit ostream operator << not supported in VC++ 6";
-  return os;
-}
-#endif
-
 // You say tomato, I say atotom
 #define PATH_MAX MAX_PATH
 
+// MSVC requires to know how code will be linked in order to compile it.
+// This information can be provided via a .def file or __declspec() annotations.
+// The following macro can be set on the compiler command line by those wishing
+// to use __declspec.
+#ifndef BASE_PORT_MSVC_DLL_MACRO
+#define BASE_PORT_MSVC_DLL_MACRO
+#endif
+
+// Wrap Microsoft _snprintf/_vsnprintf calls so they nul-terminate on buffer
+// overflow.
+#define vsnprintf base_port_MSVC_vsnprintf
+BASE_PORT_MSVC_DLL_MACRO
+    int base_port_MSVC_vsnprintf(char *str, size_t size,
+                                 const char *format, va_list ap);
+#define snprintf base_port_MSVC_snprintf
+BASE_PORT_MSVC_DLL_MACRO
+    int base_port_MSVC_snprintf(char *str, size_t size, const char *fmt, ...);
+
 // You say tomato, I say _tomato
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 
@@ -1054,7 +1112,61 @@ struct PortableHashBase { };
 // On some platforms, like ARM, the copy functions can be more efficient
 // then a load and a store.
 
-#if defined(__i386) || defined(ARCH_ATHLON) || defined(__x86_64__) || defined(_ARCH_PPC)
+#if defined(ADDRESS_SANITIZER) || defined(THREAD_SANITIZER) ||\
+    defined(MEMORY_SANITIZER)
+// Consider we have an unaligned load/store of 4 bytes from address 0x...05.
+// AddressSanitizer will treat it as a 3-byte access to the range 05:07 and
+// will miss a bug if 08 is the first unaddressable byte.
+// ThreadSanitizer will also treat this as a 3-byte access to 05:07 and will
+// miss a race between this access and some other accesses to 08.
+// MemorySanitizer will correctly propagate the shadow on unaligned stores
+// and correctly report bugs on unaligned loads, but it may not properly
+// update and report the origin of the uninitialized memory.
+// For all three tools, replacing an unaligned access with a tool-specific
+// callback solves the problem.
+
+// Make sure uint16_t/uint32_t/uint64_t are defined.
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
+uint16_t __sanitizer_unaligned_load16(const void *p);
+uint32_t __sanitizer_unaligned_load32(const void *p);
+uint64_t __sanitizer_unaligned_load64(const void *p);
+void __sanitizer_unaligned_store16(void *p, uint16_t v);
+void __sanitizer_unaligned_store32(void *p, uint32_t v);
+void __sanitizer_unaligned_store64(void *p, uint64_t v);
+#ifdef __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
+
+inline uint16 UNALIGNED_LOAD16(const void *p) {
+  return __sanitizer_unaligned_load16(p);
+}
+
+inline uint32 UNALIGNED_LOAD32(const void *p) {
+  return __sanitizer_unaligned_load32(p);
+}
+
+inline uint64 UNALIGNED_LOAD64(const void *p) {
+  return __sanitizer_unaligned_load64(p);
+}
+
+inline void UNALIGNED_STORE16(void *p, uint16 v) {
+  __sanitizer_unaligned_store16(p, v);
+}
+
+inline void UNALIGNED_STORE32(void *p, uint32 v) {
+  __sanitizer_unaligned_store32(p, v);
+}
+
+inline void UNALIGNED_STORE64(void *p, uint64 v) {
+  __sanitizer_unaligned_store64(p, v);
+}
+
+#elif defined(__i386) || defined(ARCH_ATHLON) || \
+     defined(__x86_64__) || defined(_ARCH_PPC)
 
 // x86 and x86-64 can perform unaligned loads/stores directly;
 // modern PowerPC hardware can also do unaligned integer loads and stores;
@@ -1079,6 +1191,7 @@ struct PortableHashBase { };
       !defined(__ARM_ARCH_6Z__) && \
       !defined(__ARM_ARCH_6ZK__) && \
       !defined(__ARM_ARCH_6T2__)
+
 
 // ARMv7 and newer support native unaligned accesses, but only of 16-bit
 // and 32-bit values (not 64-bit); older versions either raise a fatal signal,
@@ -1149,6 +1262,8 @@ inline void UNALIGNED_STORE64(void *p, uint64 v) {
 
 #endif
 
+// The UNALIGNED_LOADW and UNALIGNED_STOREW macros load and store values
+// of type uword_t.
 #ifdef _LP64
 #define UNALIGNED_LOADW(_p) UNALIGNED_LOAD64(_p)
 #define UNALIGNED_STOREW(_p, _val) UNALIGNED_STORE64(_p, _val)
@@ -1218,8 +1333,7 @@ inline void UnalignedCopy64(const void *src, void *dst) {
    reinterpret_cast<char*>(16))
 
 #ifdef PTHREADS_REDHAT_WIN32
-#include <iosfwd>
-using std::ostream;     // NOLINT(build/include)
+#include <iosfwd>     // NOLINT(build/include)
 #include <pthread.h>  // NOLINT(build/include)
 // pthread_t is not a simple integer or pointer on Win32
 std::ostream& operator << (std::ostream& out, const pthread_t& thread_id);
@@ -1267,6 +1381,9 @@ enum { kPlatformUsesOPDSections = 0 };
 // message is ignored (though the compiler error will likely mention
 // "static_assert_failed" and point to the line with the failing assertion).
 
+// Something else (perhaps libc++) may have provided its own definition of
+// static_assert.
+#ifndef static_assert
 #if LANG_CXX11 || __has_extension(cxx_static_assert) || _MSC_VER >= 1600
 // There's a native implementation of static_assert, no need to define our own.
 // Except that Crosstool V15 blocks use of static_assert, and lacks a warning
@@ -1286,6 +1403,7 @@ enum { kPlatformUsesOPDSections = 0 };
 // Fall back on our home-grown implementation, with its limitations.
 #define static_assert GG_PRIVATE_STATIC_ASSERT
 #endif
+#endif
 
 // CompileAssert is an implementation detail of COMPILE_ASSERT and
 // GG_PRIVATE_STATIC_ASSERT.
@@ -1300,8 +1418,22 @@ struct CompileAssert {
 #define GG_PRIVATE_CAT(a, b) GG_PRIVATE_CAT_IMMEDIATE(a, b)
 #define GG_PRIVATE_STATIC_ASSERT(expr, ignored) \
   typedef CompileAssert<(static_cast<bool>(expr))> \
-  GG_PRIVATE_CAT(static_assert_failed_at_line, __LINE__)[bool(expr) ? 1 : -1]
+  GG_PRIVATE_CAT(static_assert_failed_at_line, __LINE__)[bool(expr) ? 1 : -1] \
+  ATTRIBUTE_UNUSED
 
 #endif  // __cplusplus
+
+// Some platforms have a ::string class that is different from ::std::string
+// (although the interface is the same, of course).  On other platforms,
+// ::string is the same as ::std::string.
+#if defined(__cplusplus) && !defined(SWIG)
+#include <string>
+namespace supersonic {using std::string; }
+#ifndef HAS_GLOBAL_STRING
+using std::basic_string;
+using std::string;
+// TODO(user): using std::wstring?
+#endif  // HAS_GLOBAL_STRING
+#endif  // SWIG, __cplusplus
 
 #endif  // BASE_PORT_H_

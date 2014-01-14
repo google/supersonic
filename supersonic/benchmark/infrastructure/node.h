@@ -20,6 +20,8 @@
 #ifndef SUPERSONIC_BENCHMARK_INFRASTRUCTURE_NODE_H_
 #define SUPERSONIC_BENCHMARK_INFRASTRUCTURE_NODE_H_
 
+#include <memory>
+
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/pointer_vector.h"
 
@@ -61,7 +63,7 @@ class BenchmarkTreeNode {
   util::gtl::PointerVector<BenchmarkTreeNode> children_;
 
   // Statistics for the benchmarked cursor related to the current node.
-  scoped_ptr<CursorStatistics> cursor_statistics_;
+  std::unique_ptr<CursorStatistics> cursor_statistics_;
 
   DISALLOW_COPY_AND_ASSIGN(BenchmarkTreeNode);
 };

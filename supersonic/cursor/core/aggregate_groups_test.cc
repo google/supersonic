@@ -16,7 +16,8 @@
 #include <stddef.h>
 
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/exception/failureor.h"
@@ -50,21 +51,23 @@ namespace supersonic {
 FailureOrOwned<Cursor> CreateGroupAggregate(
     const SingleSourceProjector& group_by,
     const AggregationSpecification& aggregation,
-    Cursor* input) {
-  scoped_ptr<Cursor> input_owner(input);
+    Cursor* input,
+    const int64 max_unique_rows = 20000) {
+  std::unique_ptr<Cursor> input_owner(input);
   FailureOrOwned<Aggregator> aggregator = Aggregator::Create(
       aggregation, input_owner->schema(), HeapBufferAllocator::Get(), 1);
   PROPAGATE_ON_FAILURE(aggregator);
   FailureOrOwned<const BoundSingleSourceProjector> bound_group_by =
       group_by.Bind(input_owner->schema());
   PROPAGATE_ON_FAILURE(bound_group_by);
-  return BoundGroupAggregate(
+  return BoundGroupAggregateWithLimit(
       bound_group_by.release(), aggregator.release(),
       new MemoryLimit(std::numeric_limits<size_t>::max(),
                       false,
                       HeapBufferAllocator::Get()),
       HeapBufferAllocator::Get(),
       false,
+      max_unique_rows,
       input_owner.release());
 }
 
@@ -74,11 +77,11 @@ FailureOrOwned<Cursor> CreateGroupAggregate(
 static Cursor* Sort(Cursor* input) {
   SortOrder sort_order;
   sort_order.add(ProjectAllAttributes(), ASCENDING);
-  scoped_ptr<const BoundSortOrder> bound_sort_order(
+  std::unique_ptr<const BoundSortOrder> bound_sort_order(
       SucceedOrDie(sort_order.Bind(input->schema())));
-  scoped_ptr<const SingleSourceProjector> result_projector(
+  std::unique_ptr<const SingleSourceProjector> result_projector(
       ProjectAllAttributes());
-  scoped_ptr<const BoundSingleSourceProjector> bound_result_projector(
+  std::unique_ptr<const BoundSingleSourceProjector> bound_result_projector(
       SucceedOrDie(result_projector->Bind(input->schema())));
   return SucceedOrDie(BoundSort(
       bound_sort_order.release(),
@@ -103,13 +106,11 @@ TEST_F(AggregateCursorTest, SimpleAggregation) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col0", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT32>()
-      .AddRow(4)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32>().AddRow(4).BuildCursor());
   EXPECT_EQ("sum", aggregate->schema().attribute(0).name());
   EXPECT_TRUE(aggregate->schema().attribute(0).is_nullable());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
@@ -122,13 +123,11 @@ TEST_F(AggregateCursorTest, CountWithInputColumn) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(COUNT, "col0", "count");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<UINT64>()
-      .AddRow(2)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<UINT64>().AddRow(2).BuildCursor());
   EXPECT_FALSE(aggregate->schema().attribute(0).is_nullable());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
@@ -140,13 +139,11 @@ TEST_F(AggregateCursorTest, CountWithNullableInputColumn) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(COUNT, "col0", "count");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<UINT64>()
-      .AddRow(1)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<UINT64>().AddRow(1).BuildCursor());
   EXPECT_FALSE(aggregate->schema().attribute(0).is_nullable());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
@@ -158,13 +155,11 @@ TEST_F(AggregateCursorTest, CountAll) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(COUNT, "", "count");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<UINT64>()
-      .AddRow(2)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<UINT64>().AddRow(2).BuildCursor());
   EXPECT_FALSE(aggregate->schema().attribute(0).is_nullable());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
@@ -176,13 +171,11 @@ TEST_F(AggregateCursorTest, AggregationWithOnlyNullInputs) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col0", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT32>()
-      .AddRow(__)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32>().AddRow(__).BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
 
@@ -193,13 +186,11 @@ TEST_F(AggregateCursorTest, AggregationWithOutputTypeDifferentFromInputType) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregationWithDefinedOutputType(SUM, "col0", "sum", INT64);
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT64>()
-      .AddRow(4)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT64>().AddRow(4).BuildCursor());
   EXPECT_EQ("sum", aggregate->schema().attribute(0).name());
   EXPECT_TRUE(aggregate->schema().attribute(0).is_nullable());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
@@ -215,13 +206,11 @@ TEST_F(AggregateCursorTest, MultipleAggregations) {
   aggregator.AddAggregation(SUM, "col0", "sum");
   aggregator.AddAggregation(MAX, "col0", "max");
   aggregator.AddAggregation(MIN, "col0", "min");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT32, INT32, INT32>()
-      .AddRow(6, 3, 1)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32, INT32, INT32>().AddRow(6, 3, 1).BuildCursor());
   EXPECT_EQ("sum", aggregate->schema().attribute(0).name());
   EXPECT_EQ("max", aggregate->schema().attribute(1).name());
   EXPECT_EQ("min", aggregate->schema().attribute(2).name());
@@ -237,14 +226,12 @@ TEST_F(AggregateCursorTest, DistinctAggregation) {
       .BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddDistinctAggregation(SUM, "col0", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
   // Only distinct values are summed (3 + 4).
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT32>()
-      .AddRow(7)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32>().AddRow(7).BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
 
@@ -258,14 +245,12 @@ TEST_F(AggregateCursorTest, DistinctCountAggregation) {
   AggregationSpecification aggregator;
   aggregator.AddDistinctAggregationWithDefinedOutputType(
       COUNT, "col0", "count", INT32);
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
   // There are two distinct values (3, 4).
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT32>()
-      .AddRow(2)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32>().AddRow(2).BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
 
@@ -291,18 +276,49 @@ TEST_F(AggregateCursorTest, AggregationWithGroupBy) {
       .AddRow(1, 4)
       .AddRow(3, -5)
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_column(
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
       ProjectNamedAttribute("col0"));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col1", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_column, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32, INT32>().AddRow(1, 7).AddRow(3, -8).BuildCursor());
+
+  EXPECT_EQ("col0", aggregate->schema().attribute(0).name());
+  EXPECT_EQ("sum", aggregate->schema().attribute(1).name());
+  EXPECT_FALSE(aggregate->schema().attribute(0).is_nullable());
+  EXPECT_TRUE(aggregate->schema().attribute(1).is_nullable());
+  EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
+}
+
+TEST_F(AggregateCursorTest, AggregationWithGroupBy_UniqueRowLimit) {
+  Cursor* input = TestDataBuilder<INT32, INT32>()
+      .AddRow(1, 3)
+      .AddRow(3, -3)
+      .AddRow(1, 4)
+      .AddRow(3, -5)
+      .AddRow(4, 5)
+      .AddRow(3, -1)
+      .AddRow(5, 1)
+      .AddRow(4, 3)
+      .AddRow(1, -2)
+      .BuildCursor();
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
+      ProjectNamedAttribute("col0"));
+  AggregationSpecification aggregator;
+  aggregator.AddAggregation(SUM, "col1", "sum");
+  std::unique_ptr<Cursor> aggregate(
+      SucceedOrDie(CreateGroupAggregate(
+          *group_by_column, aggregator, input, 2)));
+
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<INT32, INT32>()
-      .AddRow(1, 7)
-      .AddRow(3, -8)
-      .BuildCursor());
+          .AddRow(1, 5)
+          .AddRow(3, -9)
+          .AddRow(4, 9)
+          .BuildCursor());
 
   EXPECT_EQ("col0", aggregate->schema().attribute(0).name());
   EXPECT_EQ("sum", aggregate->schema().attribute(1).name());
@@ -318,17 +334,16 @@ TEST_F(AggregateCursorTest, AggregationWithGroupByNullableColumn) {
       .AddRow(3, -5)
       .AddRow(__, 1)
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_column(
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
       ProjectNamedAttribute("col0"));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col1", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_column, aggregator, input)));
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<INT32, INT32>()
-      .AddRow(3, -8)
-      .AddRow(__, 5)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(TestDataBuilder<INT32, INT32>()
+                                              .AddRow(3, -8)
+                                              .AddRow(__, 5)
+                                              .BuildCursor());
   EXPECT_EQ("col0", aggregate->schema().attribute(0).name());
   EXPECT_EQ("sum", aggregate->schema().attribute(1).name());
   EXPECT_TRUE(aggregate->schema().attribute(0).is_nullable());
@@ -344,18 +359,17 @@ TEST_F(AggregateCursorTest, GroupBySecondColumn) {
       .AddRow(3, "bar")
       .AddRow(-2, "foo")
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_column(
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
       ProjectNamedAttribute("col1"));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col0", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_column, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<STRING, INT32>()
-      .AddRow("foo", -5)
-      .AddRow("bar", 5)
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(TestDataBuilder<STRING, INT32>()
+                                              .AddRow("foo", -5)
+                                              .AddRow("bar", 5)
+                                              .BuildCursor());
   EXPECT_EQ("col1", aggregate->schema().attribute(0).name());
   EXPECT_EQ("sum", aggregate->schema().attribute(1).name());
   EXPECT_CURSORS_EQUAL(Sort(expected_output.release()),
@@ -369,19 +383,19 @@ TEST_F(AggregateCursorTest, GroupByTwoColumns) {
       .AddRow("foo", 1, 4)
       .AddRow("bar", 3, -5)
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_columns(
+  std::unique_ptr<const SingleSourceProjector> group_by_columns(
       ProjectNamedAttributes(util::gtl::Container("col0", "col1")));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col2", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_columns, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<STRING, INT32, INT32>()
-      .AddRow("foo", 1, 7)
-      .AddRow("bar", 2, -3)
-      .AddRow("bar", 3, -5)
-      .BuildCursor());
+          .AddRow("foo", 1, 7)
+          .AddRow("bar", 2, -3)
+          .AddRow("bar", 3, -5)
+          .BuildCursor());
   EXPECT_CURSORS_EQUAL(Sort(expected_output.release()),
                        Sort(aggregate.release()));
 }
@@ -393,22 +407,22 @@ TEST_F(AggregateCursorTest, GroupByTwoColumnsWithMultipleAggregations) {
       .AddRow("foo", 1, 4)
       .AddRow("bar", 3, -5)
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_columns(
+  std::unique_ptr<const SingleSourceProjector> group_by_columns(
       ProjectNamedAttributes(util::gtl::Container("col0", "col1")));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col2", "sum");
   aggregator.AddAggregation(MIN, "col2", "min");
   aggregator.AddAggregation(COUNT, "", "count");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_columns, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<STRING, INT32, INT32, INT32, UINT64>()
       // Group by col, group by col, SUM col, MIN col, COUNT col
-      .AddRow("foo", 1, 7, 3, 2)
-      .AddRow("bar", 2, -3, -3, 1)
-      .AddRow("bar", 3, -5, -5, 1)
-      .BuildCursor());
+          .AddRow("foo", 1, 7, 3, 2)
+          .AddRow("bar", 2, -3, -3, 1)
+          .AddRow("bar", 3, -5, -5, 1)
+          .BuildCursor());
   EXPECT_CURSORS_EQUAL(Sort(expected_output.release()),
                        Sort(aggregate.release()));
 }
@@ -420,19 +434,14 @@ TEST_F(AggregateCursorTest, GroupByWithoutAggregateFunctions) {
       .AddRow("foo")
       .AddRow("bar")
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_column(
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
       ProjectNamedAttribute("col0"));
   AggregationSpecification empty_aggregator;
-  scoped_ptr<Cursor> aggregate(
-      SucceedOrDie(CreateGroupAggregate(*group_by_column,
-                                        empty_aggregator,
-                                        input)));
+  std::unique_ptr<Cursor> aggregate(SucceedOrDie(
+      CreateGroupAggregate(*group_by_column, empty_aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<STRING>()
-      .AddRow("foo")
-      .AddRow("bar")
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<STRING>().AddRow("foo").AddRow("bar").BuildCursor());
   EXPECT_CURSORS_EQUAL(Sort(expected_output.release()),
                        Sort(aggregate.release()));
 }
@@ -442,26 +451,25 @@ TEST_F(AggregateCursorTest, AggregationOnEmptyInput) {
   Cursor* input = TestDataBuilder<DATETIME>().BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(MIN, "col0", "min");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
-      TestDataBuilder<DATETIME>()
-      .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<DATETIME>().BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
 
 // Aggregation on empty input with group by columns should return empty result.
 TEST_F(AggregateCursorTest, AggregationOnEmptyInputWithGroupByColumn) {
   Cursor* input = TestDataBuilder<STRING, DATETIME>().BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_column(
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
       ProjectNamedAttribute("col0"));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(MIN, "col1", "min");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_column, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<STRING, DATETIME>().BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
@@ -471,10 +479,10 @@ TEST_F(AggregateCursorTest, CountOnEmptyInput) {
   Cursor* input = TestDataBuilder<DATETIME>().BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(COUNT, "col0", "count");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<UINT64>().BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
@@ -483,13 +491,13 @@ TEST_F(AggregateCursorTest, CountOnEmptyInput) {
 TEST_F(AggregateCursorTest, CountOnEmptyInputWithGroupByColumn) {
   Cursor* input = TestDataBuilder<STRING, DATETIME>()
       .BuildCursor();
-  scoped_ptr<const SingleSourceProjector> group_by_column(
+  std::unique_ptr<const SingleSourceProjector> group_by_column(
       ProjectNamedAttribute("col0"));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(COUNT, "col1", "count");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(*group_by_column, aggregator, input)));
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<STRING, UINT64>().BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_output.release(), aggregate.release());
 }
@@ -667,28 +675,26 @@ TEST_P(AggregateCursorSpyTest, LargeInput) {
   }
   Cursor* input = cursor_builder.BuildCursor();
 
-  scoped_ptr<const SingleSourceProjector> group_by_columns(
+  std::unique_ptr<const SingleSourceProjector> group_by_columns(
       ProjectNamedAttributes(util::gtl::Container("col0", "col1")));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col0", "sum");
 
-  scoped_ptr<Cursor> aggregate(
-      SucceedOrDie(CreateGroupAggregate(*group_by_columns,
-                                        aggregator,
-                                        input)));
+  std::unique_ptr<Cursor> aggregate(
+      SucceedOrDie(CreateGroupAggregate(*group_by_columns, aggregator, input)));
 
   if (GetParam()) {
-    scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+    std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
         PrintingSpyTransformer());
     aggregate->ApplyToChildren(spy_transformer.get());
     aggregate.reset(spy_transformer->Transform(aggregate.release()));
   }
 
-  scoped_ptr<Cursor> expected_output(
+  std::unique_ptr<Cursor> expected_output(
       TestDataBuilder<INT64, STRING, INT64>()
-      .AddRow(13, "foo", 2 * 13 * (3 * Cursor::kDefaultRowCount + 1))
-      .AddRow(17, "bar", 17 * (3 * Cursor::kDefaultRowCount + 1))
-      .BuildCursor());
+          .AddRow(13, "foo", 2 * 13 * (3 * Cursor::kDefaultRowCount + 1))
+          .AddRow(17, "bar", 17 * (3 * Cursor::kDefaultRowCount + 1))
+          .BuildCursor());
   EXPECT_CURSORS_EQUAL(Sort(expected_output.release()),
                        Sort(aggregate.release()));
 }
@@ -707,7 +713,7 @@ TEST_F(AggregateCursorTest, NoGroupByColumns) {
   test.SetExpectedResult(TestDataBuilder<INT32, UINT64>()
                          .AddRow(14, 7)
                          .Build());
-  scoped_ptr<AggregationSpecification> aggregation(
+  std::unique_ptr<AggregationSpecification> aggregation(
       new AggregationSpecification);
   aggregation->AddAggregation(SUM, "col0", "sum");
   aggregation->AddAggregation(COUNT, "col0", "cnt");
@@ -774,9 +780,10 @@ class BestEffortGroupAggregateDeterminismHelper {
   // Helper method to create best-effort GroupBy operations.
   Operation* CreateBestEffortGroupAggregateOperation(
       size_t memory_quota, bool enforce_quota, Operation* input_operation) {
-    scoped_ptr<GroupAggregateOptions> options((new GroupAggregateOptions)
-        ->set_memory_quota(memory_quota)
-        ->set_enforce_quota(enforce_quota));
+    std::unique_ptr<GroupAggregateOptions> options(
+        (new GroupAggregateOptions)
+            ->set_memory_quota(memory_quota)
+            ->set_enforce_quota(enforce_quota));
     return BestEffortGroupAggregate(
             ProjectNamedAttribute("col0"),
             new AggregationSpecification(aggregation_specification_),
@@ -817,23 +824,23 @@ TEST_F(AggregateCursorTest, BestEffortGroupByRespectsMemoryLimits) {
 
   BestEffortGroupAggregateDeterminismHelper helper;
   {
-    scoped_ptr<Operation> group_by(
-        helper.CreateBestEffortGroupAggregateOperation(
-            kMemory, true, helper.CreateInput()));
+    std::unique_ptr<Operation> group_by(
+        helper.CreateBestEffortGroupAggregateOperation(kMemory, true,
+                                                       helper.CreateInput()));
     MemoryUsageTracker tracker(HeapBufferAllocator::Get());
     group_by->SetBufferAllocator(&tracker, false);
-    scoped_ptr<Cursor> cursor(SucceedOrDie(group_by->CreateCursor()));
+    std::unique_ptr<Cursor> cursor(SucceedOrDie(group_by->CreateCursor()));
     helper.ExpectCursorSucceeds(cursor.get());
     EXPECT_LE(tracker.GetMaxUsage(), kMemory);
   }
   // Now don't enforce memory.
   {
-    scoped_ptr<Operation> group_by(
-        helper.CreateBestEffortGroupAggregateOperation(
-            kMemory, false, helper.CreateInput()));
+    std::unique_ptr<Operation> group_by(
+        helper.CreateBestEffortGroupAggregateOperation(kMemory, false,
+                                                       helper.CreateInput()));
     MemoryUsageTracker tracker(HeapBufferAllocator::Get());
     group_by->SetBufferAllocator(&tracker, false);
-    scoped_ptr<Cursor> cursor(SucceedOrDie(group_by->CreateCursor()));
+    std::unique_ptr<Cursor> cursor(SucceedOrDie(group_by->CreateCursor()));
     helper.ExpectCursorSucceeds(cursor.get());
     EXPECT_GT(tracker.GetMaxUsage(), kMemory);
   }
@@ -847,12 +854,13 @@ TEST_F(AggregateCursorTest, BestEffortGroupAggregateFailsOnOOM) {
   MemoryLimit enough_memory(kMemory);
 
   BestEffortGroupAggregateDeterminismHelper helper;
-  scoped_ptr<Operation> group_by(helper.CreateBestEffortGroupAggregateOperation(
-      kMemory, true, helper.CreateInput()));
+  std::unique_ptr<Operation> group_by(
+      helper.CreateBestEffortGroupAggregateOperation(kMemory, true,
+                                                     helper.CreateInput()));
 
   // Given enough memory, cursor shouldn't fail.
   group_by->SetBufferAllocator(&enough_memory, false);
-  scoped_ptr<Cursor> cursor(SucceedOrDie(group_by->CreateCursor()));
+  std::unique_ptr<Cursor> cursor(SucceedOrDie(group_by->CreateCursor()));
   helper.ExpectCursorSucceeds(cursor.get());
 
   // If best-effort group-by with enforcing quota has less memory available
@@ -867,10 +875,10 @@ TEST_F(AggregateCursorTest, TransformTest) {
   Cursor* input = TestDataBuilder<INT32>().BuildCursor();
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col0", "sum");
-  scoped_ptr<Cursor> aggregate(
+  std::unique_ptr<Cursor> aggregate(
       SucceedOrDie(CreateGroupAggregate(empty_projector_, aggregator, input)));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   aggregate->ApplyToChildren(spy_transformer.get());
 

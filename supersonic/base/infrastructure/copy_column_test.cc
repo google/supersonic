@@ -17,7 +17,7 @@
 
 #include <stddef.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -170,7 +170,7 @@ TEST_F(CopyColumnTest,
        InputSelectorTest) {
   SetUpColumnPair(INT64, NOT_NULLABLE, NOT_NULLABLE);
   const rowcount_t num_row_ids = block_->row_capacity() / 5;
-  scoped_array<rowid_t> row_ids(new rowid_t[num_row_ids]);
+  scoped_ptr<rowid_t[]> row_ids(new rowid_t[num_row_ids]);
   for (rowid_t i = 0; i < num_row_ids; ++i) {
     row_ids[i] = i * 5;
   }

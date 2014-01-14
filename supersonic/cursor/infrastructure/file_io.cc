@@ -34,14 +34,10 @@
 #include <stddef.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -350,14 +346,14 @@ class FileInputCursor : public BasicCursor {
   FailureOrVoid ReadVariableLengthData(OwnedColumn* column,
                                        const rowcount_t row_count);
 
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
   File* input_file_;
   bool delete_when_done_;
   rowcount_t rows_pending_in_block_;
   rowcount_t first_pending_row_offset_;
   // Temporary buffer used by ReadVariableLengthColumn() to store strings'
   // lengths.
-  scoped_array<uint64> strings_length_buffer_;
+  std::unique_ptr<uint64[]> strings_length_buffer_;
 
   DISALLOW_COPY_AND_ASSIGN(FileInputCursor);
 };
@@ -368,7 +364,7 @@ FailureOrOwned<Cursor> FileInput(const TupleSchema& schema,
                                  BufferAllocator* allocator) {
   CHECK_NOTNULL(input_file);
   CHECK_NOTNULL(allocator);
-  scoped_ptr<Block> block(new Block(schema, allocator));
+  std::unique_ptr<Block> block(new Block(schema, allocator));
   if (!block.get() || !block->Reallocate(kMaxChunkRowCount)) {
     input_file->Close();
     THROW(new Exception(ERROR_MEMORY_EXCEEDED,

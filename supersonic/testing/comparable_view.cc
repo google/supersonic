@@ -41,11 +41,11 @@ ComparableView::ComparableView(
       view_printer_(include_header_in_representation,
                     include_rows_in_representation) {}
 
-void ComparableView::AppendToStream(ostream *s) const {
+void ComparableView::AppendToStream(std::ostream *s) const {
   view_printer_.AppendViewToStream(view_, s);
 }
 
-void ComparableView::AppendRowToStream(size_t row_id, ostream* s) const {
+void ComparableView::AppendRowToStream(size_t row_id, std::ostream* s) const {
   view_printer_.AppendRowToStream(view_, row_id, s);
 }
 

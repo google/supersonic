@@ -18,8 +18,9 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -50,7 +51,7 @@ class ScanViewTest : public ::testing::Test {
   const View& view() { return block_->view(); }
 
  private:
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
 };
 
 TEST_F(ScanViewTest, ScanViewScansView) {
@@ -84,7 +85,7 @@ TEST_F(ScanViewTest, ScanViewScansWithSelection) {
 }
 
 TEST_F(ScanViewTest, ScanViewOperationFunctionality) {
-  scoped_ptr<Operation> scan(ScanView(view()));
+  std::unique_ptr<Operation> scan(ScanView(view()));
 
   // Debug string testing.
   string debug = "(prefix)";
@@ -103,10 +104,8 @@ TEST_F(ScanViewTest, ScanViewOperationFunctionality) {
 
 TEST_F(ScanViewTest, ScanViewWithSelectionOperationFunctionality) {
   int64 selection_vector[6] = {0LL, 1LL, 0LL, 3LL, 0LL, 1LL};
-  scoped_ptr<Operation> scan(ScanViewWithSelection(view(),
-                                                   6  /* row count */,
-                                                   selection_vector,
-                                                   4  /* buffer size */));
+  std::unique_ptr<Operation> scan(ScanViewWithSelection(
+      view(), 6 /* row count */, selection_vector, 4 /* buffer size */));
   // Debug string testing.
   string debug = "(prefix)";
   scan->AppendDebugDescription(&debug);

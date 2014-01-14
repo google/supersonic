@@ -18,6 +18,8 @@
 
 #include "supersonic/benchmark/infrastructure/tree_builder.h"
 
+#include <memory>
+
 #include "supersonic/benchmark/base/benchmark_types.h"
 #include "supersonic/benchmark/infrastructure/benchmark_listener.h"
 #include "supersonic/benchmark/infrastructure/benchmark_transformer.h"
@@ -142,9 +144,8 @@ BenchmarkTreeNode* BenchmarkTreeBuilder::ConstructNodeForCursor(
     const vector<Entry*>& node_in_entries,
     bool is_root,
     bool is_parallel_descendant) {
-  scoped_ptr<CursorStatistics> stats(CreateStatsForCursor(
-      node_out_entry,
-      node_in_entries,
+  std::unique_ptr<CursorStatistics> stats(CreateStatsForCursor(
+      node_out_entry, node_in_entries,
       is_root || is_parallel_descendant ? NULL : root_node_stats_));
 
   if (is_root) {
@@ -160,20 +161,19 @@ BenchmarkResult* BenchmarkTreeBuilder::CreateTree(Cursor* cursor) {
 
   // Create a transformer which will be used to position spies in
   // the cursor tree.
-  scoped_ptr<Transformer> transformer(BenchmarkSpyTransformer());
-  scoped_ptr<Cursor> wrapped_cursor(transformer->Transform(cursor));
+  std::unique_ptr<Transformer> transformer(BenchmarkSpyTransformer());
+  std::unique_ptr<Cursor> wrapped_cursor(transformer->Transform(cursor));
 
   CHECK_EQ(1, transformer->GetHistoryLength())
       << "There should only be one root node in history.";
 
-  scoped_ptr<PointerVector<Entry>> history(transformer->ReleaseHistory());
-  scoped_ptr<Entry> root_entry(history->front().release());
+  std::unique_ptr<PointerVector<Entry>> history(transformer->ReleaseHistory());
+  std::unique_ptr<Entry> root_entry(history->front().release());
 
-  scoped_ptr<BenchmarkTreeNode> result_node(CreateTreeNode(
-      root_entry.get(),
-      transformer.get(),
-      /* root? */ true,
-      /* parallel descendant? */ false));
+  std::unique_ptr<BenchmarkTreeNode> result_node(
+      CreateTreeNode(root_entry.get(), transformer.get(),
+                     /* root? */ true,
+                     /* parallel descendant? */ false));
 
   // Take ownership of the root entry.
   entries_.push_back(root_entry.release());
@@ -221,7 +221,7 @@ typedef PointerVector<Entry>::iterator entry_ptr_iterator;
 
 void BenchmarkTreeBuilder::RecoverHistory(Transformer* transformer,
                                           vector<Entry*>* output_history) {
-  scoped_ptr<PointerVector<Entry>> history(transformer->ReleaseHistory());
+  std::unique_ptr<PointerVector<Entry>> history(transformer->ReleaseHistory());
 
   // Transfer ownership of all Entry objects to the BenchmarkTreeBuilder class
   // and populate the output_history vector.

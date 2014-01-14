@@ -18,21 +18,12 @@
 
 #include <stddef.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
-using __gnu_cxx::hash_multiset;
+#include "supersonic/utils/std_namespace.h"
+#include <unordered_set>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -711,7 +702,7 @@ FailureOrOwned<BoundExpression> BoundInSetDataTypeAware(
           contains_null_constant);
   } else {
     bound = new BoundInSetExpression<data_type,
-        hash_set<cpp_type, operators::Hash, operators::Equal> >(
+        std::unordered_set<cpp_type, operators::Hash, operators::Equal> >(
             allocator,
             name,
             needle_expression.release(),

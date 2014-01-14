@@ -27,4 +27,38 @@ TEST(TupleSchemaTest, BigSchema) {
   }
 }
 
+TEST(TupleSchemaTest, EnumsToDifferentType) {
+  EnumDefinition enum_definition;
+  enum_definition.AddEntry(0, "a");
+  TupleSchema a_schema;
+  a_schema.add_attribute(Attribute("attr1", enum_definition, NULLABLE));
+  TupleSchema b_schema;
+  b_schema.add_attribute(Attribute("attr1", INT32, NULLABLE));
+  EXPECT_FALSE(TupleSchema::AreEqual(a_schema, b_schema, false));
+}
+
+TEST(TupleSchemaTest, TwoDifferentEnums) {
+  EnumDefinition a_enum_definition;
+  a_enum_definition.AddEntry(0, "a");
+  TupleSchema a_schema;
+  a_schema.add_attribute(Attribute("attr1", a_enum_definition, NULLABLE));
+  EnumDefinition b_enum_definition;
+  b_enum_definition.AddEntry(0, "b");
+  TupleSchema b_schema;
+  b_schema.add_attribute(Attribute("attr1", b_enum_definition, NULLABLE));
+  EXPECT_FALSE(TupleSchema::AreEqual(a_schema, b_schema, false));
+}
+
+TEST(TupleSchemaTest, SameEnums) {
+  EnumDefinition a_enum_definition;
+  a_enum_definition.AddEntry(0, "a");
+  TupleSchema a_schema;
+  a_schema.add_attribute(Attribute("attr1", a_enum_definition, NULLABLE));
+  EnumDefinition b_enum_definition;
+  b_enum_definition.AddEntry(0, "a");
+  TupleSchema b_schema;
+  b_schema.add_attribute(Attribute("attr1", b_enum_definition, NULLABLE));
+  EXPECT_TRUE(TupleSchema::AreEqual(a_schema, b_schema, true));
+}
+
 }  // namespace supersonic

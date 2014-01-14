@@ -17,6 +17,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/bit_pointers.h"
 #include "supersonic/base/infrastructure/block.h"
@@ -60,7 +62,8 @@ TupleSchema GetSchemaWithOptimizedNullabilityWithSomeForcedNullable(
 namespace internal {
 
 Block* CloneView(const View& view) {
-  scoped_ptr<Block> copy(new Block(view.schema(), HeapBufferAllocator::Get()));
+  std::unique_ptr<Block> copy(
+      new Block(view.schema(), HeapBufferAllocator::Get()));
   CHECK(copy->Reallocate(view.row_count()));
   const ViewCopier block_copier(view.schema(), true);
   CHECK_EQ(view.row_count(),

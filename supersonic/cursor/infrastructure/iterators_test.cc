@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/infrastructure/iterators.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/block.h"
 #include "supersonic/cursor/base/cursor_transformer.h"
@@ -64,9 +66,9 @@ class BaseIteratorTest : public testing::Test {
 
  private:
   TupleSchema schema_;
-  scoped_ptr<TestData> data_;
-  scoped_ptr<TestData> failing_;
-  scoped_ptr<TestData> empty_;
+  std::unique_ptr<TestData> data_;
+  std::unique_ptr<TestData> failing_;
+  std::unique_ptr<TestData> empty_;
 };
 
 class ViewIteratorTest : public BaseIteratorTest {};
@@ -215,7 +217,7 @@ TEST_P(CursorIteratorSpyTest, ConstrainedIterationWorks) {
   CursorIterator iterator(CreateViewLimiter(4, CreatePlainCursor()));
 
   if (GetParam()) {
-    scoped_ptr<CursorTransformer> spy_transform(PrintingSpyTransformer());
+    std::unique_ptr<CursorTransformer> spy_transform(PrintingSpyTransformer());
     iterator.ApplyToCursor(spy_transform.get());
   }
 
@@ -329,7 +331,7 @@ TEST_P(CursorRowIteratorSpyTest, RowByRowIterationWorks) {
       CreateViewLimiter(4, CreatePlainCursor()));
 
   if (GetParam()) {
-    scoped_ptr<CursorTransformer> spy_transform(PrintingSpyTransformer());
+    std::unique_ptr<CursorTransformer> spy_transform(PrintingSpyTransformer());
     iterator.Transform(spy_transform.get());
   }
 

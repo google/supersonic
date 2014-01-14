@@ -16,6 +16,8 @@
 
 #include "supersonic/benchmark/manager/benchmark_manager.h"
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/cursor_statistics_mock.h"
 #include "supersonic/cursor/base/cursor_mock.h"
 
@@ -50,7 +52,7 @@ class BenchmarkManagerTest : public testing::Test {
   MockCursor* CreateMockCursor() {
     // Using NiceMock for cursor as BenchmarkManager only acts on the cursor
     // through the tree builder.
-    scoped_ptr<MockCursor> cursor(new NiceMock<MockCursor>);
+    std::unique_ptr<MockCursor> cursor(new NiceMock<MockCursor>);
     ON_CALL(*cursor, schema()).WillByDefault(ReturnRef(schema_));
     ON_CALL(*cursor, GetCursorId()).WillByDefault(Return(VIEW));
     return cursor.release();
@@ -58,8 +60,9 @@ class BenchmarkManagerTest : public testing::Test {
 
   // Caller takes ownership of the result node.
   BenchmarkTreeNode* CreateMockNodeWithExpectation() {
-    scoped_ptr<CursorStatistics> stats(new MockCursorStatistics(&dummy_));
-    scoped_ptr<MockBenchmarkNode> node(new MockBenchmarkNode(stats.release()));
+    std::unique_ptr<CursorStatistics> stats(new MockCursorStatistics(&dummy_));
+    std::unique_ptr<MockBenchmarkNode> node(
+        new MockBenchmarkNode(stats.release()));
     EXPECT_CALL(*node, GatherAllData());
     return node.release();
   }
@@ -70,7 +73,7 @@ class BenchmarkManagerTest : public testing::Test {
 
 TEST_F(BenchmarkManagerTest, TypicalUseCaseTest) {
   rowcount_t block_size = -1;
-  scoped_ptr<MockCursor> cursor(CreateMockCursor());
+  std::unique_ptr<MockCursor> cursor(CreateMockCursor());
 
   // Return EOS on next call, hence there should only be one call to Next()
   // with the argument being the specified block size.
@@ -87,10 +90,10 @@ TEST_F(BenchmarkManagerTest, TypicalUseCaseTest) {
 }
 
 TEST_F(BenchmarkManagerTest, SetUpTest) {
-  scoped_ptr<Cursor> cursor(CreateMockCursor());
-  scoped_ptr<BenchmarkDataWrapper> data_wrapper(
+  std::unique_ptr<Cursor> cursor(CreateMockCursor());
+  std::unique_ptr<BenchmarkDataWrapper> data_wrapper(
       SetUpBenchmarkForCursor(cursor.release()));
-  scoped_ptr<Cursor> transformed_cursor(data_wrapper->release_cursor());
+  std::unique_ptr<Cursor> transformed_cursor(data_wrapper->release_cursor());
 
   EXPECT_TRUE(transformed_cursor.get() != NULL);
   ASSERT_TRUE(data_wrapper->node() != NULL);
@@ -121,7 +124,7 @@ INSTANTIATE_TEST_CASE_P(Destination,
                         testing::Values(DOT_STRING, DOT_FILE));
 
 TEST_P(BenchmarkManagerWithOutputTest, CreateStringGraphTest) {
-  scoped_ptr<BenchmarkTreeNode> node(CreateMockNodeWithExpectation());
+  std::unique_ptr<BenchmarkTreeNode> node(CreateMockNodeWithExpectation());
   CreateGraph("CreateGraphTest",
               node.get(),
               CreateOptions(GetParam()));

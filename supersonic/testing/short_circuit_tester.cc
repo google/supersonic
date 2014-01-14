@@ -16,6 +16,8 @@
 
 #include "supersonic/testing/short_circuit_tester.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/exception/exception_macros.h"
@@ -86,8 +88,8 @@ class BoundSkipperExpression : public BoundExpression {
   }
 
  private:
-  scoped_ptr<BoundExpression> left_child_;
-  scoped_ptr<BoundExpression> right_child_;
+  std::unique_ptr<BoundExpression> left_child_;
+  std::unique_ptr<BoundExpression> right_child_;
 };
 
 // The skip vector expectation expression calculates the left input with an
@@ -165,8 +167,8 @@ class BoundSkipVectorExpectationExpression : public BoundExpression {
   }
 
  private:
-  scoped_ptr<BoundExpression> left_child_;
-  scoped_ptr<BoundExpression> right_child_;
+  std::unique_ptr<BoundExpression> left_child_;
+  std::unique_ptr<BoundExpression> right_child_;
   BoolBlock local_skip_vector_storage_;
   bool initialized_;
 };
@@ -177,8 +179,8 @@ FailureOrOwned<BoundExpression> BoundSkipper(BoundExpression* skip_vector_ptr,
                                              BoundExpression* input_ptr,
                                              BufferAllocator* allocator,
                                              rowcount_t max_row_count) {
-  scoped_ptr<BoundExpression> skip_vector(skip_vector_ptr);
-  scoped_ptr<BoundExpression> input(input_ptr);
+  std::unique_ptr<BoundExpression> skip_vector(skip_vector_ptr);
+  std::unique_ptr<BoundExpression> input(input_ptr);
   PROPAGATE_ON_FAILURE(CheckAttributeCount(string("Skipper skip vector"),
                                            skip_vector->result_schema(),
                                            1));
@@ -200,8 +202,9 @@ FailureOrOwned<BoundExpression> BoundSkipVectorExpectation(
     BoundExpression* input_ptr,
     BufferAllocator* allocator,
     rowcount_t max_row_count) {
-  scoped_ptr<BoundExpression> expected_skip_vector(expected_skip_vector_ptr);
-  scoped_ptr<BoundExpression> input(input_ptr);
+  std::unique_ptr<BoundExpression> expected_skip_vector(
+      expected_skip_vector_ptr);
+  std::unique_ptr<BoundExpression> input(input_ptr);
   PROPAGATE_ON_FAILURE(CheckAttributeCount(
       string("Expected skip vector"),
       expected_skip_vector->result_schema(),
@@ -235,6 +238,7 @@ const Expression* SkipVectorExpectation(const Expression* expected,
 
 void TestShortCircuitUnary(const Block* block,
                            UnaryExpressionCreator factory) {
+  std::unique_ptr<const Block> deleter(block);
   const Expression* expression =
       Skipper(AttributeAt(0), factory(SkipVectorExpectation(AttributeAt(2),
                                                             AttributeAt(1))));
@@ -248,6 +252,7 @@ void TestShortCircuitBinary(const Block* block,
                                                             AttributeAt(1)),
                                       SkipVectorExpectation(AttributeAt(4),
                                                             AttributeAt(3))));
+  std::unique_ptr<const Block> deleter(block);
   TestEvaluationCommon(block, true, expression);
 }
 
@@ -260,6 +265,7 @@ void TestShortCircuitTernary(const Block* block,
                                                             AttributeAt(3)),
                                       SkipVectorExpectation(AttributeAt(6),
                                                             AttributeAt(5))));
+  std::unique_ptr<const Block> deleter(block);
   TestEvaluationCommon(block, true, expression);
 }
 

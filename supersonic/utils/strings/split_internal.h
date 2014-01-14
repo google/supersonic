@@ -17,16 +17,23 @@
 #ifndef STRINGS_SPLIT_INTERNAL_H_
 #define STRINGS_SPLIT_INTERNAL_H_
 
+#ifdef _GLIBCXX_DEBUG
+#include <glibcxx_debug_traits.h>
+#endif  // _GLIBCXX_DEBUG
+
+#include <algorithm>
+#include "supersonic/utils/std_namespace.h"
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
 #include <map>
 using std::map;
-using std::multimap;
 #include <vector>
 using std::vector;
 
 #include "supersonic/utils/port.h"  // for LANG_CXX11
+#include "supersonic/utils/template_util.h"
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"  // for base::enable_if
 #include "supersonic/utils/strings/stringpiece.h"
 
 #ifdef LANG_CXX11
@@ -38,10 +45,84 @@ namespace strings {
 
 namespace internal {
 
+#ifdef _GLIBCXX_DEBUG
+using ::glibcxx_debug_traits::IsStrictlyDebugWrapperBase;
+#else  // _GLIBCXX_DEBUG
+template <typename T> struct IsStrictlyDebugWrapperBase : base::false_ {};
+#endif  // _GLIBCXX_DEBUG
+
 // The default Predicate object, which doesn't filter out anything.
 struct NoFilter {
   bool operator()(StringPiece /* ignored */) {
     return true;
+  }
+};
+
+// This class is implicitly constructible from const char*,
+// StringPiece, and string, but not from other types that are
+// themselves convertible to StringPiece (because C++ won't implicitly
+// use a sequence of 2 user-defined conversion).  If it's constructed
+// from a temporary string, it moves that temporary into local storage
+// so that the temporary isn't destroyed before Split()'s result.
+class ConvertibleToStringPiece {
+ private:
+  // Used for temporary string arguments.  Must be declared before
+  // 'value' in order to construct 'value' from it.
+  string copy_;
+
+ public:
+  StringPiece value;
+  ConvertibleToStringPiece(const char* s) : value(s) {}    // NOLINT
+  ConvertibleToStringPiece(char* s) : value(s) {}          // NOLINT
+  ConvertibleToStringPiece(StringPiece s) : value(s) {}    // NOLINT
+  ConvertibleToStringPiece(const string& s) : value(s) {}  // NOLINT
+
+#if LANG_CXX11
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wbasecode-rvalue-reference"
+  // This overload captures temporary arguments.
+  // gave approval for this use in cl/48636778.
+  ConvertibleToStringPiece(string&& s)  // NOLINT
+      : copy_(std::move(s)),            // NOLINT
+        value(copy_) {}
+#pragma GCC diagnostic pop
+#endif
+
+  ConvertibleToStringPiece(const ConvertibleToStringPiece& other)
+      : copy_(other.copy_) {
+    if (other.copy_.empty()) {
+      value = other.value;
+    } else {
+      value = copy_;
+    }
+  }
+
+  // Effectively a move constructor, using C++98 features.
+  explicit ConvertibleToStringPiece(ConvertibleToStringPiece* other) {
+    if (other->copy_.empty()) {
+      value = other->value;
+    } else {
+      using std::swap;
+      swap(copy_, other->copy_);
+      value = copy_;
+      other->value = StringPiece();
+    }
+  }
+
+  void swap(ConvertibleToStringPiece& other) {
+    using std::swap;
+    swap(copy_, other.copy_);
+    swap(value, other.value);
+
+    // Fix up StringPieces when the real data is stored in the string.
+    if (!copy_.empty()) value = copy_;
+    if (!other.copy_.empty()) other.value = other.copy_;
+  }
+
+  ConvertibleToStringPiece& operator=(ConvertibleToStringPiece other) {
+    swap(other);
+    return *this;
   }
 };
 
@@ -75,13 +156,26 @@ class SplitIterator
       : delimiter_(d), predicate_(), is_end_(true) {}
   SplitIterator(Delimiter d, Predicate p)
       : delimiter_(d), predicate_(p), is_end_(true) {}
-  // Two constructors taking the text to iterator.
+
+  // Two constructors taking the text to iterate.
   SplitIterator(StringPiece text, Delimiter d)
-      : text_(text), delimiter_(d), predicate_(), is_end_(false) {
+      : text_(text), position_(0), delimiter_(d), predicate_(), is_end_(false) {
     ++(*this);
   }
   SplitIterator(StringPiece text, Delimiter d, Predicate p)
-      : text_(text), delimiter_(d), predicate_(p), is_end_(false) {
+      : text_(text), position_(0), delimiter_(d), predicate_(p),
+        is_end_(false) {
+    ++(*this);
+  }
+
+  // Constructor copying the delimiter and predicate out of an
+  // existing SplitIterator, but applying them to new text.
+  SplitIterator(StringPiece text, const SplitIterator& other)
+      : text_(text),
+        position_(0),
+        delimiter_(other.delimiter_),
+        predicate_(other.predicate_),
+        is_end_(false) {
     ++(*this);
   }
 
@@ -95,15 +189,16 @@ class SplitIterator
         is_end_ = true;
         return *this;
       }
-      StringPiece found_delimiter = delimiter_.Find(text_);
+      StringPiece found_delimiter = delimiter_.Find(text_, position_);
       assert(found_delimiter.data() != NULL);
-      assert(text_.begin() <= found_delimiter.begin());
+      assert(text_.begin() + position_ <= found_delimiter.begin());
       assert(found_delimiter.end() <= text_.end());
       // found_delimiter is allowed to be empty.
       // Sets curr_piece_ to all text up to but excluding the delimiter itself.
-      // Sets text_ to remaining data after the delimiter.
-      curr_piece_.set(text_.begin(), found_delimiter.begin() - text_.begin());
-      text_.remove_prefix(found_delimiter.end() - text_.begin());
+      // Increments position_ by the length of curr_piece_ and found_delimiter.
+      size_t curr_size = found_delimiter.begin() - (text_.begin() + position_);
+      curr_piece_.set(text_.begin() + position_, curr_size);
+      position_ += curr_piece_.size() + found_delimiter.size();
     } while (!predicate_(curr_piece_));
     return *this;
   }
@@ -125,6 +220,7 @@ class SplitIterator
            (is_end_ == other.is_end_ &&
             text_ == other.text_ &&
             text_.data() == other.text_.data() &&
+            position_ == other.position_ &&
             curr_piece_ == other.curr_piece_ &&
             curr_piece_.data() == other.curr_piece_.data());
   }
@@ -134,8 +230,9 @@ class SplitIterator
   }
 
  private:
-  // The text being split. Modified as delimited pieces are consumed.
+  // The text being split.
   StringPiece text_;
+  size_t position_;
   Delimiter delimiter_;
   Predicate predicate_;
   bool is_end_;
@@ -173,16 +270,60 @@ struct StringPieceTo<const string> {
   }
 };
 
-#ifdef LANG_CXX11
-// IsNotInitializerList<T>::type exists iff T is not an initializer_list. More
-// details below in Splitter<> where this is used.
+// HasMappedType<T>::value is true iff there exists a type T::mapped_type.
 template <typename T>
-struct IsNotInitializerList {
-  typedef void type;
+struct HasMappedType {
+  template <typename U> static base::small_ check(...);  // default: No
+  template <typename U> static base::big_ check(typename U::mapped_type*);
+  enum { value = sizeof(base::big_) == sizeof(check<T>(0)) };
 };
+
+// HasValueType<T>::value is true iff there exists a type T::value_type.
 template <typename T>
-struct IsNotInitializerList<std::initializer_list<T> > {};
+struct HasValueType {
+  template <typename U> static base::small_ check(...);  // default: No
+  template <typename U> static base::big_ check(typename U::value_type*);
+  enum { value = sizeof(base::big_) == sizeof(check<T>(0)) };
+};
+
+// HasConstIterator<T>::value is true iff there exists a type
+// T::const_iterator.
+template <typename T>
+struct HasConstIterator {
+  template <typename U> static base::small_ check(...);  // default: No
+  template <typename U> static base::big_ check(typename U::const_iterator*);
+  enum { value = sizeof(base::big_) == sizeof(check<T>(0)) };
+};
+
+// IsInitializerList<T>::value is true iff T is an initializer_list.
+// More details below in Splitter<> where this is used.
+template <typename T>
+struct IsInitializerList {
+  static base::small_ check(...);  // default: No
+#ifdef LANG_CXX11
+  template <typename U> static base::big_ check(std::initializer_list<U>*);
 #endif  // LANG_CXX11
+  enum { value = sizeof(base::big_) == sizeof(check(static_cast<T*>(0))) };
+};
+
+// A SplitterIsConvertibleTo<C>::type typedef exists iff the specified
+// condition is true for type 'C'.
+//
+// Restricts conversion to container-like types (by testing for the presence of
+// a const_iterator member type) and also to disable conversion to an
+// initializer_list (which also has a const_iterator). Otherwise, code compiled
+// in C++11 will get an error due to ambiguous conversion paths (in C++11
+// vector<T>::operator= is overloaded to take either a vector<T> or an
+// initializer_list<T>).
+//
+// This trick was taken from util/gtl/container_literal.h
+template <typename C>
+struct SplitterIsConvertibleTo
+    : base::enable_if<
+          !IsStrictlyDebugWrapperBase<C>::value &&
+          !IsInitializerList<C>::value &&
+          HasValueType<C>::value &&
+          HasConstIterator<C>::value> {};  // NOLINT
 
 // This class implements the behavior of the split API by giving callers access
 // to the underlying split substrings in various convenient ways, such as
@@ -205,11 +346,16 @@ class Splitter {
  public:
   typedef internal::SplitIterator<Delimiter, Predicate> Iterator;
 
-  Splitter(StringPiece text, Delimiter d)
-      : begin_(text, d), end_(d) {}
+  Splitter(ConvertibleToStringPiece* input_text, Delimiter d)
+      : text_(input_text), begin_(text_.value, d), end_(d) {}
 
-  Splitter(StringPiece text, Delimiter d, Predicate p)
-      : begin_(text, d, p), end_(d, p) {}
+  Splitter(ConvertibleToStringPiece* input_text, Delimiter d, Predicate p)
+      : text_(input_text), begin_(text_.value, d, p), end_(d, p) {}
+
+  Splitter(const Splitter& other)
+      : text_(other.text_),
+        begin_(text_.value, other.begin_),
+        end_(other.end_) {}
 
   // Range functions that iterate the split substrings as StringPiece objects.
   // These methods enable a Splitter to be used in a range-based for loop in
@@ -218,140 +364,42 @@ class Splitter {
   //   for (StringPiece sp : my_splitter) {
   //     DoWork(sp);
   //   }
-  const Iterator& begin() const { return begin_; }
-  const Iterator& end() const { return end_; }
+  Iterator begin() const { return begin_; }
+  Iterator end() const { return end_; }
 
 #ifdef LANG_CXX11
-// Support for default template arguments for function templates was added in
-// C++11, but it is not allowed if compiled in C++98 compatibility mode. Since
-// this code is under a LANG_CXX11 guard, we can safely ignore the
-// -Wc++98-compat flag and use default template arguments on the implicit
-// conversion operator below.
-//
-// This use of default template arguments on a function template was approved
-// by tgs and sanjay on behalf of the c-style-arbiters in email thread
-//
-// All compiler flags are first saved with a diagnostic push and restored with a
-// diagnostic pop below.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wc++98-compat"
-
-  // Uses SFINAE to restrict conversion to container-like types (by testing for
-  // the presence of a const_iterator member type) and also to disable
-  // conversion to an initializer_list (which also has a const_iterator).
-  // Otherwise, code compiled in C++11 will get an error due to ambiguous
-  // conversion paths (in C++11 vector<T>::operator= is overloaded to take
-  // either a vector<T> or an initializer_list<T>).
-  //
-  // This trick was taken from util/gtl/container_literal.h
+  // An implicit conversion operator that uses a default template argument to
+  // restrict its use to only those containers that the splitter is convertible
+  // to. Default template arguments on function templates are a C++11 feature,
+  // which is why this code is under an #ifdef LANG_CXX11.
   template <typename Container,
-            typename IsNotInitializerListChecker =
-                typename IsNotInitializerList<Container>::type,
-            typename ContainerChecker =
-                typename Container::const_iterator>
-  operator Container() {
-    return SelectContainer<Container, is_map<Container>::value>()(this);
+            typename OnlyIf =
+                typename SplitterIsConvertibleTo<Container>::type>
+  operator Container() const {
+    return ContainerConverter<
+        Container,
+        typename Container::value_type,
+        HasMappedType<Container>::value>()(*this);
   }
-
-// Restores diagnostic settings, i.e., removes the "ignore" on -Wpragmas and
-// -Wc++98-compat.
-#pragma GCC diagnostic pop
-
 #else
-  // Not under LANG_CXX11
+  // Not under LANG_CXX11.
+  // Same conversion operator as in the C++11 block above, except this one
+  // doesn't use SplitterIsConvertibleTo<>.
   template <typename Container>
-  operator Container() {
-    return SelectContainer<Container, is_map<Container>::value>()(this);
+  operator Container() const {
+    return ContainerConverter<
+        Container,
+        typename Container::value_type,
+        HasMappedType<Container>::value>()(*this);
   }
 #endif  // LANG_CXX11
 
-  template <typename First, typename Second>
-  operator std::pair<First, Second>() {
-    return ToPair<First, Second>();
-  }
-
- private:
-  // is_map<T>::value is true iff there exists a type T::mapped_type. This is
-  // used to dispatch to one of the SelectContainer<> functors (below) from the
-  // implicit conversion operator (above).
-  template <typename T>
-  struct is_map {
-    template <typename U> static base::big_ test(typename U::mapped_type*);
-    template <typename> static base::small_ test(...);
-    static const bool value = (sizeof(test<T>(0)) == sizeof(base::big_));
-  };
-
-  // Base template handles splitting to non-map containers
-  template <typename Container, bool>
-  struct SelectContainer {
-    Container operator()(Splitter* splitter) const {
-      return splitter->template ToContainer<Container>();
-    }
-  };
-
-  // Partial template specialization for splitting to map-like containers.
-  template <typename Container>
-  struct SelectContainer<Container, true> {
-    Container operator()(Splitter* splitter) const {
-      return splitter->template ToMap<Container>();
-    }
-  };
-
-  // Inserts split results into the container. To do this the results are first
-  // stored in a vector<StringPiece>. This is where the input text is actually
-  // "parsed". The elements in this vector are then converted to the requested
-  // type and inserted into the requested container. This is handled by the
-  // ConvertContainer() function.
-  //
-  // The reason to use an intermediate vector of StringPiece is so we can learn
-  // the needed capacity of the output container. This is needed when the output
-  // container is a vector<string> in which case resizes can be expensive due to
-  // copying of the ::string objects.
-  //
-  // At some point in the future we might add a C++11 move constructor to
-  // ::string, in which case the vector resizes are much less expensive and the
-  // use of this intermediate vector "v" can be removed.
-  template <typename Container>
-  Container ToContainer() {
-    vector<StringPiece> v;
-    for (Iterator it = begin(); it != end_; ++it) {
-      v.push_back(*it);
-    }
-    Container c;
-    ConvertContainer(v, &c);
-    return c;
-  }
-
-  // The algorithm is to insert a new pair into the map for each even-numbered
-  // item, with the even-numbered item as the key with a default-constructed
-  // value. Each odd-numbered item will then be assigned to the last pair's
-  // value.
-  template <typename Map>
-  Map ToMap() {
-    typedef typename Map::key_type Key;
-    typedef typename Map::mapped_type Data;
-    Map m;
-    StringPieceTo<Key> key_converter;
-    StringPieceTo<Data> val_converter;
-    typename Map::iterator curr_pair;
-    bool is_even = true;
-    for (Iterator it = begin(); it != end_; ++it) {
-      if (is_even) {
-        curr_pair = InsertInMap(std::make_pair(key_converter(*it), Data()), &m);
-      } else {
-        curr_pair->second = val_converter(*it);
-      }
-      is_even = !is_even;
-    }
-    return m;
-  }
-
   // Returns a pair with its .first and .second members set to the first two
   // strings returned by the begin() iterator. Either/both of .first and .second
-  // will be empty strings if the iterator doesn't have a corresponding value.
+  // will be constructed with empty strings if the iterator doesn't have a
+  // corresponding value.
   template <typename First, typename Second>
-  std::pair<First, Second> ToPair() {
+  operator std::pair<First, Second>() const {
     StringPieceTo<First> first_converter;
     StringPieceTo<Second> second_converter;
     StringPiece first, second;
@@ -365,55 +413,89 @@ class Splitter {
     return std::make_pair(first_converter(first), second_converter(second));
   }
 
-  // Overloaded InsertInMap() function. The first overload is the commonly used
-  // one for most map-like objects. The second overload is a special case for
-  // multimap, because multimap's insert() member function directly returns an
-  // iterator, rather than a pair<iterator, bool> like map's.
-  template <typename Map>
-  typename Map::iterator InsertInMap(
-      const typename Map::value_type& value, Map* map) {
-    return map->insert(value).first;
-  }
-
-  // InsertInMap overload for multimap.
-  template <typename K, typename T, typename C, typename A>
-  typename std::multimap<K, T, C, A>::iterator InsertInMap(
-      const typename std::multimap<K, T, C, A>::value_type& value,
-      typename std::multimap<K, T, C, A>* map) {
-    return map->insert(value);
-  }
-
-  // Converts the container and elements to the specified types. This is the
-  // generic case. There is an overload of this function to optimize for the
-  // common case of a vector<string>.
-  template <typename Container>
-  void ConvertContainer(const vector<StringPiece>& vin, Container* c) {
-    typedef typename Container::value_type ToType;
-    internal::StringPieceTo<ToType> converter;
-    std::insert_iterator<Container> inserter(*c, c->begin());
-    for (size_t i = 0; i < vin.size(); ++i) {
-      *inserter++ = converter(vin[i]);
+ private:
+  // ContainerConverter is a functor converting a Splitter to the requested
+  // Container and ValueType. It can be specialized to optimize splitting to
+  // certain combinations of Container and ValueType.
+  //
+  // This base template handles the generic case of storing the split results in
+  // the requested non-map-like container and converting the split substrings to
+  // the requested type.
+  template <typename Container, typename ValueType, bool is_map = false>
+  struct ContainerConverter {
+    Container operator()(const Splitter& splitter) const {
+      Container c;
+      std::transform(splitter.begin(),
+                     splitter.end(),
+                     std::inserter(c, c.end()),
+                     StringPieceTo<typename Container::value_type>());
+      return c;
     }
-  }
+  };
 
-  // Overload of ConvertContainer() that is optimized for the common case of a
-  // vector<string>. In this case, vector space is reserved, and a temp string
-  // is lifted outside the loop and reused inside the loop to minimize
-  // constructor calls and allocations. This resulted in about a 10% performance
-  // improvement in the Split2SplitStringUsing benchmark. We can revisit the
-  // need for this optimization in the future if/when ::string gains support for
-  // move semantics.
+  // Partial specialization for a vector<string>.
+  //
+  // Optimized for the common case of splitting to a vector<string>. In this
+  // case we first split the results to a vector<StringPiece> so the returned
+  // vector<string> can have space reserved to avoid string copies.
   template <typename A>
-  void ConvertContainer(const vector<StringPiece>& vin,
-                        vector<string, A>* vout) {
-    vout->reserve(vin.size());
-    string tmp;  // reused inside the loop
-    for (size_t i = 0; i < vin.size(); ++i) {
-      vin[i].CopyToString(&tmp);
-      vout->push_back(tmp);
+  struct ContainerConverter<std::vector<string, A>, string, false> {
+    std::vector<string, A> operator()(const Splitter& splitter) const {
+      std::vector<StringPiece> vsp(splitter.begin(), splitter.end());
+      std::vector<string, A> v(vsp.size());
+      for (size_t i = 0; i < vsp.size(); ++i) {
+        vsp[i].CopyToString(&v[i]);
+      }
+      return v;
     }
-  }
+  };
 
+  // Partial specialization for containers of pairs (e.g., maps).
+  //
+  // The algorithm is to insert a new pair into the map for each even-numbered
+  // item, with the even-numbered item as the key with a default-constructed
+  // value. Each odd-numbered item will then be assigned to the last pair's
+  // value.
+  template <typename Container, typename First, typename Second>
+  struct ContainerConverter<Container, std::pair<First, Second>, true> {
+    Container operator()(const Splitter& splitter) const {
+      Container m;
+      StringPieceTo<First> key_converter;
+      StringPieceTo<Second> val_converter;
+      typename Container::iterator curr_pair;
+      bool is_even = true;
+      for (Iterator it = splitter.begin(); it != splitter.end(); ++it) {
+        if (is_even) {
+          curr_pair = InsertInMap(std::make_pair(key_converter(*it), Second()),
+                                  &m);
+        } else {
+          curr_pair->second = val_converter(*it);
+        }
+        is_even = !is_even;
+      }
+      return m;
+    }
+
+    // Overloaded InsertInMap() function. The first overload is the commonly
+    // used one for most map-like objects. The second overload is a special case
+    // for multimap, because multimap's insert() member function directly
+    // returns an iterator, rather than a pair<iterator, bool> like map's.
+    template <typename Map>
+    typename Map::iterator InsertInMap(
+        const typename Map::value_type& value, Map* map) const {
+      return map->insert(value).first;
+    }
+
+    // InsertInMap overload for multimap.
+    template <typename K, typename T, typename C, typename A>
+    typename std::multimap<K, T, C, A>::iterator InsertInMap(
+        const typename std::multimap<K, T, C, A>::value_type& value,
+        typename std::multimap<K, T, C, A>* map) const {
+      return map->insert(value);
+    }
+  };
+
+  const ConvertibleToStringPiece text_;
   const Iterator begin_;
   const Iterator end_;
 };

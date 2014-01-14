@@ -20,9 +20,7 @@
 
 #include <stddef.h>
 #include <iosfwd>
-using std::ostream;
 #include <ostream>
-using std::endl;
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/base/infrastructure/block.h"
@@ -46,9 +44,9 @@ class ComparableView : public Streamable {
                  bool include_header_in_representation,
                  bool include_rows_in_representation);
 
-  virtual void AppendToStream(ostream* s) const;
+  virtual void AppendToStream(std::ostream* s) const;
 
-  void AppendRowToStream(size_t row_id, ostream* s) const;
+  void AppendRowToStream(size_t row_id, std::ostream* s) const;
 
   // Evaluates as bool. Includes detailed explanation if not equal.
   testing::AssertionResult operator==(const ComparableView& other) const;

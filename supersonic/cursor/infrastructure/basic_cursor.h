@@ -19,8 +19,9 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -28,6 +29,7 @@ using std::vector;
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
+#include <atomic>
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/exception/exception_macros.h"
 #include "supersonic/base/infrastructure/block.h"
@@ -37,10 +39,6 @@ using std::vector;
 #include "supersonic/cursor/base/cursor_transformer.h"
 #include "supersonic/cursor/proto/cursors.pb.h"
 #include "supersonic/utils/linked_ptr.h"
-// TODO(tkaftal): Moving the import down magically fixes a build issue...
-// Investigate this. Most likely caused by default-namespace/extern combo
-// on Mutex and MutexLock classes.
-#include "supersonic/utils/atomic/atomic.h"
 
 namespace supersonic {
 
@@ -58,7 +56,7 @@ class BasicCursor : public Cursor {
   // status. Thread-safe wrt Next(). (But, doesn't introduce memory barriers,
   // i.e. doesn't guarantee happens-before).
   virtual void Interrupt() {
-    interrupted_.store(true, concurrent::memory_order_relaxed);
+    interrupted_.store(true, std::memory_order_relaxed);
     for (int i = 0; i < children_.size(); ++i) {
       children_[i]->Interrupt();
     }
@@ -140,7 +138,7 @@ class BasicCursor : public Cursor {
   // it might happen that a cursor doesn't see the flag set yet, even though
   // its children already have seen it.
   bool is_interrupted() const {
-    return interrupted_.load(concurrent::memory_order_relaxed);
+    return interrupted_.load(std::memory_order_relaxed);
   }
 
   // Intended use:
@@ -162,7 +160,7 @@ class BasicCursor : public Cursor {
   // Stores the interruption status for later use. Aimed at leaf cursors,
   // as they need to let the processing thread (calling Next()) know about
   // the interruption request. This flag provides a convenient means to do so.
-  concurrent::atomic_flag interrupted_;
+  std::atomic<bool> interrupted_;
 
   DISALLOW_COPY_AND_ASSIGN(BasicCursor);
 };
@@ -198,7 +196,7 @@ class BasicDecoratorCursor : public Cursor {
   const Cursor* delegate() const { return delegate_.get(); }
 
  private:
-  scoped_ptr<Cursor> delegate_;
+  std::unique_ptr<Cursor> delegate_;
   DISALLOW_COPY_AND_ASSIGN(BasicDecoratorCursor);
 };
 

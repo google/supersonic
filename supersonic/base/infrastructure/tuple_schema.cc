@@ -26,7 +26,7 @@ EnumDefinition::Rep::Rep(BufferAllocator* buffer_allocator)
       arena_(buffer_allocator, kInitialArenaBufferSize,
              kMaxArenaBufferSize) {}
 
-FailureOrVoid EnumDefinition::Rep::Add(const int64 number, StringPiece name) {
+FailureOrVoid EnumDefinition::Rep::Add(const int32 number, StringPiece name) {
   if (name_to_number_.count(name) > 0) {
     THROW(new Exception(
         ERROR_DUPLICATE_ENUM_VALUE_NAME,
@@ -60,7 +60,7 @@ void EnumDefinition::Rep::CopyFrom(const EnumDefinition::Rep& other) {
   }
 }
 
-FailureOr<StringPiece> EnumDefinition::Rep::NumberToName(int64 number) const {
+FailureOr<StringPiece> EnumDefinition::Rep::NumberToName(int32 number) const {
   auto iterator = number_to_name_.find(number);
   if (iterator == number_to_name_.end()) {
     THROW(new Exception(
@@ -70,7 +70,7 @@ FailureOr<StringPiece> EnumDefinition::Rep::NumberToName(int64 number) const {
   return Success(iterator->second);
 }
 
-FailureOr<int64> EnumDefinition::Rep::NameToNumber(StringPiece name) const {
+FailureOr<int32> EnumDefinition::Rep::NameToNumber(StringPiece name) const {
   auto iterator = name_to_number_.find(name);
   if (iterator == name_to_number_. end()) {
     THROW(new Exception(
@@ -105,7 +105,7 @@ FailureOrVoid EnumDefinition::Rep::VerifyEquals(const EnumDefinition::Rep& a,
 
 EnumDefinition::EnumDefinition() {}
 
-FailureOrVoid EnumDefinition::AddEntry(const int64 number, StringPiece name) {
+FailureOrVoid EnumDefinition::AddEntry(const int32 number, StringPiece name) {
   // Lazy, to avoid creating for non-enums.
   if (rep_.get() == NULL) {
     // NOTE(user): uses the unbounded (heap) allocator for now. Given that
@@ -124,7 +124,7 @@ size_t EnumDefinition::entry_count() const {
   return rep_.get() == NULL ? 0 : rep_->entry_count();
 }
 
-FailureOr<StringPiece> EnumDefinition::NumberToName(int64 number) const {
+FailureOr<StringPiece> EnumDefinition::NumberToName(int32 number) const {
   if (rep_.get() == NULL) {
     THROW(new Exception(ERROR_UNDEFINED_ENUM_VALUE_NUMBER,
                         "The enum is empty"));
@@ -133,7 +133,7 @@ FailureOr<StringPiece> EnumDefinition::NumberToName(int64 number) const {
   }
 }
 
-FailureOr<int64> EnumDefinition::NameToNumber(StringPiece name) const {
+FailureOr<int32> EnumDefinition::NameToNumber(StringPiece name) const {
   if (rep_.get() == NULL) {
     THROW(new Exception(ERROR_UNDEFINED_ENUM_VALUE_NAME, "The enum is empty"));
   } else {

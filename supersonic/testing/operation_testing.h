@@ -18,8 +18,9 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -182,7 +183,7 @@ class OperationTest {
   // each input, exactly once.
   vector<bool> inputs_claimed_;
   // Expected result.
-  scoped_ptr<Operation> expected_;
+  std::unique_ptr<Operation> expected_;
   // Expected bind error, if any, or OK if no error expected.
   ReturnCode expected_bind_result_;
   // Whether row order should be ignored when comparing expected to actual.
@@ -210,7 +211,7 @@ class TestData : public BasicOperation {
  public:
 
   // Takes ownership of the block.
-  explicit TestData(Block* block) : table_(block), exception_(NULL) {}
+  explicit TestData(Block* block) : table_(block) {}
 
   // Takes ownership of the block and the exception (if any).
   TestData(Block* block, const Exception* exception)
@@ -226,7 +227,7 @@ class TestData : public BasicOperation {
 
  private:
   Table table_;
-  scoped_ptr<const Exception> exception_;
+  std::unique_ptr<const Exception> exception_;
   DISALLOW_COPY_AND_ASSIGN(TestData);
 };
 
@@ -331,7 +332,7 @@ class TestDataBuilder : public AbstractTestDataBuilder {
   BlockBuilder<A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, R, S, T, U>
       block_builder_;
   // Shared w/ built TestData instances.
-  scoped_ptr<const Exception> exception_;
+  std::unique_ptr<const Exception> exception_;
 
   DISALLOW_COPY_AND_ASSIGN(TestDataBuilder);
 };

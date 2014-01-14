@@ -2,7 +2,7 @@
 //
 // A collection of useful (static) bit-twiddling functions.
 
-#include "supersonic/utils/basictypes.h"
+#include "supersonic/utils/casts.h"
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -13,6 +13,15 @@
 
 class Bits {
  public:
+  // Forward declaration Helper class for UnsignedType.
+  template<int n>
+  struct UnsignedTypeBySize;
+
+  // Auxilliary struct for figuring out an unsigned type for a given type.
+  template<typename T> struct UnsignedType {
+    typedef typename UnsignedTypeBySize<sizeof(T)>::Type Type;
+  };
+
   // Return the number of one bits in the given integer.
   static int CountOnesInByte(unsigned char n);
 
@@ -108,7 +117,67 @@ class Bits {
   // stream in [lo, hi]?
   template <class T> static bool BytesAllInRange(T bytes, uint8 lo, uint8 hi);
 
+  // Extract 'nbits' consecutive bits from 'src'.  Position of bits are
+  // specified by 'offset' from the LSB.  'T' is a scalar type (integral,
+  // float or pointer) whose size is the same as one of the unsigned types.
+  // The return type is an unsigned type having the same size as T.
+  template<typename T>
+  static typename UnsignedType<T>::Type GetBits(const T src,
+                                                const int offset,
+                                                const int nbits) {
+    typedef typename UnsignedType<T>::Type UnsignedT;
+    const UnsignedT unsigned_src = bit_cast<UnsignedT>(src);
+    DCHECK_GT(sizeof(UnsignedT) * 8, offset);
+    DCHECK_GE(sizeof(UnsignedT) * 8, offset + nbits);
+    const UnsignedT result =
+        (unsigned_src >> offset) & NBitsFromLSB<UnsignedT>(nbits);
+    return result;
+  }
+
+  // Overwrite 'nbits' consecutive bits of 'dest.'.  Position of bits are
+  // specified by an offset from the LSB.  'T' is a scalar type (integral,
+  // float or pointer) whose size is the same as one of the unsigned types.
+  template<typename T>
+  static void SetBits(const typename UnsignedType<T>::Type value,
+                      const int offset,
+                      const int nbits,
+                      T* const dest) {
+    typedef typename UnsignedType<T>::Type UnsignedT;
+    const UnsignedT unsigned_dest = bit_cast<UnsignedT>(*dest);
+    DCHECK_GT(sizeof(UnsignedT) * 8, offset);
+    DCHECK_GE(sizeof(UnsignedT) * 8, offset + nbits);
+    const UnsignedT mask = NBitsFromLSB<UnsignedT>(nbits);
+    const UnsignedT unsigned_result =
+        (unsigned_dest & ~(mask << offset)) | ((value & mask) << offset);
+    *dest = bit_cast<T>(unsigned_result);
+  }
+
+  // Combine SetBits and GetBits for convenience.  This is meant to be a
+  // replacement for BitCopy() for some use cases.  Unlike BitCopy(),
+  // Bits::CopyBits() operating on multibyte types has the same behavior on
+  // big-endian and little-endian machines. Sample usage:
+  //
+  // uint32 a, b;
+  // Bits::CopyBits(&a, 0, b, 12, 3);
+  template<typename DestType, typename SrcType>
+  static void CopyBits(DestType* const dest,
+                       const int dest_offset,
+                       const SrcType src,
+                       const int src_offset,
+                       const int nbits) {
+    const typename UnsignedType<SrcType>::Type value =
+        GetBits(src, src_offset, nbits);
+    SetBits(value, dest_offset, nbits, dest);
+  }
+
  private:
+  // We only use this for unsigned types and for 0 <= n <= sizeof(UnsignedT).
+  template<typename UnsignedT>
+  static UnsignedT NBitsFromLSB(const int nbits) {
+    const UnsignedT all_ones = ~static_cast<UnsignedT>(0);
+    return nbits == 0 ? 0U : all_ones >> (sizeof(UnsignedT) * 8 - nbits);
+  }
+
   static const char num_bits[];
   static const unsigned char bit_reverse_table[];
   DISALLOW_COPY_AND_ASSIGN(Bits);
@@ -129,8 +198,9 @@ template <class T> struct BitPattern {
 // ------------------------------------------------------------------------
 
 // use GNU builtins where available
-#if defined(__GNUC__) && \
-    ((__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || __GNUC__ >= 4)
+#if defined(__clang__) || \
+    (defined(__GNUC__) && \
+     ((__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || __GNUC__ >= 4))
 inline int Bits::Log2Floor(uint32 n) {
   return n == 0 ? -1 : 31 ^ __builtin_clz(n);
 }
@@ -262,5 +332,27 @@ inline bool Bits::BytesAllInRange(T bytes, uint8 lo, uint8 hi) {
   return !Bits::BytesContainByteLessThan(bytes + (255 - hi) * l,
                                          lo + (255 - hi));
 }
+
+// Specializations for Bits::UnsignedTypeBySize.  For unsupported type
+// sizes, a compile-time error will be generated.
+template<>
+struct Bits::UnsignedTypeBySize<1> {
+  typedef uint8 Type;
+};
+
+template<>
+struct Bits::UnsignedTypeBySize<2> {
+  typedef uint16 Type;
+};
+
+template<>
+struct Bits::UnsignedTypeBySize<4> {
+  typedef uint32 Type;
+};
+
+template<>
+struct Bits::UnsignedTypeBySize<8> {
+  typedef uint64 Type;
+};
 
 #endif // _BITS_H_

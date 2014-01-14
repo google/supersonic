@@ -17,7 +17,7 @@
 
 #include <stddef.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"

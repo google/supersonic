@@ -17,6 +17,7 @@
 #ifndef SUPERSONIC_EXPRESSION_VECTOR_SIMD_OPERATORS_H_
 #define SUPERSONIC_EXPRESSION_VECTOR_SIMD_OPERATORS_H_
 
+#ifdef __SSE2__
 #include <mmintrin.h>   // intrinsics for MMX instructions
 #include <xmmintrin.h>  // intrinsics for SSE instructions
 #include <emmintrin.h>  // intrinsics for SSE2 instructions
@@ -119,5 +120,7 @@ SIMD_OPERATION(SimdXor, bool, __m128i, _mm_xor_si128);
 
 }  // namespace operators
 }  // namespace supersonic
+
+#endif  // __SSE2__
 
 #endif  // SUPERSONIC_EXPRESSION_VECTOR_SIMD_OPERATORS_H_

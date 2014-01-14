@@ -19,8 +19,7 @@
 // for now it serves the purpose of identifying linker issues.
 
 #include <iostream>
-using std::cout;
-using std::endl;
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "supersonic/utils/integral_types.h"
@@ -51,9 +50,6 @@ using supersonic::RandInt32;
 using supersonic::ConstDateTimeFromMicrosecondsSinceEpoch;
 using supersonic::Column;
 
-using std::cout;
-using std::endl;
-
 TEST(SmokeTestSuite, BlockTest) {
   TupleSchema schema;
   schema.add_attribute(Attribute("foo", INT32, NULLABLE));
@@ -81,18 +77,19 @@ TEST(SmokeTestSuite, MemTest) {
 }
 
 TEST(SmokeTestSuite, ExpressionTest) {
-  scoped_ptr<const Expression> plus(
+  std::unique_ptr<const Expression> plus(
       Plus(NamedAttribute("a"), NamedAttribute("b")));
-  scoped_ptr<Table> table(new Table(TupleSchema::Merge(
-      TupleSchema::Singleton("a", INT32, NULLABLE),
-      TupleSchema::Singleton("b", INT32, NULLABLE)),
-              HeapBufferAllocator::Get()));
+  std::unique_ptr<Table> table(new Table(
+      TupleSchema::Merge(TupleSchema::Singleton("a", INT32, NULLABLE),
+                         TupleSchema::Singleton("b", INT32, NULLABLE)),
+      HeapBufferAllocator::Get()));
   TableRowWriter writer(table.get());
   writer.AddRow().Int32(1).Int32(2)
         .AddRow().Int32(3).Int32(5)
         .CheckSuccess();
 
-  scoped_ptr<Operation> computation(Compute(plus.release(), table.release()));
+  std::unique_ptr<Operation> computation(
+      Compute(plus.release(), table.release()));
   computation->SetBufferAllocator(HeapBufferAllocator::Get(), false);
 
   FailureOrOwned<Cursor> cursor = computation->CreateCursor();
@@ -106,13 +103,13 @@ TEST(SmokeTestSuite, ExpressionTest) {
 }
 
 TEST(SmokeTestSuite, RandExprTest) {
-  scoped_ptr<Table> table(new Table(
-      TupleSchema::Singleton("a", INT32, NULLABLE),
-      HeapBufferAllocator::Get()));
+  std::unique_ptr<Table> table(
+      new Table(TupleSchema::Singleton("a", INT32, NULLABLE),
+                HeapBufferAllocator::Get()));
   TableRowWriter writer(table.get());
   writer.AddRow().Int32(1).CheckSuccess();
 
-  scoped_ptr<Operation> computation(Compute(RandInt32(), table.release()));
+  std::unique_ptr<Operation> computation(Compute(RandInt32(), table.release()));
   computation->SetBufferAllocator(HeapBufferAllocator::Get(), false);
 
   FailureOrOwned<Cursor> cursor = computation->CreateCursor();
@@ -121,20 +118,21 @@ TEST(SmokeTestSuite, RandExprTest) {
   ASSERT_TRUE(output.has_data());
   View view = SucceedOrDie(output);
   const int* p = view.column(0).typed_data<INT32>();
-  cout << "Generated random number: " << p[0] << endl;
+  std::cout << "Generated random number: " << p[0] << std::endl;
 }
 
 TEST(SmokeTestSuite, DateTimeTest) {
   int32 useconds = 1000121012;
-  scoped_ptr<const Expression> date(
+  std::unique_ptr<const Expression> date(
       ConstDateTimeFromMicrosecondsSinceEpoch(useconds));
-  scoped_ptr<Table> table(new Table(
-      TupleSchema::Singleton("a", INT32, NULLABLE),
-      HeapBufferAllocator::Get()));
+  std::unique_ptr<Table> table(
+      new Table(TupleSchema::Singleton("a", INT32, NULLABLE),
+                HeapBufferAllocator::Get()));
   TableRowWriter writer(table.get());
   writer.AddRow().Int32(1).CheckSuccess();
 
-  scoped_ptr<Operation> computation(Compute(date.release(), table.release()));
+  std::unique_ptr<Operation> computation(
+      Compute(date.release(), table.release()));
   computation->SetBufferAllocator(HeapBufferAllocator::Get(), false);
 
   FailureOrOwned<Cursor> cursor = computation->CreateCursor();

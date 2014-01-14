@@ -20,6 +20,8 @@
 #ifndef SUPERSONIC_BENCHMARK_INFRASTRUCTURE_TREE_BUILDER_H_
 #define SUPERSONIC_BENCHMARK_INFRASTRUCTURE_TREE_BUILDER_H_
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/benchmark_transformer.h"
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/pointer_vector.h"
@@ -34,9 +36,7 @@ class CursorStatistics;
 // node and a wrapped cursor to be used for computation.
 class BenchmarkResult {
  public:
-  BenchmarkResult()
-      : node_(NULL),
-        cursor_(NULL) {}
+  BenchmarkResult() {}
 
   // Takes ownership of both the node and the cursor.
   BenchmarkResult(BenchmarkTreeNode* node, Cursor* cursor)
@@ -53,8 +53,8 @@ class BenchmarkResult {
   Cursor* release_cursor() { return cursor_.release(); }
 
  private:
-  scoped_ptr<BenchmarkTreeNode> node_;
-  scoped_ptr<Cursor> cursor_;
+  std::unique_ptr<BenchmarkTreeNode> node_;
+  std::unique_ptr<Cursor> cursor_;
 
   DISALLOW_COPY_AND_ASSIGN(BenchmarkResult);
 };

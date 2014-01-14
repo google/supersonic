@@ -6,33 +6,41 @@
 #define BASE_INT128_H_
 
 #include <iosfwd>
-using std::ostream;
 #include "supersonic/utils/integral_types.h"
+#include "supersonic/utils/port.h"
 
 struct uint128_pod;
+
+#ifdef LANG_CXX11
+# define UINT128_CONSTEXPR constexpr
+#else
+# define UINT128_CONSTEXPR
+#endif
 
 // An unsigned 128-bit integer type. Thread-compatible.
 class uint128 {
 public:
-  uint128();  // Sets to 0, but don't trust on this behavior.
-  uint128(uint64 top, uint64 bottom);
+  UINT128_CONSTEXPR uint128();  // Sets to 0, but don't trust on this behavior.
+  UINT128_CONSTEXPR uint128(uint64 top, uint64 bottom);
 #ifndef SWIG
-  uint128(int bottom);
-  uint128(uint32 bottom);   // Top 96 bits = 0
+  UINT128_CONSTEXPR uint128(int bottom);
+  UINT128_CONSTEXPR uint128(uint32 bottom);   // Top 96 bits = 0
 #endif
-  uint128(uint64 bottom);   // hi_ = 0
-  uint128(const uint128 &val);
-  uint128(const uint128_pod &val);
+  UINT128_CONSTEXPR uint128(uint64 bottom);   // hi_ = 0
+  UINT128_CONSTEXPR uint128(const uint128 &val);
+  UINT128_CONSTEXPR uint128(const uint128_pod &val);
 
   void Initialize(uint64 top, uint64 bottom);
 
   uint128& operator=(const uint128& b);
 
   // Arithmetic operators.
-  // TODO: division, etc.
   uint128& operator+=(const uint128& b);
   uint128& operator-=(const uint128& b);
   uint128& operator*=(const uint128& b);
+  // Long division/modulo for uint128. Simple, but probably slow.
+  uint128& operator/=(const uint128& b);
+  uint128& operator%=(const uint128& b);
   uint128 operator++(int);
   uint128 operator--(int);
   uint128& operator<<=(int);
@@ -45,6 +53,8 @@ public:
 
   friend uint64 Uint128Low64(const uint128& v);
   friend uint64 Uint128High64(const uint128& v);
+  friend void div_mod_impl(const uint128& dividend, const uint128& divisor,
+                           uint128* quotient_ret, uint128* remainder_ret);
 
   // We add "std::" to avoid including all of port.h.
   friend std::ostream& operator<<(std::ostream& o, const uint128& b);
@@ -86,6 +96,10 @@ extern std::ostream& operator<<(std::ostream& o, const uint128& b);
 inline uint64 Uint128Low64(const uint128& v) { return v.lo_; }
 inline uint64 Uint128High64(const uint128& v) { return v.hi_; }
 
+// Helper function for operator/=(), operator%=().
+void div_mod_impl(const uint128& dividend, const uint128& divisor,
+                  uint128* quotient_ret, uint128* remainder_ret);
+
 // TODO: perhaps it would be nice to have int128, a signed 128-bit type?
 
 // --------------------------------------------------------------------------
@@ -104,19 +118,24 @@ inline uint128& uint128::operator=(const uint128& b) {
   return *this;
 }
 
-inline uint128::uint128(): lo_(0), hi_(0) { }
-inline uint128::uint128(uint64 top, uint64 bottom) : lo_(bottom), hi_(top) { }
-inline uint128::uint128(const uint128 &v) : lo_(v.lo_), hi_(v.hi_) { }
-inline uint128::uint128(const uint128_pod &v) : lo_(v.lo), hi_(v.hi) { }
-inline uint128::uint128(uint64 bottom) : lo_(bottom), hi_(0) { }
+inline UINT128_CONSTEXPR uint128::uint128() : lo_(0), hi_(0) {}
+inline UINT128_CONSTEXPR uint128::uint128(uint64 top, uint64 bottom)
+    : lo_(bottom), hi_(top) {}
+inline UINT128_CONSTEXPR uint128::uint128(const uint128& v)
+    : lo_(v.lo_), hi_(v.hi_) {}
+inline UINT128_CONSTEXPR uint128::uint128(const uint128_pod& v)
+    : lo_(v.lo), hi_(v.hi) {}
+inline UINT128_CONSTEXPR uint128::uint128(uint64 bottom)
+    : lo_(bottom), hi_(0) {}
 #ifndef SWIG
-inline uint128::uint128(uint32 bottom) : lo_(bottom), hi_(0) { }
-inline uint128::uint128(int bottom) : lo_(bottom), hi_(0) {
-  if (bottom < 0) {
-    --hi_;
-  }
-}
+inline UINT128_CONSTEXPR uint128::uint128(uint32 bottom)
+    : lo_(bottom), hi_(0) {}
+inline UINT128_CONSTEXPR uint128::uint128(int bottom)
+    : lo_(bottom), hi_(static_cast<int64>((bottom < 0) ? -1 : 0)) {}
 #endif
+
+#undef UINT128_CONSTEXPR
+
 inline void uint128::Initialize(uint64 top, uint64 bottom) {
   hi_ = top;
   lo_ = bottom;
@@ -265,6 +284,14 @@ inline uint128 operator-(const uint128& lhs, const uint128& rhs) {
 
 inline uint128 operator*(const uint128& lhs, const uint128& rhs) {
   return uint128(lhs) *= rhs;
+}
+
+inline uint128 operator/(const uint128& lhs, const uint128& rhs) {
+  return uint128(lhs) /= rhs;
+}
+
+inline uint128 operator%(const uint128& lhs, const uint128& rhs) {
+  return uint128(lhs) %= rhs;
 }
 
 inline uint128& uint128::operator+=(const uint128& b) {

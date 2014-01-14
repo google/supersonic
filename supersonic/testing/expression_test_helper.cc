@@ -16,14 +16,10 @@
 #include "supersonic/testing/expression_test_helper.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -50,7 +46,6 @@ using std::vector;
 #include "supersonic/utils/strings/substitute.h"
 #include "supersonic/utils/strings/util.h"
 #include "gtest/gtest.h"
-#include "supersonic/utils/singleton.h"
 
 namespace supersonic {
 
@@ -62,7 +57,7 @@ static const int kMaxNumberOfRowsInTest = 100;
 FailureOrOwned<BoundExpressionTree> StandardBind(const TupleSchema& schema,
                                                  rowcount_t max_row_count,
                                                  const Expression* expression) {
-  scoped_ptr<const Expression> deleter(expression);
+  std::unique_ptr<const Expression> deleter(expression);
   return expression->Bind(schema, HeapBufferAllocator::Get(), max_row_count);
 }
 
@@ -75,7 +70,7 @@ BoundExpressionTree* DefaultBind(const TupleSchema& schema,
 BoundExpression* DefaultDoBind(const TupleSchema& schema,
                                rowcount_t max_row_count,
                                const Expression* expression) {
-  scoped_ptr<const Expression> deleter(expression);
+  std::unique_ptr<const Expression> deleter(expression);
   return SucceedOrDie(
       expression->DoBind(schema, HeapBufferAllocator::Get(), max_row_count));
 }
@@ -87,7 +82,7 @@ const View& DefaultEvaluate(BoundExpressionTree* expression,
 
 ExpressionList* MakeExpressionList(
     const vector<const Expression*>& expressions) {
-  scoped_ptr<ExpressionList> list(new ExpressionList());
+  std::unique_ptr<ExpressionList> list(new ExpressionList());
   for (int i = 0; i < expressions.size(); ++i) {
     list->add(expressions[i]);
   }
@@ -144,10 +139,10 @@ BufferAllocator* CreateAligningHeapBufferAllocator() {
 void TestEvaluationForAlignedResizedBlock(const Block& input_block,
                                           const Expression& expr,
                                           rowcount_t size) {
-  scoped_ptr<BufferAllocator> aligning_allocator(
+  std::unique_ptr<BufferAllocator> aligning_allocator(
       CreateAligningHeapBufferAllocator());
-  scoped_ptr<const Block> block(ReplicateBlock(input_block, size,
-                                               aligning_allocator.get()));
+  std::unique_ptr<const Block> block(
+      ReplicateBlock(input_block, size, aligning_allocator.get()));
   // Check if columns are nicely aligned.
   for (int i = 0; i < block->column_count(); ++i) {
     CHECK_EQ(0, reinterpret_cast<uint64>(block->column(i).data().raw()) % 16);
@@ -170,7 +165,7 @@ void TestEvaluationForAlignedResizedBlock(const Block& input_block,
   // Obtaining the expected output view from the block by a Projector.
   int last_attribute_position = schema.attribute_count() - 1;
   const Attribute& last_attribute(schema.attribute(last_attribute_position));
-  scoped_ptr<const SingleSourceProjector> projector(
+  std::unique_ptr<const SingleSourceProjector> projector(
       ProjectAttributeAt(last_attribute_position));
   FailureOrOwned<const BoundSingleSourceProjector> bound_projector =
       projector->Bind(schema);
@@ -217,7 +212,7 @@ void TestEvaluationForAlignedResizedBlock(const Block& input_block,
 // grow.
 void TestEvaluationMemoryManagement(const Block& block,
                                     const Expression& expression) {
-  scoped_ptr<MemoryLimit> memory_limit(new MemoryLimit(1000000));
+  std::unique_ptr<MemoryLimit> memory_limit(new MemoryLimit(1000000));
   const TupleSchema& schema = block.view().schema();
   FailureOrOwned<BoundExpressionTree> bound_expression =
       expression.Bind(schema, memory_limit.get(), block.row_capacity());
@@ -267,7 +262,7 @@ void TestEvaluationAcrossBlocks(
   // Prepare the expected output.
   int last_attribute_position = schema.attribute_count() - 1;
   const Attribute& last_attribute(schema.attribute(last_attribute_position));
-  scoped_ptr<const SingleSourceProjector> projector(
+  std::unique_ptr<const SingleSourceProjector> projector(
       ProjectAttributeAt(last_attribute_position));
   FailureOrOwned<const BoundSingleSourceProjector> bound_projector =
       projector->Bind(schema);
@@ -295,11 +290,10 @@ void TestEvaluationAcrossBlocks(
   }
 }
 
-void TestEvaluationCommon(const Block* block_ptr,
+void TestEvaluationCommon(const Block* block,
                           bool stateful_expression,
                           const Expression* expr_ptr) {
-  scoped_ptr<const Block> block(block_ptr);
-  scoped_ptr<const Expression> expr(expr_ptr);
+  std::unique_ptr<const Expression> expr(expr_ptr);
   // Test for the original size and content.
   ASSERT_NO_FATAL_FAILURE(
       TestEvaluationForAlignedResizedBlock(*block, *expr,
@@ -324,55 +318,70 @@ void TestEvaluationCommon(const Block* block_ptr,
   }
 }
 
+template<typename ExpressionCreator>
+void TestEvaluationTemplated(const Block* block, ExpressionCreator factory,
+                             bool stateful) {
+  std::unique_ptr<const Block> block_deleter(block);
+  TestEvaluationCommon(
+      block, stateful,
+      CreateTestedExpression(factory));
+  // Nullable expressions are expected to pass their nullability vector both
+  // in the EvaluationResult, and via the mutable skip vector passed by the
+  // parent. Invocation via the CompoundExpression tests the latter case.
+  TestEvaluationCommon(
+      block, stateful,
+      (new CompoundExpression())->Add(CreateTestedExpression(factory)));
+}
+
 void TestEvaluation(const Block* block, ConstExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 void TestEvaluation(const Block* block, UnaryExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 void TestEvaluation(const Block* block, BinaryExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 void TestEvaluation(const Block* block, TernaryExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 void TestEvaluation(const Block* block, QuaternaryExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 void TestEvaluation(const Block* block, QuinaryExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 void TestEvaluation(const Block* block, SenaryExpressionCreator factory) {
-  TestEvaluationCommon(block, false, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, false);
 }
 
 void TestStatefulEvaluation(const Block* block,
                             ConstExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 void TestStatefulEvaluation(const Block* block,
                             UnaryExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 void TestStatefulEvaluation(const Block* block,
                             BinaryExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 void TestStatefulEvaluation(const Block* block,
                             TernaryExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 void TestStatefulEvaluation(const Block* block,
                             QuaternaryExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 void TestStatefulEvaluation(const Block* block,
                             QuinaryExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 void TestStatefulEvaluation(const Block* block,
                             SenaryExpressionCreator factory) {
-  TestEvaluationCommon(block, true, CreateTestedExpression(factory));
+  TestEvaluationTemplated(block, factory, true);
 }
 
 // -------------------------- Evaluation failure tests --------------------
@@ -391,9 +400,9 @@ void ExpectFailureLineByLine(const View& input,
 // Evaluation failure test for unary expressions.
 void TestEvaluationFailureCommon(const Block* block_ptr,
                                  const Expression* expr) {
-  scoped_ptr<const Block> block(block_ptr);
-  scoped_ptr<BoundExpressionTree> bound_expr(DefaultBind(block->view().schema(),
-      kMaxNumberOfRowsInTest, expr));
+  std::unique_ptr<const Block> block(block_ptr);
+  std::unique_ptr<BoundExpressionTree> bound_expr(
+      DefaultBind(block->view().schema(), kMaxNumberOfRowsInTest, expr));
   ExpectFailureLineByLine(block->view(), bound_expr.get());
 }
 
@@ -457,7 +466,8 @@ class SchemaHolder {
   }
 
   static const SchemaHolder* get() {
-    return Singleton<SchemaHolder>::get();
+    static SchemaHolder schema_holder;
+    return &schema_holder;
   }
 
   static int ColumnNumber(DataType type) {
@@ -495,7 +505,7 @@ class SchemaHolder {
   // TODO(onufry): this constant should be defined in ../public/types.h and
   // used from there.
   static const int kNumberOfTypes = 13;
-  scoped_ptr<const TupleSchema> schema_;
+  std::unique_ptr<const TupleSchema> schema_;
 
   DISALLOW_COPY_AND_ASSIGN(SchemaHolder);
 };
@@ -686,7 +696,8 @@ void TestBindingWithNull(TernaryExpressionCreator creator, DataType left_type,
 void TestUnaryBindingFailureInternal(UnaryExpressionCreator creator,
                                      int column_number) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
-  scoped_ptr<const Expression> deleter((*creator)(AttributeAt(column_number)));
+  std::unique_ptr<const Expression> deleter(
+      (*creator)(AttributeAt(column_number)));
 
   FailureOrOwned<BoundExpressionTree> bind_result =
       deleter->Bind(*(schema_holder->schema()), HeapBufferAllocator::Get(), 1);
@@ -712,7 +723,7 @@ void TestBinaryBindingFailureInternal(BinaryExpressionCreator creator,
                                       int left_column_number,
                                       int right_column_number) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
-  scoped_ptr<const Expression> deleter((*creator)(
+  std::unique_ptr<const Expression> deleter((*creator)(
       AttributeAt(left_column_number), AttributeAt(right_column_number)));
 
   FailureOrOwned<BoundExpressionTree> bind_result =
@@ -749,9 +760,8 @@ void TestTernaryBindingFailureInternal(TernaryExpressionCreator creator,
                                        int middle_column_number,
                                        int right_column_number) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
-  scoped_ptr<const Expression> deleter((*creator)(
-      AttributeAt(left_column_number),
-      AttributeAt(middle_column_number),
+  std::unique_ptr<const Expression> deleter((*creator)(
+      AttributeAt(left_column_number), AttributeAt(middle_column_number),
       AttributeAt(right_column_number)));
 
   FailureOrOwned<BoundExpressionTree> bind_result =
@@ -812,7 +822,7 @@ void TestTernaryBindingFailureWithNulls(TernaryExpressionCreator creator,
       const char* expected_name_template) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
   string expected_name = strings::Substitute(expected_name_template, input);
-  scoped_ptr<BoundExpression> bound_argument(
+  std::unique_ptr<BoundExpression> bound_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(input)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_argument.release(), HeapBufferAllocator::Get(), 1);
@@ -828,9 +838,9 @@ void TestTernaryBindingFailureWithNulls(TernaryExpressionCreator creator,
   const SchemaHolder* schema_holder = SchemaHolder::get();
   string expected_name = strings::Substitute(expected_name_template,
                                              left, right);
-  scoped_ptr<BoundExpression> bound_left_argument(
+  std::unique_ptr<BoundExpression> bound_left_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(left)));
-  scoped_ptr<BoundExpression> bound_right_argument(
+  std::unique_ptr<BoundExpression> bound_right_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(right)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_left_argument.release(), bound_right_argument.release(),
@@ -878,7 +888,7 @@ void TestBoundFactoryFailure(BoundUnaryExpressionFactory factory,
                              DataType input_type) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
   int arg_number = schema_holder->ColumnNumber(input_type);
-  scoped_ptr<BoundExpression> bound_argument(
+  std::unique_ptr<BoundExpression> bound_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(arg_number)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_argument.release(), HeapBufferAllocator::Get(), 1);
@@ -922,9 +932,9 @@ void TestBoundFactoryFailure(BoundBinaryExpressionFactory factory,
   int left_number = schema_holder->ColumnNumber(left_type);
   int right_number = schema_holder->ColumnNumber(right_type);
 
-  scoped_ptr<BoundExpression> bound_left_argument(
+  std::unique_ptr<BoundExpression> bound_left_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(left_number)));
-  scoped_ptr<BoundExpression> bound_right_argument(
+  std::unique_ptr<BoundExpression> bound_right_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(right_number)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_left_argument.release(), bound_right_argument.release(),
@@ -952,11 +962,11 @@ void TestBoundFactoryFailure(BoundBinaryExpressionFactory factory,
   string expected_name = strings::Substitute(expected_name_template,
                                              left_number, middle_number,
                                              right_number);
-  scoped_ptr<BoundExpression> bound_left_argument(
+  std::unique_ptr<BoundExpression> bound_left_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(left_number)));
-  scoped_ptr<BoundExpression> bound_middle_argument(
+  std::unique_ptr<BoundExpression> bound_middle_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(middle_number)));
-  scoped_ptr<BoundExpression> bound_right_argument(
+  std::unique_ptr<BoundExpression> bound_right_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(right_number)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_left_argument.release(), bound_middle_argument.release(),
@@ -973,11 +983,11 @@ void TestBoundFactoryFailure(BoundTernaryExpressionFactory factory,
   int middle_number = schema_holder->ColumnNumber(middle_type);
   int right_number = schema_holder->ColumnNumber(right_type);
 
-  scoped_ptr<BoundExpression> bound_left_argument(
+  std::unique_ptr<BoundExpression> bound_left_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(left_number)));
-  scoped_ptr<BoundExpression> bound_middle_argument(
+  std::unique_ptr<BoundExpression> bound_middle_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(middle_number)));
-  scoped_ptr<BoundExpression> bound_right_argument(
+  std::unique_ptr<BoundExpression> bound_right_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(right_number)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_left_argument.release(), bound_middle_argument.release(),
@@ -1001,15 +1011,13 @@ void TestBoundQuaternary(BoundQuaternaryExpressionFactory factory,
   string expected_name = strings::Substitute(expected_name_template,
                                              left_number, middle_left_number,
                                              middle_right_number, right_number);
-  scoped_ptr<BoundExpression> bound_left_argument(
+  std::unique_ptr<BoundExpression> bound_left_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(left_number)));
-  scoped_ptr<BoundExpression> bound_middle_left_argument(
-      DefaultDoBind(*(schema_holder->schema()), 1,
-                  AttributeAt(middle_left_number)));
-  scoped_ptr<BoundExpression> bound_middle_right_argument(
-      DefaultDoBind(*(schema_holder->schema()), 1,
-                  AttributeAt(middle_right_number)));
-  scoped_ptr<BoundExpression> bound_right_argument(
+  std::unique_ptr<BoundExpression> bound_middle_left_argument(DefaultDoBind(
+      *(schema_holder->schema()), 1, AttributeAt(middle_left_number)));
+  std::unique_ptr<BoundExpression> bound_middle_right_argument(DefaultDoBind(
+      *(schema_holder->schema()), 1, AttributeAt(middle_right_number)));
+  std::unique_ptr<BoundExpression> bound_right_argument(
       DefaultDoBind(*(schema_holder->schema()), 1, AttributeAt(right_number)));
   FailureOrOwned<BoundExpression> result = (*factory)(
       bound_left_argument.release(), bound_middle_left_argument.release(),
@@ -1023,7 +1031,8 @@ void TestBoundExpressionList(BoundExpressionListExpressionFactory factory,
                              vector<DataType> data_types,
                              const char* expected_name_template) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
-  scoped_ptr<BoundExpressionList> expression_list(new BoundExpressionList());
+  std::unique_ptr<BoundExpressionList> expression_list(
+      new BoundExpressionList());
   string expected_name = expected_name_template;
   vector<int> column_numbers;
   for (int i = 0; i < data_types.size(); ++i) {
@@ -1034,8 +1043,8 @@ void TestBoundExpressionList(BoundExpressionListExpressionFactory factory,
   }
   // Going from the biggest to replace $11 before $1.
   for (int i = data_types.size() - 1; i >= 0; --i) {
-    GlobalReplaceSubstring(StrCat("$", SimpleItoa(i)),
-        SimpleItoa(column_numbers[i]), &expected_name);
+    GlobalReplaceSubstring(StrCat("$", i),
+                           SimpleItoa(column_numbers[i]), &expected_name);
   }
   FailureOrOwned<BoundExpression> result = (*factory)(
       expression_list.release(), HeapBufferAllocator::Get(), 1);
@@ -1046,7 +1055,8 @@ void TestBoundExpressionList(BoundExpressionListExpressionFactory factory,
 void TestBoundFactoryFailure(BoundExpressionListExpressionFactory factory,
                              vector<DataType> data_types) {
   const SchemaHolder* schema_holder = SchemaHolder::get();
-  scoped_ptr<BoundExpressionList> expression_list(new BoundExpressionList());
+  std::unique_ptr<BoundExpressionList> expression_list(
+      new BoundExpressionList());
 
   for (vector<DataType>::const_iterator it = data_types.begin();
       it != data_types.end(); ++it) {

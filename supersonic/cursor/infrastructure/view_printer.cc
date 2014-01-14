@@ -17,9 +17,8 @@
 #include "supersonic/cursor/infrastructure/view_printer.h"
 
 #include <ostream>
-using std::endl;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -37,7 +36,7 @@ using std::string;
 namespace supersonic {
 
 void ViewPrinter::AppendSchemaToStream(
-    const TupleSchema& schema, ostream* s) const {
+    const TupleSchema& schema, std::ostream* s) const {
   for (size_t i = 0; i < schema.attribute_count(); ) {
       const Attribute& attribute = schema.attribute(i);
       string header = StrCat(
@@ -50,25 +49,25 @@ void ViewPrinter::AppendSchemaToStream(
     }
 }
 
-void ViewPrinter::AppendViewToStream(const View& view, ostream* s) const {
+void ViewPrinter::AppendViewToStream(const View& view, std::ostream* s) const {
   if (include_header_in_representation_) {
     *s << "View"
        << "; rows: " << view.row_count()
        << "; schema: ";
     AppendSchemaToStream(view.schema(), s);
-    *s << endl;
+    *s << std::endl;
   }
   if (include_rows_in_representation_) {
     for (size_t i = 0; i < view.row_count(); i++) {
       *s << StringPrintf("%4" PRIuS ":  ", i);
       AppendRowToStream(view, i, s);
-      *s << endl;
+      *s << std::endl;
     }
   }
 }
 
 void ViewPrinter::AppendResultViewToStream(const ResultView& result_view,
-                                           ostream* s) const {
+                                           std::ostream* s) const {
   if (result_view.has_data()) {
     *s << "\n";
     AppendViewToStream(result_view.view(), s);
@@ -88,7 +87,7 @@ void ViewPrinter::AppendResultViewToStream(const ResultView& result_view,
 
 void ViewPrinter::AppendRowToStream(const View& view,
                                     size_t row_id,
-                                    ostream* s) const {
+                                    std::ostream* s) const {
   for (size_t i = 0; i < view.schema().attribute_count(); ) {
     const Column& column = view.column(i);
     if (column.is_null() != NULL && column.is_null()[row_id]) {

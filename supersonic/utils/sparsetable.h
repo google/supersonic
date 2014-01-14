@@ -234,22 +234,16 @@
 #include <string.h>             // for memcpy
 #include <sys/types.h>          // to get u_int16_t (ISO naming madness)
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;            // equal, lexicographical_compare, swap,...
+#include "supersonic/utils/std_namespace.h"            // equal, lexicographical_compare, swap,...
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;             // to define reverse_iterator for me
+#include "supersonic/utils/std_namespace.h"             // to define reverse_iterator for me
 #include <memory>               // uninitialized_copy, uninitialized_fill
-#include <ostream>
-using std::endl;              // NOLINT -- ostream << support
+#include <ostream>              // NOLINT -- ostream << support
 #include <vector>
 using std::vector;               // a sparsetable is a vector of groups
 
-#include "supersonic/utils/type_traits.h"
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"
 #include "supersonic/utils/libc_allocator_with_realloc.h"
 
 // A lot of work to get a type that's guaranteed to be 16 bits...
@@ -823,17 +817,14 @@ class destructive_two_d_iterator {
 
 template <class T, u_int16_t GROUP_SIZE, class Alloc>
 class sparsegroup {
- private:
-  typedef typename Alloc::template rebind<T>::other value_alloc_type;
-
  public:
   // Basic types
   typedef T value_type;
-  typedef Alloc allocator_type;
-  typedef typename value_alloc_type::reference reference;
-  typedef typename value_alloc_type::const_reference const_reference;
-  typedef typename value_alloc_type::pointer pointer;
-  typedef typename value_alloc_type::const_pointer const_pointer;
+  typedef typename Alloc::template rebind<value_type>::other allocator_type;
+  typedef typename allocator_type::reference reference;
+  typedef typename allocator_type::const_reference const_reference;
+  typedef typename allocator_type::pointer pointer;
+  typedef typename allocator_type::const_pointer const_pointer;
 
   typedef table_iterator<sparsegroup<T, GROUP_SIZE, Alloc> > iterator;
   typedef const_table_iterator<sparsegroup<T, GROUP_SIZE, Alloc> >
@@ -1013,7 +1004,7 @@ class sparsegroup {
  public:
   // Constructors -- default and copy -- and destructor
   explicit sparsegroup(const allocator_type& a) :
-      group(0), settings(alloc_impl<value_alloc_type>(a)) {
+      group(0), settings(alloc_impl<allocator_type>(a)) {
     memset(bitmap, 0, sizeof(bitmap));
   }
   sparsegroup(const sparsegroup& x) : group(0), settings(x.settings) {
@@ -1358,12 +1349,12 @@ class sparsegroup {
   // zero-size allocator.
   // If new fields are added to this class, we should add them to
   // operator= and swap.
-  class Settings : public alloc_impl<value_alloc_type> {
+  class Settings : public alloc_impl<allocator_type> {
    public:
-    Settings(const alloc_impl<value_alloc_type>& a, u_int16_t n = 0)
-        : alloc_impl<value_alloc_type>(a), num_buckets(n) { }
+    Settings(const alloc_impl<allocator_type>& a, u_int16_t n = 0)
+        : alloc_impl<allocator_type>(a), num_buckets(n) { }
     Settings(const Settings& s)
-        : alloc_impl<value_alloc_type>(s), num_buckets(s.num_buckets) { }
+        : alloc_impl<allocator_type>(s), num_buckets(s.num_buckets) { }
 
     u_int16_t num_buckets;                    // limits GROUP_SIZE to 64K
   };
@@ -1388,20 +1379,19 @@ template <class T, u_int16_t GROUP_SIZE = DEFAULT_SPARSEGROUP_SIZE,
           class Alloc = libc_allocator_with_realloc<T> >
 class sparsetable {
  private:
-  typedef typename Alloc::template rebind<T>::other value_alloc_type;
   typedef typename Alloc::template rebind<
-      sparsegroup<T, GROUP_SIZE, value_alloc_type> >::other vector_alloc;
+      sparsegroup<T, GROUP_SIZE, Alloc> >::other vector_alloc;
 
  public:
   // Basic types
   typedef T value_type;                        // stolen from stl_vector.h
-  typedef Alloc allocator_type;
-  typedef typename value_alloc_type::size_type size_type;
-  typedef typename value_alloc_type::difference_type difference_type;
-  typedef typename value_alloc_type::reference reference;
-  typedef typename value_alloc_type::const_reference const_reference;
-  typedef typename value_alloc_type::pointer pointer;
-  typedef typename value_alloc_type::const_pointer const_pointer;
+  typedef typename Alloc::template rebind<value_type>::other allocator_type;
+  typedef typename allocator_type::size_type size_type;
+  typedef typename allocator_type::difference_type difference_type;
+  typedef typename allocator_type::reference reference;
+  typedef typename allocator_type::const_reference const_reference;
+  typedef typename allocator_type::pointer pointer;
+  typedef typename allocator_type::const_pointer const_pointer;
   typedef table_iterator<sparsetable<T, GROUP_SIZE, Alloc> > iterator;
   typedef const_table_iterator<sparsetable<T, GROUP_SIZE, Alloc> >
       const_iterator;
@@ -1413,11 +1403,11 @@ class sparsetable {
   // These are our special iterators, that go over non-empty buckets in a
   // table.  These aren't const only because you can change non-empty bcks.
   typedef two_d_iterator<
-      std::vector< sparsegroup<value_type, GROUP_SIZE, value_alloc_type>,
+      std::vector< sparsegroup<value_type, GROUP_SIZE, allocator_type>,
                    vector_alloc> >
      nonempty_iterator;
   typedef const_two_d_iterator<
-      std::vector< sparsegroup<value_type, GROUP_SIZE, value_alloc_type>,
+      std::vector< sparsegroup<value_type, GROUP_SIZE, allocator_type>,
                    vector_alloc> >
       const_nonempty_iterator;
   typedef std::reverse_iterator<nonempty_iterator> reverse_nonempty_iterator;
@@ -1425,7 +1415,7 @@ class sparsetable {
       const_reverse_nonempty_iterator;
   // Another special iterator: it frees memory as it iterates (used to resize)
   typedef destructive_two_d_iterator<
-      std::vector< sparsegroup<value_type, GROUP_SIZE, value_alloc_type >,
+      std::vector< sparsegroup<value_type, GROUP_SIZE, allocator_type >,
                    vector_alloc> >
       destructive_iterator;
 
@@ -1840,13 +1830,20 @@ inline std::ostream&
 operator<<(std::ostream& out, const sparsetable<T, GROUP_SIZE, Alloc>& table) {
   out << "{";
   int displayed = 0;
-  for (int i = 0; i < table.size() && displayed < 100; ++i)
+  const int kMaxDisplayed = 100;
+  const char* sep = "";
+  for (int i = 0; i < table.size(); ++i) {
     if (table.test(i)) {
-      if (displayed > 0)
-        out << " ";
+      out << sep;
+      if (displayed >= kMaxDisplayed) {
+        out << "...";
+        break;
+      }
       out << "[" << i << "]=" << table.get(i);
+      sep = " ";
       ++displayed;
     }
+  }
   out << "}";
   return out;
 }

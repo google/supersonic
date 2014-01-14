@@ -25,7 +25,7 @@
 
 #include <stddef.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/exception/failureor.h"
 #include "supersonic/base/exception/exception.h"

@@ -38,7 +38,8 @@
 // containing the name of the variable.
 
 #define COMPILE_ASSERT(expr, msg) \
-  typedef CompileAssert<(bool(expr))> msg[bool(expr) ? 1 : -1]
+  typedef CompileAssert<(static_cast<bool>(expr))> \
+  msg[static_cast<bool>(expr) ? 1 : -1] ATTRIBUTE_UNUSED
 
 // Implementation details of COMPILE_ASSERT:
 //
@@ -86,7 +87,7 @@
 // This should be used in the private: declarations for a class
 //
 // For disallowing only assign or copy, write the code directly, but declare
-// the intend in a comment, for example:
+// the intent in a comment, for example:
 // void operator=(const TypeName&);  // DISALLOW_ASSIGN
 // Note, that most uses of DISALLOW_ASSIGN and DISALLOW_COPY are broken
 // semantically, one should either use disallow both or neither. Try to
@@ -256,6 +257,50 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 
 #ifndef FALLTHROUGH_INTENDED
 #define FALLTHROUGH_INTENDED do { } while (0)
+#endif
+
+// The CLANG_WARN_UNUSED_RESULT macro can be used on a class or struct to mark
+// the class or struct as one that should never be ignored when it is a return
+// value. Which is to say, any function or method that returns an instance of
+// the marked class/struct and is not a member function of the class/struct
+// will be treated as if it has the "warn_unused_result" attribute. The macro
+// is only expanded into an attribute annotation when compiling with clang, as
+// the use of the "warn_unused_result" attribute on a class or struct is a
+// clang-specific extension of the eponymous function attribute.
+//
+// For example, in:
+//   class CLANG_WARN_UNUSED_RESULT Status {
+//     ...
+//     void CheckSuccess();
+//     Status StripMessage() const;
+//   };
+//
+//   Status CreateResource();
+//
+//   void DoIt() {
+//     Status s = CreateResource();
+//     s.StripMessage();
+//     CreateResource();
+//     CreateResource().CheckSuccess();
+//   }
+//
+// The first call to CreateResource in DoIt will not trigger a warning because
+// the returned Status object was assigned to a variable. The call to
+// Status::StripMessage also won't raise a warning despite the returned Status
+// object being unused because the method is a member of the Status class.
+// The second call to CreateResource will raise a warning because CreateResource
+// returns a Status object and that object is unused (even though CreateResource
+// was not explicitly declared with the "warn_unused_result" attribute). The
+// final call to CreateResource is fine since the CheckSuccess method is called
+// for the returned Status object.
+#if defined(__clang__)
+# if defined(LANG_CXX11) && __has_feature(cxx_attributes)
+#  define CLANG_WARN_UNUSED_RESULT [[clang::warn_unused_result]]  // NOLINT
+# else
+#  define CLANG_WARN_UNUSED_RESULT __attribute__((warn_unused_result))  // NOLINT
+# endif
+#else
+# define CLANG_WARN_UNUSED_RESULT
 #endif
 
 #endif  // BASE_MACROS_H_

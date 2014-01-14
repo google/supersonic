@@ -6,15 +6,10 @@
 
 #include <string.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <climits>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -22,15 +17,11 @@ using std::string;
 #include "supersonic/utils/stl_util.h"
 #include "supersonic/utils/hash/hash.h"
 
-#include <ext/hash_set>
-namespace __gnu_cxx {
-
-size_t hash<StringPiece>::operator()(StringPiece s) const {
+namespace std {
+size_t std::hash<StringPiece>::operator()(StringPiece s) const {
   return HashTo32(s.data(), s.size());
 }
-
-}  // namespace __gnu_cxx
-
+}  // namespace std
 
 std::ostream& operator<<(std::ostream& o, StringPiece piece) {
   o.write(piece.data(), piece.size());

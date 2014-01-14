@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/infrastructure/table.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/memory/memory.h"
@@ -41,13 +43,13 @@ TEST(TableCursorTest, SimpleData) {
         .AddRow().Int32(3).String("b")
         .AddRow().Null().Null();
   ASSERT_TRUE(writer.success());
-  scoped_ptr<Cursor> table_cursor(SucceedOrDie(table.CreateCursor()));
+  std::unique_ptr<Cursor> table_cursor(SucceedOrDie(table.CreateCursor()));
 
-  scoped_ptr<Cursor> expected_output(TestDataBuilder<INT32, STRING>()
-                                     .AddRow(1, "a")
-                                     .AddRow(3, "b")
-                                     .AddRow(__, __)
-                                     .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(TestDataBuilder<INT32, STRING>()
+                                              .AddRow(1, "a")
+                                              .AddRow(3, "b")
+                                              .AddRow(__, __)
+                                              .BuildCursor());
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       expected_output->schema(),
       table_cursor->schema());
@@ -58,10 +60,10 @@ TEST(TableCursorTest, Empty) {
   Table table(TupleSchema::Singleton("col0", INT32, NOT_NULLABLE),
               HeapBufferAllocator::Get());
 
-  scoped_ptr<Cursor> table_cursor(SucceedOrDie(table.CreateCursor()));
+  std::unique_ptr<Cursor> table_cursor(SucceedOrDie(table.CreateCursor()));
 
-  scoped_ptr<Cursor> expected_output(TestDataBuilder<INT32>()
-                                     .BuildCursor());
+  std::unique_ptr<Cursor> expected_output(
+      TestDataBuilder<INT32>().BuildCursor());
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       expected_output->schema(),
       table_cursor->schema());
@@ -77,9 +79,9 @@ TEST(TableCursorTest, Large) {
     row_writer.AddRow().Int32(i);
     expected_builder.AddRow(i);
   }
-  scoped_ptr<Cursor> table_cursor(SucceedOrDie(table.CreateCursor()));
+  std::unique_ptr<Cursor> table_cursor(SucceedOrDie(table.CreateCursor()));
 
-  scoped_ptr<Cursor> expected_output(expected_builder.BuildCursor());
+  std::unique_ptr<Cursor> expected_output(expected_builder.BuildCursor());
   EXPECT_TUPLE_SCHEMAS_EQUAL(
       expected_output->schema(),
       table_cursor->schema());
@@ -101,7 +103,7 @@ TEST(TableTest, NewTableIsEmpty) {
   EXPECT_EQ(0, table.view().row_count());
   FailureOrOwned<Cursor> cursor_result(table.CreateCursor());
   ASSERT_TRUE(cursor_result.is_success());
-  scoped_ptr<Cursor> cursor(cursor_result.release());
+  std::unique_ptr<Cursor> cursor(cursor_result.release());
   EXPECT_TRUE(cursor->Next(100).is_eos());
 }
 
@@ -113,7 +115,7 @@ TEST(TableTest, ClearedTableIsEmpty) {
 }
 
 TEST(TableTest, ClearedTableCanReuseCapacity) {
-  scoped_ptr<Block> block(BlockBuilder<INT32>().AddRow(5).Build());
+  std::unique_ptr<Block> block(BlockBuilder<INT32>().AddRow(5).Build());
   Table table(block->schema(), HeapBufferAllocator::Get());
   table.ReserveRowCapacity(1);
   table.AppendView(block->view());
@@ -130,9 +132,9 @@ TEST(TableTest, ClearedTableCanReuseCapacity) {
 TEST(TableTest, TableRespectsSoftQuota) {
   // This property is used by hybrid-sort, for example.
   StaticQuota<false> soft_quota(1, false);
-  scoped_ptr<BufferAllocator> allocator_with_soft_quota(
+  std::unique_ptr<BufferAllocator> allocator_with_soft_quota(
       new MediatingBufferAllocator(HeapBufferAllocator::Get(), &soft_quota));
-  scoped_ptr<Block> block(BlockBuilder<INT32>().AddRow(5).Build());
+  std::unique_ptr<Block> block(BlockBuilder<INT32>().AddRow(5).Build());
   Table table(block->schema(), allocator_with_soft_quota.get());
   // Table may allow some number of rows even when soft quota is 0, but it
   // should stop growing at some point. At the time of writing the limit is

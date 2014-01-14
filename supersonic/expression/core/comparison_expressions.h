@@ -17,7 +17,7 @@
 #define SUPERSONIC_EXPRESSION_CORE_COMPARISON_EXPRESSIONS_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 

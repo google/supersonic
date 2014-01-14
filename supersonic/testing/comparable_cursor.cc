@@ -16,10 +16,8 @@
 #include "supersonic/testing/comparable_cursor.h"
 
 #include <sstream>
-using std::stringstream;
-using std::ostringstream;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -61,12 +59,12 @@ class StatsListener : public SpyListener {
       }
       row_count_ += result.view().row_count();
     }
-    stringstream os(stringstream::out);
+    std::stringstream os(std::stringstream::out);
     os << result;
     last_result_ = os.str();
   }
 
-  void AppendRowRepresentationsToStream(ostream *s) {
+  void AppendRowRepresentationsToStream(std::ostream *s) {
     for (size_t i = 0; i < rows_representation_.size(); i++)
       *s << rows_representation_[i];
   }
@@ -103,19 +101,19 @@ const ResultView ComparableCursor::NextRow() {
 
 ComparableCursor::~ComparableCursor() {}
 
-void ComparableCursor::AppendToStream(ostream *s) const {
+void ComparableCursor::AppendToStream(std::ostream *s) const {
   *s << "Cursor"
      << "; rows read: " << spy_->rows_read()
      << (iterator_.is_eos() ? " (all)" : "")
      << "; calls to Next(): " << spy_->next_calls();
-  *s << "; schema: " << ComparableTupleSchema(iterator_.schema()) << endl;
+  *s << "; schema: " << ComparableTupleSchema(iterator_.schema()) << std::endl;
   spy_->AppendRowRepresentationsToStream(s);
   // Include last result in the representation only if there has been one.
   if (spy_->next_calls() > 0)
     *s << "last result: " << spy_->last_result();
 }
 
-ostream& operator<<(ostream& s, const ResultView& result) {
+std::ostream& operator<<(std::ostream& s, const ResultView& result) {
   if (result.is_failure()) {
     s << "exception " << ReturnCode_Name(result.exception().return_code())
       <<  ": " << result.exception().PrintStackTrace();

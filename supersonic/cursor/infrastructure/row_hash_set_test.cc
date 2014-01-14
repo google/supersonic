@@ -15,12 +15,10 @@
 
 #include "supersonic/cursor/infrastructure/row_hash_set.h"
 
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
-using __gnu_cxx::hash_multiset;
+#include <unordered_set>
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <vector>
 using std::vector;
 
@@ -126,9 +124,9 @@ class RowHashSetTest : public testing::Test {
 
   static bool RowIdSetHasElements(
       const vector<rowid_t>& elements, RowIdSetIterator* it) {
-    hash_multiset<rowid_t> elements_set(elements.begin(), elements.end());
+    std::unordered_multiset<rowid_t> elements_set(elements.begin(), elements.end());
     for (; !it->AtEnd(); it->Next()) {
-      hash_multiset<rowid_t>::iterator it_set = elements_set.find(it->Get());
+      std::unordered_multiset<rowid_t>::iterator it_set = elements_set.find(it->Get());
       if (it_set != elements_set.end())
         elements_set.erase(it_set);
       else
@@ -139,11 +137,11 @@ class RowHashSetTest : public testing::Test {
 
   TupleSchema row_hash_set_block_schema_;
 
-  scoped_ptr<RowHashSet> row_hash_set_;
-  scoped_ptr<RowHashMultiSet> row_multi_set_;
+  std::unique_ptr<RowHashSet> row_hash_set_;
+  std::unique_ptr<RowHashMultiSet> row_multi_set_;
 
-  scoped_ptr<FindResult> row_hash_set_result_;
-  scoped_ptr<FindMultiResult> row_multi_set_result_;
+  std::unique_ptr<FindResult> row_hash_set_result_;
+  std::unique_ptr<FindMultiResult> row_multi_set_result_;
 
   const View& query_1() const          { return query_1_->view(); }
   const View& query_11() const         { return query_11_->view(); }
@@ -155,14 +153,14 @@ class RowHashSetTest : public testing::Test {
   const View& query_1k_rows() const    { return query_1k_rows_->view(); }
 
  private:
-  scoped_ptr<Block> query_1_;
-  scoped_ptr<Block> query_11_;
-  scoped_ptr<Block> query_1122_;
-  scoped_ptr<Block> query_24680_;
-  scoped_ptr<Block> query_1234567890_;
-  scoped_ptr<Block> query_1oNoNo1N1N_;
-  scoped_ptr<Block> query_1o2o1t2t_;
-  scoped_ptr<Block> query_1k_rows_;
+  std::unique_ptr<Block> query_1_;
+  std::unique_ptr<Block> query_11_;
+  std::unique_ptr<Block> query_1122_;
+  std::unique_ptr<Block> query_24680_;
+  std::unique_ptr<Block> query_1234567890_;
+  std::unique_ptr<Block> query_1oNoNo1N1N_;
+  std::unique_ptr<Block> query_1o2o1t2t_;
+  std::unique_ptr<Block> query_1k_rows_;
 };
 
 TEST_F(RowHashSetTest,

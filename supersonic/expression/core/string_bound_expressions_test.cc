@@ -17,11 +17,14 @@
 #include "supersonic/expression/core/string_bound_expressions.h"
 
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
+#include "supersonic/utils/exception/failureor.h"
+#include "supersonic/base/exception/exception.h"
+#include "supersonic/base/infrastructure/tuple_schema.h"
+#include "supersonic/base/memory/memory.h"
 #include "supersonic/expression/base/expression.h"
 #include "supersonic/expression/core/projecting_bound_expressions.h"
 #include "supersonic/proto/supersonic.pb.h"
@@ -30,8 +33,6 @@ using std::string;
 #include "supersonic/utils/container_literal.h"
 
 namespace supersonic {
-
-class BufferAllocator;
 
 namespace {
 
@@ -137,52 +138,6 @@ TEST(StringBoundExpressionsTest, BoundSubstring) {
   TestBoundTernary(
       &BoundSubstring, STRING, INT32, UINT32,
       "SUBSTRING($0, CAST_INT32_TO_INT64($1), CAST_UINT32_TO_INT64($2))");
-}
-
-FailureOrOwned<BoundExpression> FullRegexpPatterned(BoundExpression* arg,
-                                                    BufferAllocator* allocator,
-                                                    rowcount_t max_row_count) {
-  return BoundRegexpFullMatch(arg, "X", allocator, max_row_count);
-}
-
-FailureOrOwned<BoundExpression> PartialRegexpPatterned(
-    BoundExpression* arg,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count) {
-  return BoundRegexpPartialMatch(arg, "_", allocator, max_row_count);
-}
-
-FailureOrOwned<BoundExpression> RegexpExtractPatterned(
-    BoundExpression* arg,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count) {
-  return BoundRegexpExtract(arg, "X", allocator, max_row_count);
-}
-
-FailureOrOwned<BoundExpression> RegexpReplacePatterned(
-    BoundExpression* haystack,
-    BoundExpression* substitute,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count) {
-  return BoundRegexpReplace(haystack, "X", substitute, allocator,
-                            max_row_count);
-}
-
-TEST(StringBoundExpressionsTest, BoundRegexpFull) {
-  TestBoundUnary(&FullRegexpPatterned, STRING, "REGEXP_FULL_MATCH($0)");
-}
-
-TEST(StringBoundExpressionsTest, BoundRegexpPartial) {
-  TestBoundUnary(&PartialRegexpPatterned, STRING, "REGEXP_PARTIAL_MATCH($0)");
-}
-
-TEST(StringBoundExpressionsTest, BoundRegexpExtract) {
-  TestBoundUnary(&RegexpExtractPatterned, STRING, "REGEXP_EXTRACT($0)");
-}
-
-TEST(StringBoundExpressionsTest, BoundRegexpReplace) {
-  TestBoundBinary(&RegexpReplacePatterned, STRING, STRING,
-                  "REGEXP_REPLACE($0, $1)");
 }
 
 }  // namespace

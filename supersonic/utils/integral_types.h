@@ -10,7 +10,7 @@
 #ifndef BASE_INTEGRAL_TYPES_H_
 #define BASE_INTEGRAL_TYPES_H_
 
-// These typedefs are also defined in base/google.swig. In the
+// These typedefs are also defined in base/swig/google.swig. In the
 // SWIG environment, we use those definitions and avoid duplicate
 // definitions here with an ifdef. The definitions should be the
 // same in both files, and ideally be only defined in this file.

@@ -17,7 +17,7 @@
 #include "supersonic/expression/templated/cast_expression.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/stringprintf.h"

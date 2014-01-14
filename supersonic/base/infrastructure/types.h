@@ -22,7 +22,7 @@
 #include <stddef.h>
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/macros.h"
@@ -156,8 +156,8 @@ template<> struct BasicTypeTraits<BOOL> {
 };
 
 template<> struct BasicTypeTraits<ENUM> {
-  typedef int64 cpp_type;
-  typedef int64 hold_type;
+  typedef int32 cpp_type;
+  typedef int32 hold_type;
   static const bool is_variable_length = false;
   static const bool is_numeric = false;
   static const bool is_integer = false;

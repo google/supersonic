@@ -50,7 +50,8 @@
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"  // for CHECK macros
-#include "supersonic/utils/type_traits.h"  // for remove_pointer
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"  // for remove_pointer
 
 // This is used internally by all instances of linked_ptr<>.  It needs to be
 // a non-template class because different types of linked_ptr<> can refer to
@@ -235,8 +236,8 @@ linked_ptr<T> make_linked_ptr(T* ptr) {
   return linked_ptr<T>(ptr);
 }
 
-namespace base {
+namespace std {
 template<typename T> struct remove_pointer<linked_ptr<T> > { typedef T type; };
-}  // namespace base
+}  // namespace std
 
 #endif  // UTIL_GTL_LINKED_PTR_H_

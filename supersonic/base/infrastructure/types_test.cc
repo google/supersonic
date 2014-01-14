@@ -16,7 +16,7 @@
 #include "supersonic/base/infrastructure/types.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "gtest/gtest.h"
 

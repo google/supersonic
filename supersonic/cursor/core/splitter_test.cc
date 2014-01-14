@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/splitter.h"
 
+#include <memory>
+
 #include "supersonic/utils/exception/failureor.h"
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/exception/result.h"
@@ -183,7 +185,7 @@ TEST_P(BarrierSplitterSpyTest, LateJoin) {
 
   SplitterInterface* splitter(new BarrierSplitter(input));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
 
   Cursor* reader_cursor1 = splitter->AddReader();

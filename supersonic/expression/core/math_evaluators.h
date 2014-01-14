@@ -23,12 +23,7 @@
 #include <stdio.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/mathlimits.h"
 
@@ -209,19 +204,19 @@ struct Pow {
 };
 
 struct IsFinite {
-  bool operator()(double arg) { return isfinite(arg); }
+  bool operator()(double arg) { return std::isfinite(arg); }
 };
 
 struct IsNaN {
-  bool operator()(double arg) { return isnan(arg); }
+  bool operator()(double arg) { return std::isnan(arg); }
 };
 
 struct IsInf {
-  bool operator()(double arg) { return isinf(arg); }
+  bool operator()(double arg) { return std::isinf(arg); }
 };
 
 struct IsNormal {
-  bool operator()(double arg) { return isnormal(arg); }
+  bool operator()(double arg) { return std::isnormal(arg); }
 };
 
 }  // namespace operators

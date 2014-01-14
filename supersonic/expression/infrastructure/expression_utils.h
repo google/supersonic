@@ -21,8 +21,10 @@
 #ifndef SUPERSONIC_EXPRESSION_INFRASTRUCTURE_EXPRESSION_UTILS_H_
 #define SUPERSONIC_EXPRESSION_INFRASTRUCTURE_EXPRESSION_UTILS_H_
 
+#include <set>
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/base/exception/result.h"
 #include "supersonic/base/infrastructure/bit_pointers.h"

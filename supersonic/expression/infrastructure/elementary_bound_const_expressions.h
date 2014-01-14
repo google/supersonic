@@ -17,7 +17,7 @@
 #define SUPERSONIC_EXPRESSION_INFRASTRUCTURE_ELEMENTARY_BOUND_CONST_EXPRESSIONS_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/stringprintf.h"
 #include "supersonic/base/infrastructure/tuple_schema.h"

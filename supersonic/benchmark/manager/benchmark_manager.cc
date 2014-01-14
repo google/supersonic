@@ -18,6 +18,8 @@
 
 #include "supersonic/benchmark/manager/benchmark_manager.h"
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/benchmark_listener.h"
 #include "supersonic/benchmark/infrastructure/cursor_statistics.h"
 #include "supersonic/benchmark/infrastructure/node.h"
@@ -34,7 +36,7 @@ namespace {
 // the operation. The caller takes ownership of the writer.
 DOTOutputWriter* CreateWriter(GraphVisualisationOptions options,
                               string* output) {
-  scoped_ptr<DOTOutputWriter> writer;
+  std::unique_ptr<DOTOutputWriter> writer;
   switch (options.destination) {
     case DOT_FILE:
       writer.reset(CreateFileOutputWriter(options.file_name));
@@ -55,8 +57,9 @@ inline void GatherDataAndDraw(BenchmarkTreeNode* node, DOTDrawer* drawer) {
 }  // namespace
 
 BenchmarkDataWrapper* SetUpBenchmarkForCursor(Cursor* cursor) {
-  scoped_ptr<BenchmarkTreeBuilder> tree_builder(new BenchmarkTreeBuilder());
-  scoped_ptr<BenchmarkResult> result(tree_builder->CreateTree(cursor));
+  std::unique_ptr<BenchmarkTreeBuilder> tree_builder(
+      new BenchmarkTreeBuilder());
+  std::unique_ptr<BenchmarkResult> result(tree_builder->CreateTree(cursor));
 
   return new BenchmarkDataWrapper(
       result->release_cursor(),
@@ -70,7 +73,7 @@ string CreateGraph(
     GraphVisualisationOptions options) {
   string graph_result;
 
-  scoped_ptr<DOTDrawer> drawer(
+  std::unique_ptr<DOTDrawer> drawer(
       new DOTDrawer(CreateWriter(options, &graph_result), benchmark_name));
 
   GatherDataAndDraw(node, drawer.get());
@@ -82,10 +85,10 @@ string PerformBenchmark(
     Cursor* cursor,
     rowcount_t max_block_size,
     GraphVisualisationOptions options) {
-  scoped_ptr<BenchmarkDataWrapper> data_wrapper(
+  std::unique_ptr<BenchmarkDataWrapper> data_wrapper(
       SetUpBenchmarkForCursor(cursor));
 
-  scoped_ptr<Cursor> spied_cursor(data_wrapper->release_cursor());
+  std::unique_ptr<Cursor> spied_cursor(data_wrapper->release_cursor());
 
   while (spied_cursor->Next(max_block_size).has_data()) {}
 

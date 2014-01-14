@@ -2,40 +2,23 @@
 
 #include "supersonic/utils/strings/substitute.h"
 
+#include <algorithm>
+#include "supersonic/utils/std_namespace.h"
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/strings/ascii_ctype.h"
 #include "supersonic/utils/strings/escaping.h"
+#include "supersonic/utils/strings/stringpiece.h"
 #include "supersonic/utils/stl_util.h"
 
 namespace strings {
+namespace substitute_internal {
 
-using internal::SubstituteArg;
-
-const SubstituteArg SubstituteArg::NoArg;
-
-// Returns the number of args in arg_array which were passed explicitly
-// to Substitute().
-static int CountSubstituteArgs(const SubstituteArg* const* args_array) {
-  int count = 0;
-  while (args_array[count] != &SubstituteArg::NoArg) {
-    ++count;
-  }
-  return count;
-}
-
-void SubstituteAndAppend(
+void SubstituteAndAppendArray(
     string* output, StringPiece format,
-    const SubstituteArg& arg0, const SubstituteArg& arg1,
-    const SubstituteArg& arg2, const SubstituteArg& arg3,
-    const SubstituteArg& arg4, const SubstituteArg& arg5,
-    const SubstituteArg& arg6, const SubstituteArg& arg7,
-    const SubstituteArg& arg8, const SubstituteArg& arg9) {
-  const SubstituteArg* const args_array[] = {
-    &arg0, &arg1, &arg2, &arg3, &arg4, &arg5, &arg6, &arg7, &arg8, &arg9, NULL
-  };
-
+    const StringPiece* args_array, size_t num_args) {
   // Determine total size needed.
   int size = 0;
   for (int i = 0; i < format.size(); i++) {
@@ -46,15 +29,15 @@ void SubstituteAndAppend(
         return;
       } else if (ascii_isdigit(format[i+1])) {
         int index = format[i+1] - '0';
-        if (args_array[index]->size() == -1) {
+        if (index >= num_args) {
           LOG(DFATAL)
             << "strings::Substitute format string invalid: asked for \"$"
-            << index << "\", but only " << CountSubstituteArgs(args_array)
+            << index << "\", but only " << num_args
             << " args were given.  Full format string was: \""
             << CEscape(format) << "\".";
           return;
         }
-        size += args_array[index]->size();
+        size += args_array[index].size();
         ++i;  // Skip next char.
       } else if (format[i+1] == '$') {
         ++size;
@@ -78,9 +61,8 @@ void SubstituteAndAppend(
   for (int i = 0; i < format.size(); i++) {
     if (format[i] == '$') {
       if (ascii_isdigit(format[i+1])) {
-        const SubstituteArg* src = args_array[format[i+1] - '0'];
-        memcpy(target, src->data(), src->size());
-        target += src->size();
+        const StringPiece src = args_array[format[i+1] - '0'];
+        target = std::copy(src.begin(), src.end(), target);
         ++i;  // Skip next char.
       } else if (format[i+1] == '$') {
         *target++ = '$';
@@ -94,12 +76,11 @@ void SubstituteAndAppend(
   DCHECK_EQ(target - output->data(), output->size());
 }
 
-SubstituteArg::SubstituteArg(const void* value) {
+Arg::Arg(const void* value) {
   COMPILE_ASSERT(sizeof(scratch_) >= sizeof(value) * 2 + 2,
                  fix_sizeof_scratch_);
   if (value == NULL) {
-    text_ = "NULL";
-    size_ = strlen(text_);
+    piece_ = "NULL";
   } else {
     char* ptr = scratch_ + sizeof(scratch_);
     uintptr_t num = reinterpret_cast<uintptr_t>(value);
@@ -110,9 +91,9 @@ SubstituteArg::SubstituteArg(const void* value) {
     } while (num != 0);
     *--ptr = 'x';
     *--ptr = '0';
-    text_ = ptr;
-    size_ = scratch_ + sizeof(scratch_) - ptr;
+    piece_.set(ptr, scratch_ + sizeof(scratch_) - ptr);
   }
 }
 
+}  // namespace substitute_internal
 }  // namespace strings

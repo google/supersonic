@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/infrastructure/writer.h"
 
+#include <memory>
+
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/exception/failureor.h"
@@ -55,7 +57,7 @@ TEST_F(WriterTest, WriteAll) {
          .AddRow(2, "cat");
   int block_sizes[] = { 1, 2, 4, 5, 10, 100 };
   for (int i = 0; i < arraysize(block_sizes); ++i) {
-    scoped_ptr<TestData> input(builder.Build());
+    std::unique_ptr<TestData> input(builder.Build());
     Writer writer(CreateViewLimiter(block_sizes[i],
                                     SucceedOrDie(input->CreateCursor())));
     Table table(writer.schema(), HeapBufferAllocator::Get());
@@ -76,7 +78,7 @@ TEST_F(WriterTest, WritePartial) {
          .AddRow(1, "baz")
          .AddRow(7, "car")
          .AddRow(2, "cat");
-  scoped_ptr<TestData> input(builder.Build());
+  std::unique_ptr<TestData> input(builder.Build());
   Writer writer(SucceedOrDie(input->CreateCursor()));
   Table table1(writer.schema(), HeapBufferAllocator::Get());
   Table table2(writer.schema(), HeapBufferAllocator::Get());
@@ -107,9 +109,8 @@ TEST_F(WriterTest, WriteFailure) {
          .AddRow(4)
          .AddRow(0)  // Division by 0 occurs here.
          .AddRow(2);
-  scoped_ptr<Operation> compute(
-      Compute(DivideSignaling(ConstInt32(5), AttributeAt(0)),
-              builder.Build()));
+  std::unique_ptr<Operation> compute(
+      Compute(DivideSignaling(ConstInt32(5), AttributeAt(0)), builder.Build()));
 
   Writer writer(SucceedOrDie(compute->CreateCursor()));
 
@@ -139,11 +140,11 @@ INSTANTIATE_TEST_CASE_P(SpyUse, WriterSpyTest, testing::Bool());
 TEST_P(WriterSpyTest, WritePartialToConstrainedSinks) {
   TestDataBuilder<INT32> builder;
   builder.AddRow(4).AddRow(6).AddRow(1).AddRow(7).AddRow(2);
-  scoped_ptr<TestData> input(builder.Build());
+  std::unique_ptr<TestData> input(builder.Build());
   Writer writer(CreateViewLimiter(2, SucceedOrDie(input->CreateCursor())));
 
   if (GetParam()) {
-    scoped_ptr<CursorTransformer> spy_transform(PrintingSpyTransformer());
+    std::unique_ptr<CursorTransformer> spy_transform(PrintingSpyTransformer());
     writer.ApplyToIterator(spy_transform.get());
   }
 

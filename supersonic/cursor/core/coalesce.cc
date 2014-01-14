@@ -17,6 +17,7 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 using std::vector;
 
@@ -74,7 +75,7 @@ class CoalesceCursor : public BasicCursor {
 
  private:
   util::gtl::PointerVector<CursorIterator> inputs_;
-  scoped_ptr<const BoundMultiSourceProjector> projector_;
+  std::unique_ptr<const BoundMultiSourceProjector> projector_;
 
   DISALLOW_COPY_AND_ASSIGN(CoalesceCursor);
 };

@@ -88,17 +88,12 @@
 #include <stdint.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -335,16 +330,16 @@ class BasicMerger : public Merger {
         allocator_(allocator) {}
 
   FailureOrVoid AddSorted(Cursor* cursor) {
-    scoped_ptr<Cursor> cursor_owner(cursor);
-    scoped_ptr<FileDeleter> temp_file(
-        new FileDeleter(TempFile::Create(temporary_directory_prefix_.c_str())));
+    std::unique_ptr<Cursor> cursor_owner(cursor);
+    std::unique_ptr<file::FileRemover> temp_file(new file::FileRemover(
+        TempFile::Create(temporary_directory_prefix_.c_str())));
     if (temp_file->get() == NULL) {
       THROW(new Exception(ERROR_TEMP_FILE_CREATION_ERROR,
                           StrCat("Couldn't create temporary file in ",
                                  temporary_directory_prefix_)));
     }
     {
-      scoped_ptr<Sink> file_sink(
+      std::unique_ptr<Sink> file_sink(
           FileOutput(temp_file->get(), DO_NOT_TAKE_OWNERSHIP));
       Writer part_writer(cursor_owner.release());
       FailureOr<rowcount_t> write_all_result =
@@ -357,6 +352,8 @@ class BasicMerger : public Merger {
       PROPAGATE_ON_FAILURE(write_all_result);
       PROPAGATE_ON_FAILURE(file_sink->Finalize());
     }
+    // TODO(user): Don't just ignore the util::Status object!
+    // We didn't opensource util::task::Status.
     temp_file->get()->Seek(0);
     file_buffers_.push_back(temp_file.release());
     return Success();
@@ -366,7 +363,7 @@ class BasicMerger : public Merger {
   // enough.
   FailureOrOwned<Cursor> Merge(const BoundSortOrder* sort_order,
                                Cursor* additional) {
-    scoped_ptr<Cursor> additional_owned(additional);
+    std::unique_ptr<Cursor> additional_owned(additional);
     vector<Cursor*> merged_cursors;
     ElementDeleter deleter(&merged_cursors);
     while (!file_buffers_.empty()) {
@@ -400,7 +397,7 @@ class BasicMerger : public Merger {
   TupleSchema schema_;
   string temporary_directory_prefix_;
   BufferAllocator* allocator_;
-  PointerVector<FileDeleter> file_buffers_;
+  PointerVector<file::FileRemover> file_buffers_;
   DISALLOW_COPY_AND_ASSIGN(BasicMerger);
 };
 
@@ -449,7 +446,7 @@ class UnbufferedSorter : public Sorter {
   // Returns a Cursor containing sorted data from the input view. View should be
   // valid as long as the Cursor exists.
   FailureOrOwned<Cursor> SortView(const View& view) {
-    scoped_ptr<Permutation> permutation(new Permutation(view.row_count()));
+    std::unique_ptr<Permutation> permutation(new Permutation(view.row_count()));
     SortPermutation(*sort_order_, view, permutation.get());
     FailureOrOwned<Cursor> sorted = BoundScanViewWithSelection(
         view, permutation->size(), permutation->permutation(),
@@ -459,9 +456,9 @@ class UnbufferedSorter : public Sorter {
   }
 
  private:
-  scoped_ptr<const BoundSortOrder> sort_order_;
+  std::unique_ptr<const BoundSortOrder> sort_order_;
   BufferAllocator* allocator_;
-  scoped_ptr<Merger> merger_;
+  std::unique_ptr<Merger> merger_;
   DISALLOW_COPY_AND_ASSIGN(UnbufferedSorter);
 };
 
@@ -533,11 +530,9 @@ class BufferingSorter : public Sorter {
     FailureOrOwned<Cursor> last_sorted =
         unbuffered_sorter_.SortView(memory_buffer_->view());
     PROPAGATE_ON_FAILURE(last_sorted);
-    scoped_ptr<Cursor> last_sorted_owning(
-        TakeOwnership(last_sorted.release(),
-                      softquota_bypass_allocator_.release(),
-                      materialization_allocator_.release(),
-                      memory_buffer_.release()));
+    std::unique_ptr<Cursor> last_sorted_owning(TakeOwnership(
+        last_sorted.release(), softquota_bypass_allocator_.release(),
+        materialization_allocator_.release(), memory_buffer_.release()));
     return unbuffered_sorter_.GetResultCursorMergedWith(
         last_sorted_owning.release());
   }
@@ -564,11 +559,11 @@ class BufferingSorter : public Sorter {
   // in allocator_, so Sort will be able to grow its internal Table considerably
   // even if there's no soft quota left. This should prevent big performance
   // degradation is such cases.
-  scoped_ptr<BufferAllocator> softquota_bypass_allocator_;
+  std::unique_ptr<BufferAllocator> softquota_bypass_allocator_;
 
   // materialization_allocator_ is MemoryLimit with soft quota.
-  scoped_ptr<MemoryLimit> materialization_allocator_;
-  scoped_ptr<Table> memory_buffer_;
+  std::unique_ptr<MemoryLimit> materialization_allocator_;
+  std::unique_ptr<Table> memory_buffer_;
   UnbufferedSorter unbuffered_sorter_;
   DISALLOW_COPY_AND_ASSIGN(BufferingSorter);
 };
@@ -628,9 +623,9 @@ class SortCursor : public BasicCursor {
 
   bool is_waiting_on_barrier_supported_;
   Writer writer_;
-  scoped_ptr<const BoundSingleSourceProjector> result_projector_;
-  scoped_ptr<Cursor> result_;
-  scoped_ptr<Sorter> sorter_;
+  std::unique_ptr<const BoundSingleSourceProjector> result_projector_;
+  std::unique_ptr<Cursor> result_;
+  std::unique_ptr<Sorter> sorter_;
   SorterSink sorter_sink_;
   DISALLOW_COPY_AND_ASSIGN(SortCursor);
 };
@@ -676,7 +671,7 @@ class SortOperation : public BasicOperation {
     const TupleSchema& schema = child_cursor->schema();
     FailureOrOwned<const BoundSortOrder> sort_order(sort_order_->Bind(schema));
     PROPAGATE_ON_FAILURE(sort_order);
-    scoped_ptr<const BoundSingleSourceProjector> result_projector_ptr;
+    std::unique_ptr<const BoundSingleSourceProjector> result_projector_ptr;
     if (result_projector_.get() != NULL) {
       FailureOrOwned<const BoundSingleSourceProjector> result_projector(
           result_projector_->Bind(schema));
@@ -693,8 +688,9 @@ class SortOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const SortOrder> sort_order_;
-  scoped_ptr<const SingleSourceProjector> result_projector_;   // Can be NULL.
+  std::unique_ptr<const SortOrder> sort_order_;
+  // result_projector_ may be NULL.
+  std::unique_ptr<const SingleSourceProjector> result_projector_;
   size_t memory_quota_;
   string temporary_directory_prefix_;
   DISALLOW_COPY_AND_ASSIGN(SortOperation);
@@ -721,9 +717,9 @@ class ExtendedSortOperation : public BasicOperation {
   virtual FailureOrOwned<Cursor> CreateCursor() const {
     FailureOrOwned<Cursor> raw_child_cursor = child()->CreateCursor();
     PROPAGATE_ON_FAILURE(raw_child_cursor);
-    scoped_ptr<Cursor> child_cursor(raw_child_cursor.release());
+    std::unique_ptr<Cursor> child_cursor(raw_child_cursor.release());
 
-    scoped_ptr<const BoundSingleSourceProjector> bound_result_projector;
+    std::unique_ptr<const BoundSingleSourceProjector> bound_result_projector;
     if (result_projector_.get() != NULL) {
       FailureOrOwned<const BoundSingleSourceProjector> result_projector(
           result_projector_->Bind(child_cursor->schema()));
@@ -742,8 +738,9 @@ class ExtendedSortOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const ExtendedSortSpecification> sort_order_;
-  scoped_ptr<const SingleSourceProjector> result_projector_;   // Can be NULL.
+  std::unique_ptr<const ExtendedSortSpecification> sort_order_;
+  // result_projector_ may be NULL.
+  std::unique_ptr<const SingleSourceProjector> result_projector_;
   size_t memory_quota_;
   string temporary_directory_prefix_;
   DISALLOW_COPY_AND_ASSIGN(ExtendedSortOperation);
@@ -838,7 +835,7 @@ FailureOrOwned<Cursor> BoundSort(
     BufferAllocator* allocator,
     Cursor* child) {
   if (result_projector == NULL) {
-    scoped_ptr<const SingleSourceProjector> all(ProjectAllAttributes());
+    std::unique_ptr<const SingleSourceProjector> all(ProjectAllAttributes());
     result_projector = SucceedOrDie(all->Bind(child->schema()));
   }
   return Success(
@@ -863,10 +860,10 @@ FailureOrOwned<Cursor> BoundExtendedSort(
     BufferAllocator* allocator,
     rowcount_t max_row_count,
     Cursor* child) {
-  scoped_ptr<const ExtendedSortSpecification> owned_sort_specification(
+  std::unique_ptr<const ExtendedSortSpecification> owned_sort_specification(
       sort_specification);
-  scoped_ptr<Cursor> owned_child(child);
-  scoped_ptr<const BoundSingleSourceProjector> owned_result_projector(
+  std::unique_ptr<Cursor> owned_child(child);
+  std::unique_ptr<const BoundSingleSourceProjector> owned_result_projector(
       result_projector);
 
   // First we check that sort order does not have duplicate key(s).
@@ -920,7 +917,7 @@ FailureOrOwned<Cursor> BoundExtendedSort(
 
   // We create the parameters to create a bound compute expression.
   map<string, size_t> uppercase_version_position;
-  scoped_ptr<ExpressionList> compute_argument(new ExpressionList());
+  std::unique_ptr<ExpressionList> compute_argument(new ExpressionList());
   for (size_t i = 0; i < owned_child->schema().attribute_count(); ++i) {
     compute_argument->add(AttributeAt(i));
   }
@@ -968,7 +965,7 @@ FailureOrOwned<Cursor> BoundExtendedSort(
   owned_child.reset(bound_compute.release());
 
   // We create BoundSortOrder for BoundSort.
-  scoped_ptr<BoundSingleSourceProjector> keys_projector(
+  std::unique_ptr<BoundSingleSourceProjector> keys_projector(
       new BoundSingleSourceProjector(owned_child->schema()));
   vector<ColumnOrder> keys_orders;
 
@@ -988,7 +985,7 @@ FailureOrOwned<Cursor> BoundExtendedSort(
 
   // We also need to project out the temporary attributes.
   if (owned_result_projector.get() == NULL) {
-    scoped_ptr<BoundSingleSourceProjector> output_projector(
+    std::unique_ptr<BoundSingleSourceProjector> output_projector(
         new BoundSingleSourceProjector(owned_child->schema()));
     for (size_t i = 0; i < initial_number_of_attributes; ++i) {
       output_projector->Add(i);
@@ -1006,7 +1003,7 @@ FailureOrOwned<Cursor> BoundExtendedSort(
 
   PROPAGATE_ON_FAILURE(freshly_sorted_cursor);
 
-  scoped_ptr<Cursor> final_cursor(freshly_sorted_cursor.release());
+  std::unique_ptr<Cursor> final_cursor(freshly_sorted_cursor.release());
 
   // TODO(user): Sort should be able to use this more efficiently then simply
   // layering a limit over a sort. Fix this.

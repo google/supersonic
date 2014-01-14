@@ -19,17 +19,12 @@
 #define SUPERSONIC_EXPRESSION_INFRASTRUCTURE_BASIC_BOUND_EXPRESSION_H_
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -148,7 +143,7 @@ class BoundUnaryExpression : public BasicBoundExpression {
   BoundExpression* const argument() const { return arg_.get(); }
 
  private:
-  const scoped_ptr<BoundExpression> arg_;
+  const std::unique_ptr<BoundExpression> arg_;
   DISALLOW_COPY_AND_ASSIGN(BoundUnaryExpression);
 };
 
@@ -184,8 +179,8 @@ class BoundBinaryExpression : public BasicBoundExpression {
   BoundExpression* const right() const { return right_.get(); }
 
  private:
-  const scoped_ptr<BoundExpression> left_;
-  const scoped_ptr<BoundExpression> right_;
+  const std::unique_ptr<BoundExpression> left_;
+  const std::unique_ptr<BoundExpression> right_;
   DISALLOW_COPY_AND_ASSIGN(BoundBinaryExpression);
 };
 
@@ -222,9 +217,9 @@ class BoundTernaryExpression : public BasicBoundExpression {
   }
 
  protected:
-  const scoped_ptr<BoundExpression> left_;
-  const scoped_ptr<BoundExpression> middle_;
-  const scoped_ptr<BoundExpression> right_;
+  const std::unique_ptr<BoundExpression> left_;
+  const std::unique_ptr<BoundExpression> middle_;
+  const std::unique_ptr<BoundExpression> right_;
 
   DISALLOW_COPY_AND_ASSIGN(BoundTernaryExpression);
 };

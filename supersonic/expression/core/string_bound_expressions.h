@@ -18,7 +18,6 @@
 
 #include "supersonic/base/exception/result.h"
 #include "supersonic/base/infrastructure/types.h"
-#include "supersonic/utils/strings/stringpiece.h"
 
 // For the descriptions of particular functions, see string_expressions.h.
 // For the usage of bound expression accessors, see expression.h or kick the
@@ -41,31 +40,6 @@ FailureOrOwned<BoundExpression> BoundLength(BoundExpression* arg,
 FailureOrOwned<BoundExpression> BoundLtrim(BoundExpression* arg,
                                            BufferAllocator* allocator,
                                            rowcount_t max_row_count);
-
-FailureOrOwned<BoundExpression> BoundRegexpPartialMatch(
-    BoundExpression* str,
-    const StringPiece& pattern,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count);
-
-FailureOrOwned<BoundExpression> BoundRegexpFullMatch(
-    BoundExpression* str,
-    const StringPiece& pattern,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count);
-
-FailureOrOwned<BoundExpression> BoundRegexpExtract(
-    BoundExpression* str,
-    const StringPiece& pattern,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count);
-
-FailureOrOwned<BoundExpression> BoundRegexpReplace(
-    BoundExpression* haystack,
-    const StringPiece& pattern,
-    BoundExpression* substitute,
-    BufferAllocator* allocator,
-    rowcount_t max_row_count);
 
 FailureOrOwned<BoundExpression> BoundRtrim(BoundExpression* arg,
                                            BufferAllocator* allocator,

@@ -20,32 +20,20 @@
 #ifndef SUPERSONIC_EXPRESSION_CORE_STRING_EVALUATORS_H_
 #define SUPERSONIC_EXPRESSION_CORE_STRING_EVALUATORS_H_
 
-#include <math.h>
-#include <cstdio>
-#include <ctime>
-#include <cstring>
-
+#include <stddef.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <cstring>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
+#include "supersonic/utils/integral_types.h"
+#include <glog/logging.h>
+#include "supersonic/utils/logging-inl.h"
+#include "supersonic/base/memory/arena.h"
 #include "supersonic/utils/strings/ascii_ctype.h"
-#include "supersonic/utils/strings/join.h"
 #include "supersonic/utils/strings/stringpiece.h"
 #include "supersonic/utils/strings/util.h"
-#include "supersonic/utils/hash/hash.h"
-#include "supersonic/utils/mathlimits.h"
-#include <re2/re2.h>
-
-#include "supersonic/expression/proto/operators.pb.h"
-#include "supersonic/base/memory/arena.h"
-#include "supersonic/base/infrastructure/types_infrastructure.h"
 
 namespace supersonic {
 namespace operators {
@@ -98,37 +86,6 @@ struct StringReplaceEvaluator {
     char* new_str = static_cast<char*>(arena->AllocateBytes(s.length() + 1));
     strncpy(new_str, s.c_str(), s.length());
     return StringPiece(new_str, s.length());
-  }
-};
-
-struct RegexpFull {
-  bool operator()(const RE2& pattern, const StringPiece &str) {
-    // TODO(tkaftal): Try to avoid memory copying during the .ToString() calls.
-    return RE2::FullMatch(str.ToString(), pattern);
-  }
-};
-
-struct RegexpPartial {
-  bool operator()(const RE2& pattern, const StringPiece &str) {
-    // TODO(tkaftal): Try to avoid memory copying during the .ToString() calls.
-    return RE2::PartialMatch(str.ToString(), pattern);
-  }
-};
-
-struct RegexpReplace {
-  // We want to use a buffer string, but not necessarily to allocate it with
-  // each call to the operator - we will thus allocate it in the Evaluate
-  // function, and then pass it as an argument.
-  StringPiece operator()(const StringPiece& haystack, const RE2& pattern,
-                         const StringPiece& substitute, string& buffer,
-                         Arena* arena) {
-    buffer = haystack.as_string();
-    // TODO(tkaftal): Try to avoid memory copying during the .ToString() calls.
-    RE2::GlobalReplace(&buffer, pattern, substitute.ToString());
-    char* new_str =
-        static_cast<char*>(arena->AllocateBytes(buffer.length() + 1));
-    strncpy(new_str, buffer.c_str(), buffer.length());
-    return StringPiece(new_str, buffer.length());
   }
 };
 

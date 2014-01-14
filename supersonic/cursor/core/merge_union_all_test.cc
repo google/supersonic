@@ -15,6 +15,7 @@
 
 #include "supersonic/cursor/core/merge_union_all.h"
 
+#include <memory>
 #include <vector>
 using std::vector;
 
@@ -142,22 +143,21 @@ TEST_F(MergeUnionAllTest, a1a2b1b2_a1a3b2b2WithSpyTransform) {
   Cursor* input1 = a1a2b1b2_.BuildCursor();
   Cursor* input2 = a1a3b2b2_.BuildCursor();
 
-  scoped_ptr<Cursor> expected_result(a1a2b1b2_a1a3b2b2_output_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(
+      a1a2b1b2_a1a3b2b2_output_.BuildCursor());
 
-  scoped_ptr<SortOrder> sort_order(new SortOrder);
+  std::unique_ptr<SortOrder> sort_order(new SortOrder);
   sort_order->OrderByNamedAttribute("col0", ASCENDING);
   sort_order->OrderByNamedAttribute("col1", ASCENDING);
 
-  scoped_ptr<const BoundSortOrder> bound_sort_order(
+  std::unique_ptr<const BoundSortOrder> bound_sort_order(
       SucceedOrDie(sort_order->Bind(input1->schema())));
 
-  scoped_ptr<Cursor> merge(
-      SucceedOrDie(BoundMergeUnionAll(
-          bound_sort_order.release(),
-          util::gtl::Container(input1, input2),
-          HeapBufferAllocator::Get())));
+  std::unique_ptr<Cursor> merge(SucceedOrDie(BoundMergeUnionAll(
+      bound_sort_order.release(), util::gtl::Container(input1, input2),
+      HeapBufferAllocator::Get())));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   merge->ApplyToChildren(spy_transformer.get());
   merge.reset(spy_transformer->Transform(merge.release()));
@@ -374,7 +374,7 @@ TEST_F(MergeUnionAllTest, a1a1a1a1a1a1a1b1_b2) {
          .AddRow("b", 1);
   // Create first input, add ("b", 2) and then use the same builder to create
   // expected result.
-  scoped_ptr<TestData> input1(builder.Build());
+  std::unique_ptr<TestData> input1(builder.Build());
   builder.AddRow("b", 2);
   test.SetExpectedResult(builder.Build());
   test.Execute(MergeUnionAll(
@@ -444,20 +444,18 @@ TEST_F(MergeUnionAllTest, TransformTest) {
   Cursor* input1 = a1a2b1b2_.BuildCursor();
   Cursor* input2 = a1a3b2b2_.BuildCursor();
 
-  scoped_ptr<SortOrder> sort_order(new SortOrder);
+  std::unique_ptr<SortOrder> sort_order(new SortOrder);
   sort_order->OrderByNamedAttribute("col0", ASCENDING);
   sort_order->OrderByNamedAttribute("col1", ASCENDING);
 
-  scoped_ptr<const BoundSortOrder> bound_sort_order(
+  std::unique_ptr<const BoundSortOrder> bound_sort_order(
       SucceedOrDie(sort_order->Bind(input1->schema())));
 
-  scoped_ptr<Cursor> merge(
-      SucceedOrDie(BoundMergeUnionAll(
-          bound_sort_order.release(),
-          util::gtl::Container(input1, input2),
-          HeapBufferAllocator::Get())));
+  std::unique_ptr<Cursor> merge(SucceedOrDie(BoundMergeUnionAll(
+      bound_sort_order.release(), util::gtl::Container(input1, input2),
+      HeapBufferAllocator::Get())));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   merge->ApplyToChildren(spy_transformer.get());
 

@@ -16,6 +16,8 @@
 #ifndef SUPERSONIC_CURSOR_INFRASTRUCTURE_TABLE_H_
 #define SUPERSONIC_CURSOR_INFRASTRUCTURE_TABLE_H_
 
+#include <memory>
+
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -144,8 +146,8 @@ class Table : public BasicOperation {
   // (not row_count()), so you may want to Compact() the table before calling
   // this method.
   Block* extract_block() {
-    scoped_ptr<Block> swapped(new Block(block_->schema(),
-                                        block_->allocator()));
+    std::unique_ptr<Block> swapped(
+        new Block(block_->schema(), block_->allocator()));
     swapped.swap(block_);
     Clear();
     return swapped.release();
@@ -163,7 +165,7 @@ class Table : public BasicOperation {
   // For use by TableRowAppender.
   Block* block() { return block_.get(); }
 
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
   View view_;
   ViewCopier view_copier_;
   DISALLOW_COPY_AND_ASSIGN(Table);

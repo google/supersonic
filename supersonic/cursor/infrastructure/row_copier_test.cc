@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/infrastructure/row_copier.h"
 
+#include <memory>
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -35,7 +37,7 @@ Block* CreateOutputBlock(size_t row_count) {
   output_schema.add_attribute(Attribute("c1", INT64, NULLABLE));
   output_schema.add_attribute(Attribute("c2", STRING, NULLABLE));
   output_schema.add_attribute(Attribute("c3", STRING, NULLABLE));
-  scoped_ptr<Block> result(
+  std::unique_ptr<Block> result(
       new Block(output_schema, HeapBufferAllocator::Get()));
   CHECK(result->Reallocate(row_count));
   return result.release();
@@ -44,12 +46,12 @@ Block* CreateOutputBlock(size_t row_count) {
 class RowCopierTest : public testing::Test {};
 
 TEST_F(RowCopierTest, RowCopierSimpleCopy) {
-  scoped_ptr<Block> input(BlockBuilder<INT64, STRING, STRING>().
-                          AddRow(0, "a", "b").
-                          AddRow(1, "c", "d").
-                          AddRow(2, "e", "f").
-                          Build());
-  scoped_ptr<Block> output(CreateOutputBlock(10));
+  std::unique_ptr<Block> input(BlockBuilder<INT64, STRING, STRING>()
+                                   .AddRow(0, "a", "b")
+                                   .AddRow(1, "c", "d")
+                                   .AddRow(2, "e", "f")
+                                   .Build());
+  std::unique_ptr<Block> output(CreateOutputBlock(10));
   RowCopier<
       DirectRowSourceReader<RowSourceAdapter>,
       DirectRowSourceWriter<RowSinkAdapter> > copier(output->schema(), true);
@@ -68,11 +70,11 @@ TEST_F(RowCopierTest, RowCopierSimpleCopy) {
 }
 
 TEST_F(RowCopierTest, ViewCopierCopyAlongProjection) {
-  scoped_ptr<Block> input(BlockBuilder<INT64, STRING, STRING>().
-                          AddRow(0, "a", "b").
-                          AddRow(1, "c", "d").
-                          AddRow(2, "e", "f").
-                          Build());
+  std::unique_ptr<Block> input(BlockBuilder<INT64, STRING, STRING>()
+                                   .AddRow(0, "a", "b")
+                                   .AddRow(1, "c", "d")
+                                   .AddRow(2, "e", "f")
+                                   .Build());
   BoundSingleSourceProjector projector(input->schema());
   projector.Add(0);
   projector.Add(2);
@@ -99,11 +101,11 @@ TEST_F(RowCopierTest, ViewCopierCopyAlongProjection) {
 }
 
 TEST_F(RowCopierTest, MultiViewCopierCopyAlongProjection) {
-  scoped_ptr<Block> input(BlockBuilder<INT64, STRING, STRING>().
-                          AddRow(0, "a", "b").
-                          AddRow(1, "c", "d").
-                          AddRow(2, "e", "f").
-                          Build());
+  std::unique_ptr<Block> input(BlockBuilder<INT64, STRING, STRING>()
+                                   .AddRow(0, "a", "b")
+                                   .AddRow(1, "c", "d")
+                                   .AddRow(2, "e", "f")
+                                   .Build());
   // Use the same source twice, project it's 1rd and 3st column, taking one
   // from each 'copy' of the source.
   BoundMultiSourceProjector projector(

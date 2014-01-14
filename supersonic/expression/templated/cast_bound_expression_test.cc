@@ -17,10 +17,9 @@
 #include "supersonic/expression/templated/cast_bound_expression.h"
 
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/expression/base/expression.h"
 #include "supersonic/expression/core/projecting_bound_expressions.h"

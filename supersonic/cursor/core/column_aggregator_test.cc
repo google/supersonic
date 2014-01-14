@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/column_aggregator.h"
 
+#include <memory>
+
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -56,8 +58,9 @@ static Block* EmptyBlockWithSingleNotNullableColumn(DataType column_type,
 }
 
 TEST_F(AggregatorsTest, ComputeSimpleAggregation) {
-  scoped_ptr<Block> result_block(EmptyBlockWithSingleNullableColumn(INT64, 4));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(
+      EmptyBlockWithSingleNullableColumn(INT64, 4));
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           MIN, INT64, result_block.get(), 0)));
 
@@ -72,12 +75,8 @@ TEST_F(AggregatorsTest, ComputeSimpleAggregation) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(-5)
-                                    .AddRow(0)
-                                    .AddRow(1)
-                                    .AddRow(-1)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(-5).AddRow(0).AddRow(1).AddRow(-1).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
@@ -85,13 +84,13 @@ TEST_F(AggregatorsTest,
        StoreResultOfAggregationInSecondColumnOfResultBlock) {
   // Create result block with two columns, store aggregation result in the
   // second column.
-  scoped_ptr<Block> result_block(BlockBuilder<INT64, INT64>()
-                                 .AddRow(__, __)
-                                 .AddRow(__, __)
-                                 .AddRow(__, __)
-                                 .AddRow(__, __)
-                                 .Build());
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(BlockBuilder<INT64, INT64>()
+                                          .AddRow(__, __)
+                                          .AddRow(__, __)
+                                          .AddRow(__, __)
+                                          .AddRow(__, __)
+                                          .Build());
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           SUM, INT32, result_block.get(), 1)));
 
@@ -108,19 +107,20 @@ TEST_F(AggregatorsTest,
 
 
   // First column should be left unchanged.
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64, INT64>()
-                                    .AddRow(__, -7)
-                                    .AddRow(__, 3)
-                                    .AddRow(__, 5)
-                                    .AddRow(__, 3)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(BlockBuilder<INT64, INT64>()
+                                             .AddRow(__, -7)
+                                             .AddRow(__, 3)
+                                             .AddRow(__, 5)
+                                             .AddRow(__, 3)
+                                             .Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest,
        StoreResultOfAggregationInColumnOfDifferentTypeThenInputColumn) {
-  scoped_ptr<Block> result_block(EmptyBlockWithSingleNullableColumn(INT64, 4));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(
+      EmptyBlockWithSingleNullableColumn(INT64, 4));
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           SUM, UINT32, result_block.get(), 0)));
 
@@ -135,18 +135,19 @@ TEST_F(AggregatorsTest,
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(7)
-                                    .AddRow(3)
-                                    .AddRow(5)
-                                    .AddRow(0xFFFFFFFFLL + 4)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(BlockBuilder<INT64>()
+                                             .AddRow(7)
+                                             .AddRow(3)
+                                             .AddRow(5)
+                                             .AddRow(0xFFFFFFFFLL + 4)
+                                             .Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeAggregationOfValuesWithNulls) {
-  scoped_ptr<Block> result_block(EmptyBlockWithSingleNullableColumn(INT32, 4));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(
+      EmptyBlockWithSingleNullableColumn(INT32, 4));
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           SUM, INT32, result_block.get(), 0)));
 
@@ -168,28 +169,27 @@ TEST_F(AggregatorsTest, ComputeAggregationOfValuesWithNulls) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-
-  scoped_ptr<Block> expected_output(
+  std::unique_ptr<Block> expected_output(
       BlockBuilder<INT32>()
       // Taken from inpu1[0] because input2[0] is null.
-      .AddRow(-2)
+          .AddRow(-2)
 
       // Null because both input1[1] and input2[1] are null.
-      .AddRow(__)
-      .AddRow(5)
+          .AddRow(__)
+          .AddRow(5)
 
       // Taken from inpu2[3] because input1[3] is null.
-      .AddRow(4)
-      .Build());
+          .AddRow(4)
+          .Build());
 
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeAggregationWithResultStoredAsString) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNullableColumn(STRING, 4));
 
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           MIN, STRING, result_block.get(), 0)));
 
@@ -204,18 +204,19 @@ TEST_F(AggregatorsTest, ComputeAggregationWithResultStoredAsString) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<STRING>()
-                                    .AddRow("abakus")
-                                    .AddRow("baba")
-                                    .AddRow("ada")
-                                    .AddRow("oda")
-                                    .Build());
+  std::unique_ptr<Block> expected_output(BlockBuilder<STRING>()
+                                             .AddRow("abakus")
+                                             .AddRow("baba")
+                                             .AddRow("ada")
+                                             .AddRow("oda")
+                                             .Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ResultIndexRespectedWhileUpdatingAggregation) {
-  scoped_ptr<Block> result_block(EmptyBlockWithSingleNullableColumn(INT32, 4));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(
+      EmptyBlockWithSingleNullableColumn(INT32, 4));
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           SUM, INT32, result_block.get(), 0)));
 
@@ -227,21 +228,16 @@ TEST_F(AggregatorsTest, ResultIndexRespectedWhileUpdatingAggregation) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT32>()
-                                    .AddRow(__)
-                                    .AddRow(__)
-                                    .AddRow(4)
-                                    .AddRow(__)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT32>().AddRow(__).AddRow(__).AddRow(4).AddRow(__).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeCount) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT64, 1));
-  scoped_ptr<ColumnAggregator> aggregator(
-      SucceedOrDie(ColumnAggregatorFactory().CreateCountAggregator(
-          result_block.get(), 0)));
+  std::unique_ptr<ColumnAggregator> aggregator(SucceedOrDie(
+      ColumnAggregatorFactory().CreateCountAggregator(result_block.get(), 0)));
 
   View view(TupleSchema::Singleton("", INT64, NULLABLE));
   const int64 input[] = { -5, 0, 4, 4 };
@@ -250,36 +246,32 @@ TEST_F(AggregatorsTest, ComputeCount) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(4)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(4).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeCountWithoutInputColumn) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT64, 1));
 
-  scoped_ptr<ColumnAggregator> aggregator(
-      SucceedOrDie(ColumnAggregatorFactory().CreateCountAggregator(
-          result_block.get(), 0)));
+  std::unique_ptr<ColumnAggregator> aggregator(SucceedOrDie(
+      ColumnAggregatorFactory().CreateCountAggregator(result_block.get(), 0)));
   const rowid_t result_index[] = { 0, 0, 0, 0 };
   ASSERT_TRUE(aggregator->UpdateAggregation(NULL, 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(4)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(4).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeCountOfValuesWithNulls) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT32, 1));
 
-  scoped_ptr<ColumnAggregator> aggregator(
-      SucceedOrDie(ColumnAggregatorFactory().CreateCountAggregator(
-          result_block.get(), 0)));
+  std::unique_ptr<ColumnAggregator> aggregator(SucceedOrDie(
+      ColumnAggregatorFactory().CreateCountAggregator(result_block.get(), 0)));
 
   View view(TupleSchema::Singleton("", INT32, NULLABLE));
   const int64 input[] = { -5, 0, 4, 4 };
@@ -292,16 +284,15 @@ TEST_F(AggregatorsTest, ComputeCountOfValuesWithNulls) {
               .is_success());
 
   // NULL values should not be counted.
-  scoped_ptr<Block> expected_output(BlockBuilder<INT32>()
-                                    .AddRow(2)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT32>().AddRow(2).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeDistinctCountOfIntegers) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT64, 1));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateDistinctCountAggregator(
           INT64, result_block.get(), 0)));
 
@@ -312,16 +303,15 @@ TEST_F(AggregatorsTest, ComputeDistinctCountOfIntegers) {
   view.mutable_column(0)->Reset(input1, bool_ptr(NULL));
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(2)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(2).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeDistinctCountOfStrings) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT64, 1));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateDistinctCountAggregator(
           STRING, result_block.get(), 0)));
 
@@ -338,15 +328,15 @@ TEST_F(AggregatorsTest, ComputeDistinctCountOfStrings) {
               .is_success());
 
   // Overall 4 distinct strings in both input columns.
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(4)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(4).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeDistinctConcatOfStrings) {
-  scoped_ptr<Block> result_block(EmptyBlockWithSingleNullableColumn(STRING, 2));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(
+      EmptyBlockWithSingleNullableColumn(STRING, 2));
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateDistinctAggregator(
           CONCAT, STRING, result_block.get(), 0)));
 
@@ -364,20 +354,21 @@ TEST_F(AggregatorsTest, ComputeDistinctConcatOfStrings) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 4, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<STRING>()
-                                    // DISTINCT(baba,aba,aba,oda)=baba,aba,oda
-                                    .AddRow("baba,aba,oda")
-                                    // DISTINCT(baba,baba,raba,baba)=baba,rada
-                                    .AddRow("baba,rada")
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<STRING>()
+      // DISTINCT(baba,aba,aba,oda)=baba,aba,oda
+          .AddRow("baba,aba,oda")
+      // DISTINCT(baba,baba,raba,baba)=baba,rada
+          .AddRow("baba,rada")
+          .Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeConcatOfInts) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNullableColumn(STRING, 1));
 
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           CONCAT, INT32, result_block.get(), 0)));
 
@@ -392,16 +383,15 @@ TEST_F(AggregatorsTest, ComputeConcatOfInts) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 3, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<STRING>()
-                                    .AddRow("-5,0,345,2,-2,3,1")
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<STRING>().AddRow("-5,0,345,2,-2,3,1").Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ComputeConcatOfStrings) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNullableColumn(STRING, 1));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           CONCAT, STRING, result_block.get(), 0)));
 
@@ -416,15 +406,15 @@ TEST_F(AggregatorsTest, ComputeConcatOfStrings) {
   ASSERT_TRUE(aggregator->UpdateAggregation(&view.column(0), 2, result_index)
               .is_success());
 
-  scoped_ptr<Block> expected_output(BlockBuilder<STRING>()
-                                    .AddRow("baba,baba,dada,aba,wada")
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<STRING>().AddRow("baba,baba,dada,aba,wada").Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ResetSetsAllResultsToNulls) {
-  scoped_ptr<Block> result_block(EmptyBlockWithSingleNullableColumn(INT64, 4));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<Block> result_block(
+      EmptyBlockWithSingleNullableColumn(INT64, 4));
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           MIN, INT64, result_block.get(), 0)));
 
@@ -436,21 +426,20 @@ TEST_F(AggregatorsTest, ResetSetsAllResultsToNulls) {
               .is_success());
   aggregator->Reset();
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(__)
-                                    .AddRow(__)
-                                    .AddRow(__)
-                                    .AddRow(__)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(BlockBuilder<INT64>()
+                                             .AddRow(__)
+                                             .AddRow(__)
+                                             .AddRow(__)
+                                             .AddRow(__)
+                                             .Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ResetSetsAllCountResultsToZero) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT64, 1));
-  scoped_ptr<ColumnAggregator> aggregator(
-      SucceedOrDie(ColumnAggregatorFactory().CreateCountAggregator(
-          result_block.get(), 0)));
+  std::unique_ptr<ColumnAggregator> aggregator(SucceedOrDie(
+      ColumnAggregatorFactory().CreateCountAggregator(result_block.get(), 0)));
 
   View view(TupleSchema::Singleton("", INT64, NULLABLE));
   const int64 input[] = { -5, 0, 4, 4 };
@@ -460,17 +449,16 @@ TEST_F(AggregatorsTest, ResetSetsAllCountResultsToZero) {
               .is_success());
   aggregator->Reset();
 
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(0)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(0).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ResetWorksOnStringResultColumn) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNullableColumn(STRING, 4));
 
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           MAX, STRING, result_block.get(), 0)));
 
@@ -490,19 +478,19 @@ TEST_F(AggregatorsTest, ResetWorksOnStringResultColumn) {
               .is_success());
 
   // All results are from the second update.
-  scoped_ptr<Block> expected_output(BlockBuilder<STRING>()
-                                    .AddRow("aba")
-                                    .AddRow("baba")
-                                    .AddRow("ada")
-                                    .AddRow("wada")
-                                    .Build());
+  std::unique_ptr<Block> expected_output(BlockBuilder<STRING>()
+                                             .AddRow("aba")
+                                             .AddRow("baba")
+                                             .AddRow("ada")
+                                             .AddRow("wada")
+                                             .Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, ResetDistinctAggregationDiscardsOldDistinctValues) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(INT64, 1));
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateDistinctCountAggregator(
           STRING, result_block.get(), 0)));
 
@@ -522,14 +510,13 @@ TEST_F(AggregatorsTest, ResetDistinctAggregationDiscardsOldDistinctValues) {
               .is_success());
 
   // Overall 3 distinct strings in the second input column.
-  scoped_ptr<Block> expected_output(BlockBuilder<INT64>()
-                                    .AddRow(3)
-                                    .Build());
+  std::unique_ptr<Block> expected_output(
+      BlockBuilder<INT64>().AddRow(3).Build());
   EXPECT_VIEWS_EQUAL(expected_output->view(), result_block->view());
 }
 
 TEST_F(AggregatorsTest, NotSupportedAggregationDetected) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNullableColumn(STRING, 1));
 
   FailureOrOwned<ColumnAggregator> status =
@@ -539,7 +526,7 @@ TEST_F(AggregatorsTest, NotSupportedAggregationDetected) {
 }
 
 TEST_F(AggregatorsTest, NotSupportedCountOutputTypeDetected) {
-  scoped_ptr<Block> result_block(
+  std::unique_ptr<Block> result_block(
       EmptyBlockWithSingleNotNullableColumn(DATETIME, 1));
   FailureOrOwned<ColumnAggregator> status =
       ColumnAggregatorFactory().CreateCountAggregator(result_block.get(), 0);
@@ -553,10 +540,10 @@ TEST_F(AggregatorsTest, UpdateStringAggregationReturnsErrorWhenOutOfMemory) {
   // Pass enough memory to allocate a block, but not enough to update
   // aggregation.
   MemoryLimit memory_limit(32);
-  scoped_ptr<Block> result_block(new Block(schema, &memory_limit));
+  std::unique_ptr<Block> result_block(new Block(schema, &memory_limit));
   CHECK(result_block->Reallocate(1));
 
-  scoped_ptr<ColumnAggregator> aggregator(
+  std::unique_ptr<ColumnAggregator> aggregator(
       SucceedOrDie(ColumnAggregatorFactory().CreateAggregator(
           MAX, STRING, result_block.get(), 0)));
 

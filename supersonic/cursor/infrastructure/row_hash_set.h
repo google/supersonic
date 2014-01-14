@@ -18,6 +18,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -66,16 +68,25 @@ class RowHashSet {
 
   ~RowHashSet();
 
-  // All columns are key.
   explicit RowHashSet(const TupleSchema& block_schema,
                       BufferAllocator* const allocator);
+
+  RowHashSet(const TupleSchema& block_schema,
+             BufferAllocator* const allocator,
+             const BoundSingleSourceProjector* key_selector);
+
+  // All columns are key.
+  RowHashSet(const TupleSchema& block_schema,
+             BufferAllocator* const allocator,
+             int64 max_unique_keys_in_result);
 
   // Takes ownership of a SingleSourceProjector that indicates the subset of
   // internal block's columns that are key columns. It must be bound to block's
   // schema.
   RowHashSet(const TupleSchema& block_schema,
              BufferAllocator* const allocator,
-             const BoundSingleSourceProjector* key_selector);
+             const BoundSingleSourceProjector* key_selector,
+             int64 max_unique_keys_in_result);
 
   // Ensures that the hash set has capacity for at least the specified
   // number of rows. Returns false on OOM. Using this method may reduce
@@ -235,7 +246,7 @@ class FindResult {
  private:
   rowid_t* mutable_row_ids() { return row_ids_.get(); }
 
-  scoped_array<rowid_t> row_ids_;
+  std::unique_ptr<rowid_t[]> row_ids_;
   rowcount_t row_ids_size_;
 
   friend class RowHashSetImpl;
@@ -294,7 +305,7 @@ class FindMultiResult {
   }
 
   rowcount_t query_row_count_;
-  scoped_array<rowid_t> row_ids_;
+  std::unique_ptr<rowid_t[]> row_ids_;
   const EqualRowIdsLink* equal_row_ids_;
 
   friend class RowHashSetImpl;

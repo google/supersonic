@@ -19,12 +19,10 @@
 
 #include <map>
 using std::map;
-using std::multimap;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -37,16 +35,16 @@ using std::vector;
 #include "supersonic/base/infrastructure/types.h"
 #include "supersonic/base/memory/arena.h"
 #include "supersonic/proto/supersonic.pb.h"
-#include "supersonic/utils/shared_ptr.h"
+#include <memory>
 
 namespace supersonic {
 
 class EnumDefinition {
  public:
   EnumDefinition();
-  FailureOrVoid AddEntry(const int64 number, StringPiece name);
-  FailureOr<StringPiece> NumberToName(int64 number) const;
-  FailureOr<int64> NameToNumber(StringPiece name) const;
+  FailureOrVoid AddEntry(const int32 number, StringPiece name);
+  FailureOr<StringPiece> NumberToName(int32 number) const;
+  FailureOr<int32> NameToNumber(StringPiece name) const;
   size_t entry_count() const;
   static FailureOrVoid VerifyEquals(const EnumDefinition& a,
                                     const EnumDefinition& b);
@@ -56,9 +54,9 @@ class EnumDefinition {
    public:
     explicit Rep(BufferAllocator* buffer_allocator);
     void CopyFrom(const Rep& other);
-    FailureOrVoid Add(const int64 number, StringPiece name);
-    FailureOr<StringPiece> NumberToName(int64 number) const;
-    FailureOr<int64> NameToNumber(StringPiece name) const;
+    FailureOrVoid Add(const int32 number, StringPiece name);
+    FailureOr<StringPiece> NumberToName(int32 number) const;
+    FailureOr<int32> NameToNumber(StringPiece name) const;
     size_t entry_count() const { return name_to_number_.size(); }
     BufferAllocator* buffer_allocator() const { return buffer_allocator_; }
 
@@ -67,8 +65,8 @@ class EnumDefinition {
    private:
     BufferAllocator* const buffer_allocator_;
     Arena arena_;
-    map<StringPiece, int64> name_to_number_;
-    map<int64, StringPiece> number_to_name_;
+    map<StringPiece, int32> name_to_number_;
+    map<int32, StringPiece> number_to_name_;
     DISALLOW_COPY_AND_ASSIGN(Rep);
   };
   shared_ptr<Rep> rep_;
@@ -109,6 +107,7 @@ class Attribute {
     DCHECK_EQ(ENUM, type_);
     return enum_definition_;
   }
+
  private:
   string name_;
   DataType type_;
@@ -165,7 +164,8 @@ class TupleSchema {
     }
 
     int LookupAttributePosition(const string& attribute_name) const {
-      map<string, int>::const_iterator i = attribute_names_.find(attribute_name);
+      map<string, int>::const_iterator i = attribute_names_.find(
+          attribute_name);
       return (i == attribute_names_.end()) ? -1 : i->second;
     }
 
@@ -219,8 +219,17 @@ class TupleSchema {
     for (int i = 0; i < a.attribute_count(); i++) {
       const Attribute& a_attr = a.attribute(i);
       const Attribute& b_attr = b.attribute(i);
-      if (a_attr.type() != b_attr.type() ||
-          a_attr.is_nullable() != b_attr.is_nullable() ||
+      if (a_attr.type() != b_attr.type()) {
+        return false;
+      }
+      if (a_attr.type() == ENUM) {
+        FailureOrVoid enums_equal = EnumDefinition::VerifyEquals(
+            a_attr.enum_definition(), b_attr.enum_definition());
+        if (enums_equal.is_failure()) {
+          return false;
+        }
+      }
+      if (a_attr.is_nullable() != b_attr.is_nullable() ||
           (check_names && (a_attr.name() != b_attr.name()))) {
         return false;
       }

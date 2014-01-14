@@ -16,8 +16,9 @@
 
 #include "supersonic/expression/infrastructure/basic_bound_expression.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/base/exception/result.h"
 #include "supersonic/base/infrastructure/tuple_schema.h"
@@ -62,12 +63,10 @@ class BasicBoundExpressionTest : public ::testing::Test {
   template<DataType data_type>
   void TestGetConstantBoundExpressionValue(
       typename TypeTraits<data_type>::hold_type value) {
-    scoped_ptr<BoundExpression> expression(SucceedOrDie(
-        InitBasicExpression(
-            15,
-            new BoundConstExpression<data_type>(
-                HeapBufferAllocator::Get(), value),
-            HeapBufferAllocator::Get())));
+    std::unique_ptr<BoundExpression> expression(SucceedOrDie(
+        InitBasicExpression(15, new BoundConstExpression<data_type>(
+                                    HeapBufferAllocator::Get(), value),
+                            HeapBufferAllocator::Get())));
     bool is_null;
     FailureOr<typename TypeTraits<data_type>::hold_type> result =
         GetConstantBoundExpressionValue<data_type>(
@@ -104,7 +103,7 @@ class BasicBoundExpressionTest : public ::testing::Test {
   }
 
   void TestResolve(BoundExpression* expression_ptr, const string& description) {
-    scoped_ptr<BoundExpression> expression(expression_ptr);
+    std::unique_ptr<BoundExpression> expression(expression_ptr);
     EXPECT_EQ(description,
               expression->result_schema().GetHumanReadableSpecification());
   }
@@ -112,7 +111,7 @@ class BasicBoundExpressionTest : public ::testing::Test {
   void TestreferredAttributeNames(
       BoundExpression* expression_ptr,
       const set<string>& exprected_referred_attribute_names) {
-    scoped_ptr<BoundExpression> expression(expression_ptr);
+    std::unique_ptr<BoundExpression> expression(expression_ptr);
     EXPECT_EQ(exprected_referred_attribute_names,
               expression->referred_attribute_names());
   }
@@ -203,7 +202,7 @@ TEST_F(BasicBoundExpressionTest, TestCollectReferredAttributeNamesOnTernary) {
 
 TEST_F(BasicBoundExpressionTest, GetConstantBoundExpressionValueNotNull) {
   bool is_null;
-  scoped_ptr<BoundExpression> expression(GetTrue());
+  std::unique_ptr<BoundExpression> expression(GetTrue());
   FailureOr<bool> result =
       GetConstantBoundExpressionValue<BOOL>(expression.get(), &is_null);
   EXPECT_TRUE(result.is_success());
@@ -225,7 +224,7 @@ TEST_F(BasicBoundExpressionTest, GetConstantBoundExpressionValueNotNull) {
 
 TEST_F(BasicBoundExpressionTest, GetConstantBoundExpressionValueNull) {
   bool is_null;
-  scoped_ptr<BoundExpression> expression(GetNull());
+  std::unique_ptr<BoundExpression> expression(GetNull());
   FailureOr<bool> result =
       GetConstantBoundExpressionValue<BOOL>(expression.get(), &is_null);
   EXPECT_TRUE(result.is_success());
@@ -234,7 +233,7 @@ TEST_F(BasicBoundExpressionTest, GetConstantBoundExpressionValueNull) {
 
 TEST_F(BasicBoundExpressionTest, GetConstantExpressionValueNotNull) {
   bool is_null;
-  scoped_ptr<const Expression> expression(ConstBool(true));
+  std::unique_ptr<const Expression> expression(ConstBool(true));
   FailureOr<bool> result =
       GetConstantExpressionValue<BOOL>(*expression, &is_null);
   EXPECT_TRUE(result.is_success());
@@ -250,7 +249,7 @@ TEST_F(BasicBoundExpressionTest, GetConstantExpressionValueNotNull) {
 
 TEST_F(BasicBoundExpressionTest, GetConstantExpressionValueNull) {
   bool is_null;
-  scoped_ptr<const Expression> expression(Null(BOOL));
+  std::unique_ptr<const Expression> expression(Null(BOOL));
   FailureOr<bool> result =
       GetConstantExpressionValue<BOOL>(*expression, &is_null);
   EXPECT_TRUE(result.is_success());
@@ -259,7 +258,7 @@ TEST_F(BasicBoundExpressionTest, GetConstantExpressionValueNull) {
 
 TEST_F(BasicBoundExpressionTest, GetConstantExpressionValueNotConst) {
   bool is_null;
-  scoped_ptr<const Expression> expression(NamedAttribute("any"));
+  std::unique_ptr<const Expression> expression(NamedAttribute("any"));
   FailureOr<bool> result =
       GetConstantExpressionValue<BOOL>(*expression, &is_null);
   EXPECT_FALSE(result.is_success());

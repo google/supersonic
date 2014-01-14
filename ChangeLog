@@ -1,16 +1,55 @@
+News for version 0.9.4 [released: 2014-01-02]
+*  BUG ID  6:
+autogen.sh fails on Mac OS X 10.6.8
+*  BUG ID  7: make fails on missing file in .deps directory (Mac OS X 10.6.8)
+*  BUG ID 10:
+Install step does not install supersonic/cursor/base/cursor_transformer.h
+*  BUG ID 11:
+shared_ptr declared in global scope
+*  Missing field initialization in RowHashSet.
+Bug reported by: st xiao
+https://groups.google.com/forum/?fromgroups=#!topic/supersonic-query-engine/UPqZLCuHxE0
+
+Features:
+* Significant cleanup of dependencies:
+GOOD news: Supersonic builds on OSX and should be much easier to build it on other
+systems.
+BAD news:  C++0x compatible compiler is required (e.g. >=gcc-4.6).
+* Added support for enums to Supersonic:
+* adds core support for the enum type, that consists of (id, value) pairs.
+* adds support for parsing enums (by name) from strings.
+* adds support for printing enums to strings (when dumping views for
+debugging and testing).
+* Extended aggegation support: Adding the functionality for limiting number of
+rows in the result by giving a bound on the unique number of key rows seen in
+input order. All the key combinations which doesn't fall in this bound get
+aggregated in one single row at last hash index.
+Affected APIs:
+supersonic/cursor/core/aggregate.h
+supersonic/cursor/infrastructure/row_hash_set.h
+* Fixed potential undefined-behaviour issue in:
+supersonic/expression/core/elementary_bound_expressions.cc
+* Fixed bug in supersonic/expression/core/elementary_bound_expressions.cc
+* hash-join optimization: for empty left-hand-side, don't scan the
+right-hand-side.
+* Fixed Permutation::permutation() behavior in case of empty permutation.
+
+
+-------------------------------------------------------------------------------
 News for version 0.9.3 [released: 2013-01-10]
 
 Issues fixes:
- * BUG ID 9: [https://code.google.com/p/supersonic/issues/detail?id=9]
-   fastmemcmp_inlined is incorrect
- * BUG ID 8: [https://code.google.com/p/supersonic/issues/detail?id=8]
-   make file under vmware virtual machine
- * TupleSchema complexity: Projection had O(n^2) complexity on attribute count.
+* BUG ID 9: [https://code.google.com/p/supersonic/issues/detail?id=9]
+fastmemcmp_inlined is incorrect
+* BUG ID 8: [https://code.google.com/p/supersonic/issues/detail?id=8]
+make file under vmware virtual machine
+* TupleSchema complexity: Projection had O(n^2) complexity on attribute count.
 
 Features:
- * Cleanup of ViewCopier interface.
- * Supersonic build in -O3 mode and without -g (no debuging symbols) by default.
- * guide/join.cc example is simpler now.
+* Cleanup of ViewCopier interface.
+* Supersonic build in -O3 mode and without -g (no debuging symbols) by default.
+* guide/join.cc example is simpler now.
+
 
 --------------------------------------------------------------------------------
 News for version 0.9.2:
@@ -20,31 +59,32 @@ feature with utilities for writing benchmarks with some examples. The library
 now also uses Googlemock for testing.
 
 There have also been some bug fixes:
- - BUG ID: 5 [https://code.google.com/p/supersonic/issues/detail?id=5]
-   Can't link libboost_system when building [FIXED]
+- BUG ID: 5 [https://code.google.com/p/supersonic/issues/detail?id=5]
+Can't link libboost_system when building [FIXED]
 
 Other fixes:
- - Fixed a temporary file bug which caused Supersonic to crash on successful
- file creation.
+- Fixed a temporary file bug which caused Supersonic to crash on successful
+file creation.
 
 
 --------------------------------------------------------------------------------
 Supersonic Query Engine 0.9.1:
 
 Several build bug fixes:
- - BUG ID: 1 [https://code.google.com/p/supersonic/issues/detail?id=1]
-   gcc4.6 doesn't support "-R" linker flag; FIXED
+- BUG ID: 1 [https://code.google.com/p/supersonic/issues/detail?id=1]
+gcc4.6 doesn't support "-R" linker flag; FIXED
 
- - BUG ID: 2 [https://code.google.com/p/supersonic/issues/detail?id=2]
-   no .gitignore; ADDED
+- BUG ID: 2 [https://code.google.com/p/supersonic/issues/detail?id=2]
+no .gitignore; ADDED
 
- - BUG ID: 3 [https://code.google.com/p/supersonic/issues/detail?id=3]
-   string_bound_expressions: gcc4.6 reports a "taking address of temporary"
-   error; FIXED
+- BUG ID: 3 [https://code.google.com/p/supersonic/issues/detail?id=3]
+string_bound_expressions: gcc4.6 reports a "taking address of temporary"
+error; FIXED
 
 Other fixes:
- - added conditional Automake flag for determining the archiver - flag is
-   required in AM1.12, and not supported by older AM's
+- added conditional Automake flag for determining the archiver - flag is
+required in AM1.12, and not supported by older AM's
+
 
 --------------------------------------------------------------------------------
 Supersonic Query Engine 0.9.0:

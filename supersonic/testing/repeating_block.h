@@ -18,6 +18,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/result.h"
@@ -44,7 +46,7 @@ class RepeatingBlockOperation : public BasicOperation {
   // Returns NULL if block can't be created.
   Block* CreateResizedBlock(Block* original_block, rowcount_t min_num_rows);
 
-  scoped_ptr<Block> resized_block_;
+  std::unique_ptr<Block> resized_block_;
   rowcount_t total_num_rows_;
   DISALLOW_COPY_AND_ASSIGN(RepeatingBlockOperation);
 };

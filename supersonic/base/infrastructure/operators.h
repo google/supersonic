@@ -21,18 +21,15 @@
 
 #include <stddef.h>
 
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
+#include <type_traits>
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/template_util.h"
-#include "supersonic/utils/type_traits.h"
 #include "supersonic/proto/supersonic.pb.h"
 #include "supersonic/utils/strings/stringpiece.h"
 #include "supersonic/utils/endian.h"
@@ -238,9 +235,9 @@ struct Less {
   bool operator()(const T1& a, const T2& b) const {
     // Disabling mixed-type DataType vs other-type comparisons. See the comment
     // above.
-    COMPILE_ASSERT((!base::is_same<T1, DataType>::value &&
-                   !base::is_same<T2, DataType>::value),
-                   Less_for_DataType_and_other_type_is_disabled);
+    static_assert(!std::is_same<T1, DataType>::value &&
+                  !std::is_same<T2, DataType>::value,
+                  "Less for DataType and other type is disabled");
     return a < b;
   }
 
@@ -340,18 +337,21 @@ struct Hash {
   template<typename T>
   size_t operator()(const T& v) const {
     // Handle enums by conversion to the appropriate integral type.
-    hash<typename base::if_<
-           base::is_enum<T>::value,
-           typename base::if_<sizeof(T) <= sizeof(int32), int32, int64>::type,
+    std::hash<typename std::conditional<
+           std::is_enum<T>::value,
+           typename std::conditional<
+               sizeof(T) <= sizeof(int32),
+               int32,
+               int64>::type,
            T>::type> hasher;
     return hasher(v);
   }
   size_t operator()(const float& v) const {
-    hash<int32> hasher;
+    std::hash<int32> hasher;
     return hasher(*reinterpret_cast<const int32*>(&v));
   }
   size_t operator()(const double& v) const {
-    hash<int64> hasher;
+    std::hash<int64> hasher;
     return hasher(*reinterpret_cast<const int64*>(&v));
   }
   size_t operator()(const bool& v) const {

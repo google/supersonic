@@ -17,6 +17,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/stringprintf.h"
 #include "supersonic/base/exception/result.h"
@@ -74,11 +76,11 @@ class LimitCursorTest : public testing::Test {
 TEST_F(LimitCursorTest, AskForLess) {
   SetupInput(1024);
 
-  scoped_ptr<Operation> limit(Limit(0, 100, input_));
+  std::unique_ptr<Operation> limit(Limit(0, 100, input_));
 
   FailureOrOwned<Cursor> create_cursor = limit->CreateCursor();
   ASSERT_TRUE(create_cursor.is_success());
-  scoped_ptr<Cursor> limit_cursor(create_cursor.release());
+  std::unique_ptr<Cursor> limit_cursor(create_cursor.release());
   ResultView result = limit_cursor->Next(50);
   ASSERT_TRUE(result.has_data());
   EXPECT_EQ(50, result.view().row_count());
@@ -95,11 +97,11 @@ TEST_F(LimitCursorTest, AskForLess) {
 // with row_count > limit.
 TEST_F(LimitCursorTest, AskForMore) {
   SetupInput(1024);
-  scoped_ptr<Operation> limit(Limit(0, 100, input_));
+  std::unique_ptr<Operation> limit(Limit(0, 100, input_));
 
   FailureOrOwned<Cursor> create_cursor = limit->CreateCursor();
   ASSERT_TRUE(create_cursor.is_success());
-  scoped_ptr<Cursor> limit_cursor(create_cursor.release());
+  std::unique_ptr<Cursor> limit_cursor(create_cursor.release());
   ResultView result = limit_cursor->Next(120);
   ASSERT_TRUE(result.has_data());
   EXPECT_EQ(100, result.view().row_count());
@@ -112,11 +114,11 @@ TEST_F(LimitCursorTest, AskForMore) {
 // with row_count > available input.
 TEST_F(LimitCursorTest, AskForMoreThanInput) {
   SetupInput(1024);
-  scoped_ptr<Operation> limit(Limit(0, 2048, input_));
+  std::unique_ptr<Operation> limit(Limit(0, 2048, input_));
 
   FailureOrOwned<Cursor> create_cursor = limit->CreateCursor();
   ASSERT_TRUE(create_cursor.is_success());
-  scoped_ptr<Cursor> limit_cursor(create_cursor.release());
+  std::unique_ptr<Cursor> limit_cursor(create_cursor.release());
   ResultView result = limit_cursor->Next(1536);
   ASSERT_TRUE(result.has_data());
   EXPECT_EQ(1024, result.view().row_count());
@@ -127,11 +129,11 @@ TEST_F(LimitCursorTest, AskForMoreThanInput) {
 
 TEST_F(LimitCursorTest, LimitWithOffset) {
   SetupInput(1024);
-  scoped_ptr<Operation> limit(Limit(100, 200, input_));
+  std::unique_ptr<Operation> limit(Limit(100, 200, input_));
 
   FailureOrOwned<Cursor> create_cursor = limit->CreateCursor();
   ASSERT_TRUE(create_cursor.is_success());
-  scoped_ptr<Cursor> limit_cursor(create_cursor.release());
+  std::unique_ptr<Cursor> limit_cursor(create_cursor.release());
   ResultView result = limit_cursor->Next(250);
   ASSERT_TRUE(result.has_data());
   EXPECT_EQ(200, result.view().row_count());

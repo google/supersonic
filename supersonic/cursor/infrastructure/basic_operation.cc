@@ -16,7 +16,7 @@
 #include "supersonic/cursor/infrastructure/basic_operation.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <typeinfo>
 
 #include <glog/logging.h>

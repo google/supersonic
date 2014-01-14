@@ -18,14 +18,14 @@
 #include <stddef.h>
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/base/infrastructure/tuple_schema.h"
 #include "supersonic/base/infrastructure/types.h"
 
 namespace supersonic {
 
-void ComparableTupleSchema::AppendToStream(ostream *s) const {
+void ComparableTupleSchema::AppendToStream(std::ostream *s) const {
   view_printer_.AppendSchemaToStream(schema_, s);
 }
 
@@ -102,10 +102,10 @@ testing::AssertionResult TupleSchemasEqual(
   ComparableTupleSchema b_comparable(b);
   testing::AssertionResult result = a_comparable.Compare(b_comparable);
   if (!result) {
-    result << endl
-        << "in TupleSchemasEqual(" << a_str << ", " << b_str << ")"
-        << endl << a_str << " = " << a_comparable
-        << endl << b_str << " = " << b_comparable;
+    result << std::endl
+           << "in TupleSchemasEqual(" << a_str << ", " << b_str << ")"
+        << std::endl << a_str << " = " << a_comparable
+        << std::endl << b_str << " = " << b_comparable;
   }
   return result;
 }
@@ -117,10 +117,10 @@ testing::AssertionResult TupleSchemasStrictEqual(
   ComparableTupleSchema b_comparable(b);
   testing::AssertionResult result = a_comparable.CompareStrict(b_comparable);
   if (!result) {
-    result << endl
+    result << std::endl
         << "in TupleSchemasStrictEqual(" << a_str << ", " << b_str << ")"
-        << endl << a_str << " = " << a_comparable
-        << endl << b_str << " = " << b_comparable;
+        << std::endl << a_str << " = " << a_comparable
+        << std::endl << b_str << " = " << b_comparable;
   }
   return result;
 }

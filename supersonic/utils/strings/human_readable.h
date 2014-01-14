@@ -7,10 +7,8 @@
 #define STRINGS_HUMAN_READABLE_H__
 
 #include <functional>
-using std::binary_function;
-using std::less;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/basictypes.h"
 #include "supersonic/utils/integral_types.h"

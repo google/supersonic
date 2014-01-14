@@ -16,6 +16,8 @@
 //
 // File containing several examples of operation benchmarks.
 
+#include <memory>
+
 #include "supersonic/benchmark/examples/common_utils.h"
 #include "supersonic/cursor/core/merge_union_all.h"
 #include "supersonic/supersonic.h"
@@ -48,11 +50,10 @@ Operation* CreateGroup() {
                    random.Rand32());
   }
 
-  scoped_ptr<Operation> group(GroupAggregate(
+  std::unique_ptr<Operation> group(GroupAggregate(
       ProjectAttributeAt(0),
       (new AggregationSpecification)->AddAggregation(MAX, "col1", "col1_maxes"),
-      NULL,
-      new Table(builder.Build())));
+      NULL, new Table(builder.Build())));
   return group.release();
 }
 
@@ -96,10 +97,10 @@ Operation* CreateMergeUnion() {
 }
 
 Operation* CreateHashJoin() {
-  scoped_ptr<Operation> lhs(CreateSort(kInputRowCount));
-  scoped_ptr<Operation> rhs(CreateGroup());
+  std::unique_ptr<Operation> lhs(CreateSort(kInputRowCount));
+  std::unique_ptr<Operation> rhs(CreateGroup());
 
-  scoped_ptr<CompoundMultiSourceProjector> projector(
+  std::unique_ptr<CompoundMultiSourceProjector> projector(
       new CompoundMultiSourceProjector());
   projector->add(0, ProjectAllAttributes("L."));
   projector->add(1, ProjectAllAttributes("R."));
@@ -126,37 +127,34 @@ Operation* SimpleTreeExample() {
                    StringPrintf("Name%lld", i % kGroupNum));
   }
 
-  scoped_ptr<Operation> named_columns(
-      Project(ProjectRename(
-          Container("name", "salary", "intern", "age", "boss_name"),
-          ProjectAllAttributes()),
+  std::unique_ptr<Operation> named_columns(Project(
+      ProjectRename(Container("name", "salary", "intern", "age", "boss_name"),
+                    ProjectAllAttributes()),
       new Table(builder.Build())));
 
-  scoped_ptr<Operation> filter1(Filter(NamedAttribute("intern"),
-                                       ProjectAllAttributes(),
-                                       named_columns.release()));
-  scoped_ptr<Operation> compute(
-      Compute((new CompoundExpression)
-                  ->Add(NamedAttribute("name"))
-                  ->Add(NamedAttribute("intern"))
-                  ->Add(NamedAttribute("boss_name"))
-                  ->AddAs("ratio", Divide(NamedAttribute("salary"),
-                                          NamedAttribute("age"))),
-              filter1.release()));
+  std::unique_ptr<Operation> filter1(Filter(NamedAttribute("intern"),
+                                            ProjectAllAttributes(),
+                                            named_columns.release()));
+  std::unique_ptr<Operation> compute(Compute(
+      (new CompoundExpression)
+          ->Add(NamedAttribute("name"))
+          ->Add(NamedAttribute("intern"))
+          ->Add(NamedAttribute("boss_name"))
+          ->AddAs("ratio",
+                  Divide(NamedAttribute("salary"), NamedAttribute("age"))),
+      filter1.release()));
 
-  scoped_ptr<Operation> group(GroupAggregate(
+  std::unique_ptr<Operation> group(GroupAggregate(
       ProjectNamedAttribute("boss_name"),
       (new AggregationSpecification)->AddAggregation(MAX, "ratio", "max_ratio"),
-      NULL,
-      compute.release()));
+      NULL, compute.release()));
 
   // Let every fourth pass.
-  scoped_ptr<Operation> filter2(Filter(
-      Equal(ConstInt32(0), Modulus(Sequence(), ConstInt32(4))),
-      ProjectAllAttributes(),
-      new Table(builder.Build())));
+  std::unique_ptr<Operation> filter2(
+      Filter(Equal(ConstInt32(0), Modulus(Sequence(), ConstInt32(4))),
+             ProjectAllAttributes(), new Table(builder.Build())));
 
-  scoped_ptr<CompoundMultiSourceProjector> projector(
+  std::unique_ptr<CompoundMultiSourceProjector> projector(
       new CompoundMultiSourceProjector());
   projector->add(0, ProjectAllAttributes("L."));
   projector->add(1, ProjectAllAttributes("R."));

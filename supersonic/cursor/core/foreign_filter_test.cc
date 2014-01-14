@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/foreign_filter.h"
 
+#include <memory>
+
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/base/infrastructure/types.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -182,14 +184,14 @@ TEST_F(ForeignFilterTest, AlternatingMatchingWithSpyTransform) {
   Cursor* filter = sample_filter_builder_.BuildCursor();
   Cursor* input = sample_input_builder_.BuildCursor();
 
-  scoped_ptr<Cursor> foreign(BoundForeignFilter(0, 0, filter, input));
+  std::unique_ptr<Cursor> foreign(BoundForeignFilter(0, 0, filter, input));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   foreign->ApplyToChildren(spy_transformer.get());
   foreign.reset(spy_transformer->Transform(foreign.release()));
 
-  scoped_ptr<Cursor> expected_result(sample_output_builder_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(sample_output_builder_.BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_result.release(), foreign.release());
 }
 
@@ -270,9 +272,9 @@ TEST_F(ForeignFilterTest, TransformTest) {
   Cursor* filter = sample_filter_builder_.BuildCursor();
   Cursor* input = sample_input_builder_.BuildCursor();
 
-  scoped_ptr<Cursor> foreign(BoundForeignFilter(0, 0, filter, input));
+  std::unique_ptr<Cursor> foreign(BoundForeignFilter(0, 0, filter, input));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   foreign->ApplyToChildren(spy_transformer.get());
 

@@ -17,10 +17,9 @@
 #include "supersonic/expression/core/elementary_bound_expressions.h"
 
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 

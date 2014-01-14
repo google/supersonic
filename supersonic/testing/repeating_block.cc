@@ -16,14 +16,10 @@
 #include "supersonic/testing/repeating_block.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -42,7 +38,7 @@ namespace supersonic {
 
 Block* ReplicateBlock(const Block& source, rowcount_t requested_row_count,
                       BufferAllocator* allocator) {
-  scoped_ptr<Block> new_block(new Block(source.schema(), allocator));
+  std::unique_ptr<Block> new_block(new Block(source.schema(), allocator));
   if (!new_block->Reallocate(requested_row_count)) return NULL;
   ViewCopier copier(source.schema(), true);
   rowcount_t rows_copied = 0;
@@ -115,7 +111,7 @@ FailureOrOwned<Cursor> RepeatingBlockOperation::CreateCursor() const {
 
 Block* RepeatingBlockOperation::CreateResizedBlock(Block* source,
                                                    rowcount_t min_num_rows) {
-  scoped_ptr<Block> source_deleter(source);
+  std::unique_ptr<Block> source_deleter(source);
   size_t num_input_rows = source->row_capacity();
   if (num_input_rows >= min_num_rows) {
     // No need to create new block, this one has enough rows.

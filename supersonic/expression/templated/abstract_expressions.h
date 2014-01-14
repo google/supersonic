@@ -20,7 +20,7 @@
 #define SUPERSONIC_EXPRESSION_TEMPLATED_ABSTRACT_EXPRESSIONS_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 

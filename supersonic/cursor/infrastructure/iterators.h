@@ -22,14 +22,10 @@
 #include <stddef.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include <gflags/gflags.h>
 #include "supersonic/utils/integral_types.h"
@@ -200,7 +196,7 @@ class CursorProxy {
   void AppendDebugDescription(string* target) const;
 
  private:
-  scoped_ptr<Cursor> cursor_;
+  std::unique_ptr<Cursor> cursor_;
   const bool is_waiting_on_barrier_supported_;
   string terminal_debug_description_;
   ResultView cursor_status_;

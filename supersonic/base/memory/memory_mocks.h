@@ -20,7 +20,7 @@
 #define SUPERSONIC_BASE_MEMORY_MEMORY_MOCKS_H_
 
 #include <list>
-using std::list;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/base/memory/memory.h"
 #include "gmock/gmock.h"

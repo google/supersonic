@@ -19,7 +19,7 @@
 #define SUPERSONIC_BASE_EXCEPTION_EXCEPTION_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/macros.h"

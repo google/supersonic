@@ -20,7 +20,7 @@
 #define SUPERSONIC_OPENSOURCE_FILE_FILE_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/macros.h"

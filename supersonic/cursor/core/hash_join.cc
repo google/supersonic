@@ -15,11 +15,11 @@
 
 #include "supersonic/cursor/core/hash_join.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -113,8 +113,10 @@ class HashIndexOnMaterializedCursor : public LookupIndex {
 
   FailureOr<bool> MaterializeInputAndBuildIndex(Cursor* input);
 
+  bool empty() const { return index_.size() == 0; }
+
  private:
-  // Subclass of LookupIndexCursor returned by MultiLookup; implemements
+  // Subclass of LookupIndexCursor returned by MultiLookup; implements
   // matching logic.
   template <JoinType join_type>
   class ResultCursor;
@@ -137,12 +139,12 @@ class HashIndexOnMaterializedCursor : public LookupIndex {
   RowHashSetType index_;
 
   // Set to NULL once the index is materialized.
-  scoped_ptr<Cursor> input_;
+  std::unique_ptr<Cursor> input_;
 
   // Placeholders for ResultCursor's data (see its doc). Scratchpads allocated
   // here to avoid repeated allocation in each call to MultiLookup().
   mutable Block result_cursor_block_;
-  mutable scoped_array<rowid_t> result_cursor_query_ids_;
+  mutable std::unique_ptr<rowid_t[]> result_cursor_query_ids_;
 
   template <JoinType join_type>
   friend class ResultCursor;
@@ -156,9 +158,8 @@ class HashIndexMaterializer : public LookupIndexBuilder {
       JoinType join_type,
       BufferAllocator* const allocator,
       const BoundSingleSourceProjector* key_selector) {
-    scoped_ptr<HashIndexMaterializer> materializer(
-        new HashIndexMaterializer(
-            input, join_type, allocator, key_selector));
+    std::unique_ptr<HashIndexMaterializer> materializer(
+        new HashIndexMaterializer(input, join_type, allocator, key_selector));
     PROPAGATE_ON_FAILURE(materializer->Init());
     return Success(materializer.release());
   }
@@ -201,8 +202,8 @@ class HashIndexMaterializer : public LookupIndexBuilder {
     return Success();
   }
 
-  scoped_ptr<Cursor> input_;
-  scoped_ptr<HashIndexOnMaterializedCursor<key_uniqueness> > index_;
+  std::unique_ptr<Cursor> input_;
+  std::unique_ptr<HashIndexOnMaterializedCursor<key_uniqueness> > index_;
 };
 
 // The actual hash join implementation.
@@ -210,7 +211,7 @@ class HashJoinCursor : public Cursor {
  public:
   // Takes ownership of lhs_key_selector.
   HashJoinCursor(
-      JoinType join_type,  // Needed only for DCHECK.
+      JoinType join_type,
       BufferAllocator* const allocator,
       const BoundSingleSourceProjector* lhs_key_selector,
       const BoundMultiSourceProjector& result_projector,
@@ -254,10 +255,11 @@ class HashJoinCursor : public Cursor {
       JoinType join_type,
       const BoundMultiSourceProjector& result_projector);
 
-  scoped_ptr<Cursor> lhs_;
-  scoped_ptr<LookupIndexBuilder> rhs_builder_;
-  scoped_ptr<const LookupIndex> rhs_;
-  scoped_ptr<const BoundSingleSourceProjector> lhs_key_selector_;
+  JoinType join_type_;
+  std::unique_ptr<Cursor> lhs_;
+  std::unique_ptr<LookupIndexBuilder> rhs_builder_;
+  std::unique_ptr<const LookupIndex> rhs_;
+  std::unique_ptr<const BoundSingleSourceProjector> lhs_key_selector_;
 
   // Projector from lhs_ to lhs_result_, see below.
   const BoundSingleSourceProjector lhs_result_projector_;
@@ -270,7 +272,7 @@ class HashJoinCursor : public Cursor {
 
   // Projector that sets result_view over final result data from lhs and rhs
   // input - over (lhs_result_, rhs_result.view()) pair; see below.
-  scoped_ptr<BoundMultiSourceProjector> final_result_projector_;
+  std::unique_ptr<BoundMultiSourceProjector> final_result_projector_;
 
   // Combined view over the final result, that is over
   //    (1) projected lhs columns in lhs_result_ above.
@@ -288,7 +290,7 @@ class HashJoinCursor : public Cursor {
   // Specifically, a single call to HashJoinCursor::Next() might not exhaust
   // the cursor of matches and hence the subsequent call should resume where
   // the last left off.
-  scoped_ptr<LookupIndexCursor> matches_;
+  std::unique_ptr<LookupIndexCursor> matches_;
 };
 
 
@@ -309,7 +311,7 @@ HashJoinOperation::HashJoinOperation(
 FailureOrOwned<Cursor> HashJoinOperation::CreateCursor() const {
   Operation* const lhs_operation = child_at(0);
   Operation* const rhs_operation = child_at(1);
-  scoped_ptr<LookupIndex> rhs_lookup_index;
+  std::unique_ptr<LookupIndex> rhs_lookup_index;
 
   FailureOrOwned<Cursor> provided_lhs_cursor = lhs_operation->CreateCursor();
   PROPAGATE_ON_FAILURE(provided_lhs_cursor);
@@ -342,12 +344,9 @@ FailureOrOwned<Cursor> HashJoinOperation::CreateCursor() const {
           &provided_lhs_cursor->schema(), &rhs_builder->schema()));
   PROPAGATE_ON_FAILURE(bound_result_projector);
 
-  scoped_ptr<HashJoinCursor> cursor(new HashJoinCursor(
-      join_type_,
-      buffer_allocator(),
-      bound_lhs_key_selector.release(),
-      *bound_result_projector,
-      rhs_builder.release(),
+  std::unique_ptr<HashJoinCursor> cursor(new HashJoinCursor(
+      join_type_, buffer_allocator(), bound_lhs_key_selector.release(),
+      *bound_result_projector, rhs_builder.release(),
       provided_lhs_cursor.release()));
   PROPAGATE_ON_FAILURE(cursor->Init());
   return Success(cursor.release());
@@ -371,14 +370,15 @@ HashJoinCursor::HashJoinCursor(
     const BoundMultiSourceProjector& result_projector,
     LookupIndexBuilder* rhs,
     Cursor* lhs)
-    : lhs_(lhs),
+    : join_type_(join_type),
+      lhs_(lhs),
       rhs_builder_(rhs),
-      rhs_(NULL),
       lhs_key_selector_(lhs_key_selector),
       lhs_result_projector_(result_projector.GetSingleSourceProjector(0)),
       lhs_result_(lhs_result_projector_.result_schema(), allocator),
       lhs_result_copier_(&lhs_result_projector_, false),
       result_view_(result_projector.result_schema()),
+      lhs_view_(NULL),
       lookup_query_(lhs_key_selector_->result_schema()) {
   DCHECK(lhs_key_selector_->source_schema().EqualByType(lhs->schema()));
 
@@ -456,14 +456,29 @@ ResultView HashJoinCursor::Next(rowcount_t max_row_count) {
         // The cursor of matches is exhausted. The main loop will advance to
         // the next lhs view.
         matches_.reset(NULL);
+        lhs_view_ = NULL;
       } else {
         // TODO(user): handle WAITING_ON_BARRIER.
         LOG(FATAL) << "Unexpected iteration result";
       }
     }
 
+    if (lhs_view_ == NULL) {
+      ResultView lhs_result = lhs_->Next(Cursor::kDefaultRowCount);
+      PROPAGATE_ON_FAILURE(lhs_result);
+      // Early termination if lhs is empty.
+      if (lhs_result.is_eos()) {
+        return ResultView::EOS();
+      } else if (lhs_result.is_waiting_on_barrier()) {
+        return ResultView::WaitingOnBarrier();
+      } else {
+        CHECK(lhs_result.has_data());
+        lhs_view_ = &lhs_result.view();
+      }
+    }
+
     if (rhs_.get() == NULL) {
-      // Right-hand side not yet materialized. Try do it.
+      // Right-hand side not yet materialized.
       FailureOrOwned<LookupIndex> result = rhs_builder_->Build();
       PROPAGATE_ON_FAILURE(result);
       rhs_.reset(result.release());
@@ -474,33 +489,30 @@ ResultView HashJoinCursor::Next(rowcount_t max_row_count) {
         rhs_builder_.reset(NULL);
         DCHECK(lhs_key_selector_->result_schema().EqualByType(
             rhs_->key_selector().result_schema()));
+        // Early termination if rhs is empty in the INNER join.
+        if (rhs_->empty() && join_type_ == INNER) {
+          return ResultView::EOS();
+        }
       }
     }
 
-    // A new lhs view is read only if the current cursor of matches is
-    // exhausted.
-    ResultView lhs_result = lhs_->Next(Cursor::kDefaultRowCount);
-    PROPAGATE_ON_FAILURE(lhs_result);
-    if (lhs_result.has_data()) {
-      lhs_view_ = &lhs_result.view();
-      // Set up lookup_query_ with lhs key columns.
-      lhs_key_selector_->Project(*lhs_view_, &lookup_query_);
-      lookup_query_.set_row_count(lhs_view_->row_count());
-      // Pass lookup_query to LookupIndex.
-      FailureOrOwned<LookupIndexCursor> multi_lookup_result =
-          rhs_->MultiLookup(&lookup_query_);
-      PROPAGATE_ON_FAILURE(multi_lookup_result);
-      matches_.reset(multi_lookup_result.release());
-      if (matches_.get() == NULL) {
-        // Right-hand-side encountered a barrier during materialization.
-        return ResultView::WaitingOnBarrier();
-      }
-    } else if (lhs_result.is_eos()) {
-      return ResultView::EOS();
-    } else {
-      CHECK(lhs_result.is_waiting_on_barrier());
+    // If we got here, we have new data in lhs_view_, and the rhs is
+    // materialized.
+    DCHECK(lhs_view_ != NULL);
+    DCHECK_GT(lhs_view_->row_count(), 0);
+    // Set up lookup_query_ with lhs key columns.
+    lhs_key_selector_->Project(*lhs_view_, &lookup_query_);
+    lookup_query_.set_row_count(lhs_view_->row_count());
+    // Pass lookup_query to LookupIndex.
+    FailureOrOwned<LookupIndexCursor> multi_lookup_result =
+        rhs_->MultiLookup(&lookup_query_);
+    PROPAGATE_ON_FAILURE(multi_lookup_result);
+    matches_.reset(multi_lookup_result.release());
+    if (matches_.get() == NULL) {
+      // Right-hand-side encountered a barrier during materialization.
       return ResultView::WaitingOnBarrier();
     }
+    // Otherwise, continue the loop, and it'll see new matches.
   }
 }
 

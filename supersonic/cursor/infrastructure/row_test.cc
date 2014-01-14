@@ -16,8 +16,9 @@
 
 #include "supersonic/cursor/infrastructure/row.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/testing/block_builder.h"
@@ -28,8 +29,10 @@ namespace supersonic {
 namespace {
 
 TEST(RowTest, ReturnsCorrectData) {
-  scoped_ptr<Block> block(BlockBuilder<INT32, UINT32, INT64>()
-      .AddRow(7, 9, __).AddRow(8, __, 10LL).Build());
+  std::unique_ptr<Block> block(BlockBuilder<INT32, UINT32, INT64>()
+                                   .AddRow(7, 9, __)
+                                   .AddRow(8, __, 10LL)
+                                   .Build());
 
   RowSourceAdapter adapter(block->view(), 1);
   EXPECT_TUPLE_SCHEMAS_EQUAL(block->view().schema(), adapter.schema());

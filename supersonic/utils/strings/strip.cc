@@ -9,25 +9,20 @@
 #include <assert.h>
 #include <string.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/strings/ascii_ctype.h"
 #include "supersonic/utils/strings/stringpiece.h"
 
-string StripPrefixString(StringPiece str, const StringPiece& prefix) {
+string StripPrefixString(StringPiece str, StringPiece prefix) {
   if (str.starts_with(prefix))
     str.remove_prefix(prefix.length());
   return str.as_string();
 }
 
-bool TryStripPrefixString(StringPiece str, const StringPiece& prefix,
+bool TryStripPrefixString(StringPiece str, StringPiece prefix,
                                  string* result) {
   const bool has_prefix = str.starts_with(prefix);
   if (has_prefix)
@@ -36,13 +31,13 @@ bool TryStripPrefixString(StringPiece str, const StringPiece& prefix,
   return has_prefix;
 }
 
-string StripSuffixString(StringPiece str, const StringPiece& suffix) {
+string StripSuffixString(StringPiece str, StringPiece suffix) {
   if (str.ends_with(suffix))
     str.remove_suffix(suffix.length());
   return str.as_string();
 }
 
-bool TryStripSuffixString(StringPiece str, const StringPiece& suffix,
+bool TryStripSuffixString(StringPiece str, StringPiece suffix,
                                  string* result) {
   const bool has_suffix = str.ends_with(suffix);
   if (has_suffix)
@@ -176,7 +171,7 @@ string OutputWithMarkupTagsStripped(const string& s) {
 }
 
 
-int TrimStringLeft(string* s, const StringPiece& remove) {
+int TrimStringLeft(string* s, StringPiece remove) {
   int i = 0;
   while (i < s->size() && memchr(remove.data(), (*s)[i], remove.size())) {
     ++i;
@@ -185,7 +180,7 @@ int TrimStringLeft(string* s, const StringPiece& remove) {
   return i;
 }
 
-int TrimStringRight(string* s, const StringPiece& remove) {
+int TrimStringRight(string* s, StringPiece remove) {
   int i = s->size(), trimmed = 0;
   while (i > 0 && memchr(remove.data(), (*s)[i-1], remove.size())) {
     --i;

@@ -19,8 +19,9 @@
 #ifndef SUPERSONIC_CURSOR_CORE_SPECIFICATION_BUILDER_H_
 #define SUPERSONIC_CURSOR_CORE_SPECIFICATION_BUILDER_H_
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 
@@ -53,7 +54,7 @@ class ExtendedSortSpecificationBuilder {
   ExtendedSortSpecification* Build();
 
  private:
-  scoped_ptr<ExtendedSortSpecification> specification_;
+  std::unique_ptr<ExtendedSortSpecification> specification_;
 };
 
 }  // namespace supersonic

@@ -16,8 +16,9 @@
 
 #include "supersonic/expression/core/stateful_bound_expressions.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -178,7 +179,7 @@ class BoundChangedExpression : public BoundUnaryExpression {
   // The state, meaning the last seen value.
   CppType state_;
   // A buffer to hold the state if it is variable length.
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   DISALLOW_COPY_AND_ASSIGN(BoundChangedExpression);
 };
@@ -415,7 +416,7 @@ struct Persister<true> {
   Arena* arena_;
   string description_;
   AssignmentOperator<STRING, STRING, true> assigner_;
-  scoped_ptr<Buffer> buffer_;
+  std::unique_ptr<Buffer> buffer_;
 };
 
 

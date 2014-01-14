@@ -9,7 +9,7 @@
 // routines exported by this module.  Sometimes using the inlined
 // versions is faster.  Measure before using the inlined versions.
 //
-// Performance measurement:
+// Performance measurements:
 //   strings::fastmemcmp_inlined
 //     Analysis: memcmp, fastmemcmp_inlined, fastmemcmp
 //     2012-01-30
@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "supersonic/utils/integral_types.h"
+#include "supersonic/utils/macros.h"
 #include "supersonic/utils/port.h"
 
 namespace strings {
@@ -30,10 +31,11 @@ namespace strings {
 // Return true if the n bytes at a equal the n bytes at b.
 // The regions are allowed to overlap.
 //
-// The performance is similar to the performance memcmp(), but faster for
+// The performance is similar to the performance of memcmp(), but faster for
 // moderately-sized inputs, or inputs that share a common prefix and differ
 // somewhere in their last 8 bytes. Further optimizations can be added later
-// if it makes sense to do so.
+// if it makes sense to do so.  Please keep this in sync with
+// google_internal::gg_memeq() in //third_party/stl/gcc3/string.
 inline bool memeq(const char* a, const char* b, size_t n) {
   size_t n_rounded_down = n & ~static_cast<size_t>(7);
   if (PREDICT_FALSE(n_rounded_down == 0)) {  // n <= 7
@@ -45,16 +47,21 @@ inline bool memeq(const char* a, const char* b, size_t n) {
   if ((u | v) != 0) {  // The first or last 8 bytes differ.
     return false;
   }
-  a += 8;
-  b += 8;
-  n = n_rounded_down - 8;
-  if (n > 128) {
-    // As of 2012, memcmp on x86-64 uses a big unrolled loop with SSE2
-    // instructions, and while we could try to do something faster, it
-    // doesn't seem worth pursuing.
+  // The next line forces n to be a multiple of 8.
+  n = n_rounded_down;
+  if (n >= 80) {
+    // In 2013 or later, this should be fast on long strings.
     return memcmp(a, b, n) == 0;
   }
-  for (; n >= 16; n -= 16) {
+  // Now force n to be a multiple of 16.  At worst, this causes a re-compare
+  // of 8 bytes at the start of a and b. That's minor, and is outweighed by the
+  // simplification of the code that follows, because it can assume n % 16 is 0.
+  size_t e = n & 8;
+  a += e;
+  b += e;
+  n -= e;
+  // n is now in {0, 16, 32, ...}.  Process 0 or more 16-byte chunks.
+  while (n > 0) {
     uint64 x = UNALIGNED_LOAD64(a) ^ UNALIGNED_LOAD64(b);
     uint64 y = UNALIGNED_LOAD64(a + 8) ^ UNALIGNED_LOAD64(b + 8);
     if ((x | y) != 0) {
@@ -62,29 +69,52 @@ inline bool memeq(const char* a, const char* b, size_t n) {
     }
     a += 16;
     b += 16;
+    n -= 16;
   }
-  // n must be 0 or 8 now because it was a multiple of 8 at the top of the loop.
-  return n == 0 || UNALIGNED_LOAD64(a) == UNALIGNED_LOAD64(b);
+  return true;
 }
 
-inline int fastmemcmp_inlined(const char *a, const char *b, size_t n) {
-  if (n >= 64) {
-    return memcmp(a, b, n);
-  }
-  const char* a_limit = a + n;
-  while (a + sizeof(uint64) <= a_limit &&
-         UNALIGNED_LOAD64(a) == UNALIGNED_LOAD64(b)) {
-    a += sizeof(uint64);
-    b += sizeof(uint64);
-  }
-  if (a + sizeof(uint32) <= a_limit &&
-      UNALIGNED_LOAD32(a) == UNALIGNED_LOAD32(b)) {
-    a += sizeof(uint32);
-    b += sizeof(uint32);
-  }
-  while (a < a_limit) {
-    int d = static_cast<uint32>(*a++) - static_cast<uint32>(*b++);
-    if (d) return d;
+inline int fastmemcmp_inlined(const void *va, const void *vb, size_t n) {
+  const unsigned char* pa = static_cast<const unsigned char*>(va);
+  const unsigned char* pb = static_cast<const unsigned char*>(vb);
+  switch (n) {
+    default:
+      return memcmp(va, vb, n);
+    case 7:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      ++pa;
+      ++pb;
+      FALLTHROUGH_INTENDED;
+    case 6:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      ++pa;
+      ++pb;
+      FALLTHROUGH_INTENDED;
+    case 5:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      ++pa;
+      ++pb;
+      FALLTHROUGH_INTENDED;
+    case 4:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      ++pa;
+      ++pb;
+      FALLTHROUGH_INTENDED;
+    case 3:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      ++pa;
+      ++pb;
+      FALLTHROUGH_INTENDED;
+    case 2:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      ++pa;
+      ++pb;
+      FALLTHROUGH_INTENDED;
+    case 1:
+      if (*pa != *pb) return *pa < *pb ? -1 : +1;
+      FALLTHROUGH_INTENDED;
+    case 0:
+      break;
   }
   return 0;
 }

@@ -27,7 +27,7 @@
 
 #include <stddef.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/exception/failureor.h"

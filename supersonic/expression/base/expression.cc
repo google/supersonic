@@ -16,12 +16,7 @@
 #include "supersonic/expression/base/expression.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/exception/failureor.h"

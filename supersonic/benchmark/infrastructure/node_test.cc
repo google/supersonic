@@ -16,6 +16,8 @@
 
 #include "supersonic/benchmark/infrastructure/node.h"
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/cursor_statistics_mock.h"
 
 #include "gtest/gtest.h"
@@ -39,21 +41,21 @@ class BenchmarkTreeNodeTest : public testing::Test {
 
 TEST_F(BenchmarkTreeNodeTest, ChildrenTest) {
   // Create benchmark nodes.
-  scoped_ptr<BenchmarkTreeNode> root(new BenchmarkTreeNode(NULL));
+  std::unique_ptr<BenchmarkTreeNode> root(new BenchmarkTreeNode(NULL));
 
-  scoped_ptr<BenchmarkTreeNode> child_1(new BenchmarkTreeNode(NULL));
+  std::unique_ptr<BenchmarkTreeNode> child_1(new BenchmarkTreeNode(NULL));
   BenchmarkTreeNode* child_1_ptr = child_1.get();
 
-  scoped_ptr<BenchmarkTreeNode> child_2(new BenchmarkTreeNode(NULL));
+  std::unique_ptr<BenchmarkTreeNode> child_2(new BenchmarkTreeNode(NULL));
   BenchmarkTreeNode* child_2_ptr = child_2.get();
 
-  scoped_ptr<BenchmarkTreeNode> child_1_1(new BenchmarkTreeNode(NULL));
+  std::unique_ptr<BenchmarkTreeNode> child_1_1(new BenchmarkTreeNode(NULL));
   BenchmarkTreeNode* child_1_1_ptr = child_1_1.get();
 
-  scoped_ptr<BenchmarkTreeNode> child_1_2(new BenchmarkTreeNode(NULL));
+  std::unique_ptr<BenchmarkTreeNode> child_1_2(new BenchmarkTreeNode(NULL));
   BenchmarkTreeNode* child_1_2_ptr = child_1_2.get();
 
-  scoped_ptr<BenchmarkTreeNode> child_2_1(new BenchmarkTreeNode(NULL));
+  std::unique_ptr<BenchmarkTreeNode> child_2_1(new BenchmarkTreeNode(NULL));
   BenchmarkTreeNode* child_2_1_ptr = child_2_1.get();
 
   // Attach children, relinquish scoped_ptr's ownership.
@@ -82,28 +84,29 @@ TEST_F(BenchmarkTreeNodeTest, ChildrenTest) {
 TEST_F(BenchmarkTreeNodeTest, GatherDataTest) {
   CursorWithBenchmarkListener dummy;
 
-  scoped_ptr<CursorStatistics> stats1(
+  std::unique_ptr<CursorStatistics> stats1(
       ExpectOneCall(new MockCursorStatistics(&dummy)));
   CursorStatistics* stats1_ptr = stats1.get();
 
-  scoped_ptr<CursorStatistics> stats1_1(
+  std::unique_ptr<CursorStatistics> stats1_1(
       ExpectOneCall(new MockCursorStatistics(&dummy)));
   CursorStatistics* stats1_1_ptr = stats1_1.get();
 
-  scoped_ptr<CursorStatistics> stats1_1_1(
+  std::unique_ptr<CursorStatistics> stats1_1_1(
       ExpectOneCall(new MockCursorStatistics(&dummy)));
   CursorStatistics* stats1_1_1_ptr = stats1_1_1.get();
 
-  scoped_ptr<CursorStatistics> stats1_2(
+  std::unique_ptr<CursorStatistics> stats1_2(
       ExpectOneCall(new MockCursorStatistics(&dummy)));
   CursorStatistics* stats1_2_ptr = stats1_2.get();
 
-  scoped_ptr<BenchmarkTreeNode> node1(new BenchmarkTreeNode(stats1.release()));
-  scoped_ptr<BenchmarkTreeNode> node1_1(
+  std::unique_ptr<BenchmarkTreeNode> node1(
+      new BenchmarkTreeNode(stats1.release()));
+  std::unique_ptr<BenchmarkTreeNode> node1_1(
       new BenchmarkTreeNode(stats1_1.release()));
-  scoped_ptr<BenchmarkTreeNode> node1_1_1(
+  std::unique_ptr<BenchmarkTreeNode> node1_1_1(
       new BenchmarkTreeNode(stats1_1_1.release()));
-  scoped_ptr<BenchmarkTreeNode> node1_2(
+  std::unique_ptr<BenchmarkTreeNode> node1_2(
       new BenchmarkTreeNode(stats1_2.release()));
 
   // Check statistics.

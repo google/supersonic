@@ -15,9 +15,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/int128.h"
 #include "supersonic/utils/integral_types.h"
@@ -27,6 +27,7 @@ using std::string;
 #include "supersonic/utils/stringprintf.h"
 #include "supersonic/utils/strtoint.h"
 #include "supersonic/utils/strings/ascii_ctype.h"
+#include "supersonic/utils/strings/case.h"
 
 // Reads a <double> in *text, which may not be whitespace-initiated.
 // *len is the length, or -1 if text is '\0'-terminated, which is more
@@ -78,7 +79,7 @@ static inline bool EatADouble(const char** text, int* len, bool allow_question,
     retval = strtod(pos, &end_nonconst);
   } else {
     // not '\0'-terminated & no obvious terminator found. must copy.
-    scoped_array<char> buf(new char[rem + 1]);
+    scoped_ptr<char[]> buf(new char[rem + 1]);
     memcpy(buf.get(), pos, rem);
     buf[rem] = '\0';
     retval = strtod(buf.get(), &end_nonconst);
@@ -494,8 +495,7 @@ bool ParseLeadingBoolValue(const char *str, bool deflt) {
 
 // ----------------------------------------------------------------------
 // FpToString()
-// FloatToString()
-// IntToString()
+// Uint128ToHexString()
 //    Convert various types to their string representation, possibly padded
 //    with spaces, using snprintf format specifiers.
 // ----------------------------------------------------------------------
@@ -514,6 +514,25 @@ string Uint128ToHexString(uint128 ui128) {
   snprintf(buf + 16, sizeof(buf) - 16, "%016" GG_LL_FORMAT "x",
            Uint128Low64(ui128));
   return string(buf);
+}
+
+bool HexStringToUint128(StringPiece hex, uint128* value) {
+  value->Initialize(0, 0);
+  if (hex.empty() || hex.size() > 32) return false;
+  // Verify that there are no invalid characters.
+  if (hex.find_first_not_of("0123456789abcdefABCDEF", 0) != StringPiece::npos)
+    return false;
+  // Consume 16 character suffixes and parse them as we go beore merging.
+  uint64 parts[2] = {0, 0};
+  for (uint64* p = parts; !hex.empty(); ++p) {
+    StringPiece next = hex;
+    next.remove_suffix(hex.size() > 16 ? 16 : hex.size());
+    StringPiece curr = hex.substr(next.size());
+    hex = next;
+    if (!safe_strtou64_base(curr, p, 16)) return false;
+  }
+  value->Initialize(parts[1], parts[0]);
+  return true;
 }
 
 namespace {
@@ -542,14 +561,12 @@ static const int8 kAsciiToInt[256] = {
   36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36,
   36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36, 36 };
 
-// Parse the sign and optional hex or oct prefix in range
-// [*start_ptr, *end_ptr).
-inline bool safe_parse_sign_and_base(const char** start_ptr  /*inout*/,
-                                     const char** end_ptr  /*inout*/,
+// Parse the sign and optional hex or oct prefix in text.
+inline bool safe_parse_sign_and_base(StringPiece* text  /*inout*/,
                                      int* base_ptr  /*inout*/,
                                      bool* negative_ptr  /*output*/) {
-  const char* start = *start_ptr;
-  const char* end = *end_ptr;
+  const char* start = text->data();
+  const char* end = start + text->size();
   int base = *base_ptr;
 
   // Consume whitespace.
@@ -581,6 +598,10 @@ inline bool safe_parse_sign_and_base(const char** start_ptr  /*inout*/,
         (start[1] == 'x' || start[1] == 'X')) {
       base = 16;
       start += 2;
+      if (start >= end) {
+        // "0x" with no digits after is invalid.
+        return false;
+      }
     } else if (end - start >= 1 && start[0] == '0') {
       base = 8;
       start += 1;
@@ -591,14 +612,17 @@ inline bool safe_parse_sign_and_base(const char** start_ptr  /*inout*/,
     if (end - start >= 2 && start[0] == '0' &&
         (start[1] == 'x' || start[1] == 'X')) {
       start += 2;
+      if (start >= end) {
+        // "0x" with no digits after is invalid.
+        return false;
+      }
     }
   } else if (base >= 2 && base <= 36) {
     // okay
   } else {
     return false;
   }
-  *start_ptr = start;
-  *end_ptr = end;
+  text->set(start, end - start);
   *base_ptr = base;
   return true;
 }
@@ -629,21 +653,31 @@ inline bool safe_parse_sign_and_base(const char** start_ptr  /*inout*/,
 
 template<typename IntType>
 inline bool safe_parse_positive_int(
-    const char* start, const char* end, int base, IntType* value_p) {
+    StringPiece text, int base, IntType* value_p) {
   IntType value = 0;
   const IntType vmax = std::numeric_limits<IntType>::max();
   assert(vmax > 0);
   assert(vmax >= base);
   const IntType vmax_over_base = vmax / base;
+  const char* start = text.data();
+  const char* end = start + text.size();
   // loop over digits
-  // loop body is interleaved for perf, not readability
   for (; start < end; ++start) {
     unsigned char c = static_cast<unsigned char>(start[0]);
     int digit = kAsciiToInt[c];
-    if (value > vmax_over_base) return false;
+    if (digit >= base) {
+      *value_p = value;
+      return false;
+    }
+    if (value > vmax_over_base) {
+      *value_p = vmax;
+      return false;
+    }
     value *= base;
-    if (digit >= base) return false;
-    if (value > vmax - digit) return false;
+    if (value > vmax - digit) {
+      *value_p = vmax;
+      return false;
+    }
     value += digit;
   }
   *value_p = value;
@@ -652,7 +686,7 @@ inline bool safe_parse_positive_int(
 
 template<typename IntType>
 inline bool safe_parse_negative_int(
-    const char* start, const char* end, int base, IntType* value_p) {
+    StringPiece text, int base, IntType* value_p) {
   IntType value = 0;
   const IntType vmin = std::numeric_limits<IntType>::min();
   assert(vmin < 0);
@@ -665,15 +699,25 @@ inline bool safe_parse_negative_int(
   if (vmin % base > 0) {
     vmin_over_base += 1;
   }
+  const char* start = text.data();
+  const char* end = start + text.size();
   // loop over digits
-  // loop body is interleaved for perf, not readability
   for (; start < end; ++start) {
     unsigned char c = static_cast<unsigned char>(start[0]);
     int digit = kAsciiToInt[c];
-    if (value < vmin_over_base) return false;
+    if (digit >= base) {
+      *value_p = value;
+      return false;
+    }
+    if (value < vmin_over_base) {
+      *value_p = vmin;
+      return false;
+    }
     value *= base;
-    if (digit >= base) return false;
-    if (value < vmin + digit) return false;
+    if (value < vmin + digit) {
+      *value_p = vmin;
+      return false;
+    }
     value -= digit;
   }
   *value_p = value;
@@ -683,107 +727,49 @@ inline bool safe_parse_negative_int(
 // Input format based on POSIX.1-2008 strtol
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/strtol.html
 template<typename IntType>
-bool safe_int_internal(const char* start, const char* end, int base,
-                       IntType* value_p) {
+bool safe_int_internal(StringPiece text, IntType* value_p, int base) {
+  *value_p = 0;
   bool negative;
-  if (!safe_parse_sign_and_base(&start, &end, &base, &negative)) {
+  if (!safe_parse_sign_and_base(&text, &base, &negative)) {
     return false;
   }
   if (!negative) {
-    return safe_parse_positive_int(start, end, base, value_p);
+    return safe_parse_positive_int(text, base, value_p);
   } else {
-    return safe_parse_negative_int(start, end, base, value_p);
+    return safe_parse_negative_int(text, base, value_p);
   }
 }
 
 template<typename IntType>
-inline bool safe_uint_internal(const char* start, const char* end, int base,
-                               IntType* value_p) {
+inline bool safe_uint_internal(StringPiece text, IntType* value_p, int base) {
+  *value_p = 0;
   bool negative;
-  if (!safe_parse_sign_and_base(&start, &end, &base, &negative) || negative) {
+  if (!safe_parse_sign_and_base(&text, &base, &negative) || negative) {
     return false;
   }
-  return safe_parse_positive_int(start, end, base, value_p);
+  return safe_parse_positive_int(text, base, value_p);
 }
 
 }  // anonymous namespace
 
-bool safe_strto32_base(const char* startptr, const int buffer_size,
-                       int32* v, int base) {
-  return safe_int_internal<int32>(startptr, startptr + buffer_size, base, v);
+bool safe_strto32_base(StringPiece text, int32* value, int base) {
+  return safe_int_internal<int32>(text, value, base);
 }
 
-bool safe_strto64_base(const char* startptr, const int buffer_size,
-                       int64* v, int base) {
-  return safe_int_internal<int64>(startptr, startptr + buffer_size, base, v);
+bool safe_strto64_base(StringPiece text, int64* value, int base) {
+  return safe_int_internal<int64>(text, value, base);
 }
 
-bool safe_strto32(const char* startptr, const int buffer_size, int32* value) {
-  return safe_int_internal<int32>(startptr, startptr + buffer_size, 10, value);
+bool safe_strtou32_base(StringPiece text, uint32* value, int base) {
+  return safe_uint_internal<uint32>(text, value, base);
 }
 
-bool safe_strto64(const char* startptr, const int buffer_size, int64* value) {
-  return safe_int_internal<int64>(startptr, startptr + buffer_size, 10, value);
+bool safe_strtou64_base(StringPiece text, uint64* value, int base) {
+  return safe_uint_internal<uint64>(text, value, base);
 }
 
-bool safe_strtou32_base(const char* str, int buffer_size,
-                        uint32* value, int base) {
-  return safe_uint_internal<uint32>(str, str + buffer_size, base, value);
-}
-
-bool safe_strtou64_base(const char* str, int buffer_size,
-                        uint64* value, int base) {
-  return safe_uint_internal<uint64>(str, str + buffer_size, base, value);
-}
-
-bool safe_strto32_base(const char* str, int32* value, int base) {
-  char* endptr;
-  errno = 0;  // errno only gets set on errors
-  *value = strto32(str, &endptr, base);
-  if (endptr != str) {
-    while (ascii_isspace(*endptr)) ++endptr;
-  }
-  return *str != '\0' && *endptr == '\0' && errno == 0;
-}
-
-bool safe_strto64_base(const char* str, int64* value, int base) {
-  char* endptr;
-  errno = 0;  // errno only gets set on errors
-  *value = strto64(str, &endptr, base);
-  if (endptr != str) {
-    while (ascii_isspace(*endptr)) ++endptr;
-  }
-  return *str != '\0' && *endptr == '\0' && errno == 0;
-}
-
-bool safe_strtou32_base(const char* str, uint32* value, int base) {
-  // strtoul does not give any errors on negative numbers, so we have to
-  // search the string for '-' manually.
-  while (ascii_isspace(*str)) ++str;
-  if (*str == '-') return false;
-
-  char* endptr;
-  errno = 0;  // errno only gets set on errors
-  *value = strtou32(str, &endptr, base);
-  if (endptr != str) {
-    while (ascii_isspace(*endptr)) ++endptr;
-  }
-  return *str != '\0' && *endptr == '\0' && errno == 0;
-}
-
-bool safe_strtou64_base(const char* str, uint64* value, int base) {
-  // strtou64 does not give any errors on negative numbers, so we have to
-  // search the string for '-' manually.
-  while (ascii_isspace(*str)) ++str;
-  if (*str == '-') return false;
-
-  char* endptr;
-  errno = 0;  // errno only gets set on errors
-  *value = strtou64(str, &endptr, base);
-  if (endptr != str) {
-    while (ascii_isspace(*endptr)) ++endptr;
-  }
-  return *str != '\0' && *endptr == '\0' && errno == 0;
+bool safe_strtosize_t_base(StringPiece text, size_t* value, int base) {
+  return safe_uint_internal<size_t>(text, value, base);
 }
 
 // ----------------------------------------------------------------------
@@ -812,23 +798,6 @@ size_t u64tostr_base36(uint64 number, size_t buf_size, char* buffer) {
 
   return result_size - 1;
 }
-
-// Generate functions that wrap safe_strtoXXX_base.
-#define GEN_SAFE_STRTO(name, type)                           \
-bool name##_base(const string& str, type* value, int base) { \
-  return name##_base(str.c_str(), value, base);              \
-}                                                            \
-bool name(const char* str, type* value) {                    \
-  return name##_base(str, value, 10);                        \
-}                                                            \
-bool name(const string& str, type* value) {                  \
-  return name##_base(str.c_str(), value, 10);                \
-}
-GEN_SAFE_STRTO(safe_strto32, int32);
-GEN_SAFE_STRTO(safe_strtou32, uint32);
-GEN_SAFE_STRTO(safe_strto64, int64);
-GEN_SAFE_STRTO(safe_strtou64, uint64);
-#undef GEN_SAFE_STRTO
 
 bool safe_strtof(const char* str, float* value) {
   char* endptr;
@@ -867,6 +836,23 @@ bool safe_strtod(const string& str, double* value) {
   return safe_strtod(str.c_str(), value);
 }
 
+bool safe_strtob(StringPiece str, bool* value) {
+  CHECK(value != NULL) << "NULL output boolean given.";
+  if (CaseEqual(str, "true") || CaseEqual(str, "t") ||
+      CaseEqual(str, "yes") || CaseEqual(str, "y") ||
+      CaseEqual(str, "1")) {
+    *value = true;
+    return true;
+  }
+  if (CaseEqual(str, "false") || CaseEqual(str, "f") ||
+      CaseEqual(str, "no") || CaseEqual(str, "n") ||
+      CaseEqual(str, "0")) {
+    *value = false;
+    return true;
+  }
+  return false;
+}
+
 uint64 atoi_kmgt(const char* s) {
   char* endptr;
   uint64 n = strtou64(s, &endptr, 10);
@@ -896,8 +882,6 @@ uint64 atoi_kmgt(const char* s) {
 }
 
 // ----------------------------------------------------------------------
-// FastIntToBuffer()
-// FastInt64ToBuffer()
 // FastHexToBuffer()
 // FastHex64ToBuffer()
 // FastHex32ToBuffer()
@@ -920,19 +904,9 @@ uint64 atoi_kmgt(const char* s) {
 //    for FastTimeToBuffer(), we guarantee that it is.)
 // ----------------------------------------------------------------------
 
-char *FastInt64ToBuffer(int64 i, char* buffer) {
-  FastInt64ToBufferLeft(i, buffer);
-  return buffer;
-}
-
 // Offset into buffer where FastInt32ToBuffer places the end of string
 // null character.  Also used by FastInt32ToBufferLeft
 static const int kFastInt32ToBufferOffset = 11;
-
-char *FastInt32ToBuffer(int32 i, char* buffer) {
-  FastInt32ToBufferLeft(i, buffer);
-  return buffer;
-}
 
 char *FastHexToBuffer(int i, char* buffer) {
   CHECK_GE(i, 0) << "FastHexToBuffer() wants non-negative integers, not " << i;
@@ -965,18 +939,9 @@ char *FastHex32ToBuffer(uint32 value, char* buffer) {
   return InternalFastHexToBuffer(value, buffer, 8);
 }
 
-// TODO(user): revisit the two_ASCII_digits optimization.
-//
 // Several converters use this table to reduce
 // division and modulo operations.
 extern const char two_ASCII_digits[100][2];  // from strutil.cc
-
-static inline void PutTwoDigits(int i, char* p) {
-  DCHECK_GE(i, 0);
-  DCHECK_LT(i, 100);
-  p[0] = two_ASCII_digits[i][0];
-  p[1] = two_ASCII_digits[i][1];
-}
 
 // ----------------------------------------------------------------------
 // FastInt32ToBufferLeft()
@@ -995,8 +960,7 @@ static inline void PutTwoDigits(int i, char* p) {
 // ----------------------------------------------------------------------
 
 char* FastUInt32ToBufferLeft(uint32 u, char* buffer) {
-  int digits;
-  const char *ASCII_digits = NULL;
+  uint32 digits;
   // The idea of this implementation is to trim the number of divides to as few
   // as possible by using multiplication and subtraction rather than mod (%),
   // and by outputting two digits at a time rather than one.
@@ -1005,41 +969,31 @@ char* FastUInt32ToBufferLeft(uint32 u, char* buffer) {
   // branches into it from below.
   if (u >= 1000000000) {  // >= 1,000,000,000
     digits = u / 100000000;  // 100,000,000
-    ASCII_digits = two_ASCII_digits[digits];
-    buffer[0] = ASCII_digits[0];
-    buffer[1] = ASCII_digits[1];
+    memcpy(buffer, two_ASCII_digits[digits], 2);
     buffer += 2;
  sublt100_000_000:
     u -= digits * 100000000;  // 100,000,000
  lt100_000_000:
     digits = u / 1000000;  // 1,000,000
-    ASCII_digits = two_ASCII_digits[digits];
-    buffer[0] = ASCII_digits[0];
-    buffer[1] = ASCII_digits[1];
+    memcpy(buffer, two_ASCII_digits[digits], 2);
     buffer += 2;
  sublt1_000_000:
     u -= digits * 1000000;  // 1,000,000
  lt1_000_000:
     digits = u / 10000;  // 10,000
-    ASCII_digits = two_ASCII_digits[digits];
-    buffer[0] = ASCII_digits[0];
-    buffer[1] = ASCII_digits[1];
+    memcpy(buffer, two_ASCII_digits[digits], 2);
     buffer += 2;
  sublt10_000:
     u -= digits * 10000;  // 10,000
  lt10_000:
     digits = u / 100;
-    ASCII_digits = two_ASCII_digits[digits];
-    buffer[0] = ASCII_digits[0];
-    buffer[1] = ASCII_digits[1];
+    memcpy(buffer, two_ASCII_digits[digits], 2);
     buffer += 2;
  sublt100:
     u -= digits * 100;
  lt100:
     digits = u;
-    ASCII_digits = two_ASCII_digits[digits];
-    buffer[0] = ASCII_digits[0];
-    buffer[1] = ASCII_digits[1];
+    memcpy(buffer, two_ASCII_digits[digits], 2);
     buffer += 2;
  done:
     *buffer = 0;
@@ -1089,9 +1043,6 @@ char* FastInt32ToBufferLeft(int32 i, char* buffer) {
 }
 
 char* FastUInt64ToBufferLeft(uint64 u64, char* buffer) {
-  int digits;
-  const char *ASCII_digits = NULL;
-
   uint32 u = static_cast<uint32>(u64);
   if (u == u64) return FastUInt32ToBufferLeft(u, buffer);
 
@@ -1099,29 +1050,20 @@ char* FastUInt64ToBufferLeft(uint64 u64, char* buffer) {
   buffer = FastUInt64ToBufferLeft(top_11_digits, buffer);
   u = u64 - (top_11_digits * 1000000000);
 
-  digits = u / 10000000;  // 10,000,000
-  DCHECK_LT(digits, 100);
-  ASCII_digits = two_ASCII_digits[digits];
-  buffer[0] = ASCII_digits[0];
-  buffer[1] = ASCII_digits[1];
+  uint32 digits = u / 10000000;  // 10,000,000
+  memcpy(buffer, two_ASCII_digits[digits], 2);
   buffer += 2;
   u -= digits * 10000000;  // 10,000,000
   digits = u / 100000;  // 100,000
-  ASCII_digits = two_ASCII_digits[digits];
-  buffer[0] = ASCII_digits[0];
-  buffer[1] = ASCII_digits[1];
+  memcpy(buffer, two_ASCII_digits[digits], 2);
   buffer += 2;
   u -= digits * 100000;  // 100,000
   digits = u / 1000;  // 1,000
-  ASCII_digits = two_ASCII_digits[digits];
-  buffer[0] = ASCII_digits[0];
-  buffer[1] = ASCII_digits[1];
+  memcpy(buffer, two_ASCII_digits[digits], 2);
   buffer += 2;
   u -= digits * 1000;  // 1,000
   digits = u / 10;
-  ASCII_digits = two_ASCII_digits[digits];
-  buffer[0] = ASCII_digits[0];
-  buffer[1] = ASCII_digits[1];
+  memcpy(buffer, two_ASCII_digits[digits], 2);
   buffer += 2;
   u -= digits * 10;
   digits = u;
@@ -1175,7 +1117,7 @@ int AutoDigitStrCmp(const char* a, int alen,
   int aindex = 0;
   int bindex = 0;
   while ((aindex < alen) && (bindex < blen)) {
-    if (isdigit(a[aindex]) && isdigit(b[bindex])) {
+    if (ascii_isdigit(a[aindex]) && ascii_isdigit(b[bindex])) {
       // Compare runs of digits.  Instead of extracting numbers, we
       // just skip leading zeroes, and then get the run-lengths.  This
       // allows us to handle arbitrary precision numbers.  We remember
@@ -1193,8 +1135,8 @@ int AutoDigitStrCmp(const char* a, int alen,
       // Count digit lengths
       int astart = aindex;
       int bstart = bindex;
-      while ((aindex < alen) && isdigit(a[aindex])) aindex++;
-      while ((bindex < blen) && isdigit(b[bindex])) bindex++;
+      while ((aindex < alen) && ascii_isdigit(a[aindex])) aindex++;
+      while ((bindex < blen) && ascii_isdigit(b[bindex])) bindex++;
       if (aindex - astart < bindex - bstart) {
         // a has shorter run of digits: so smaller
         return -1;
@@ -1295,12 +1237,12 @@ bool StrictAutoDigitLessThan(const char* a, int alen,
 // ----------------------------------------------------------------------
 
 string SimpleDtoa(double value) {
-  char buffer[kDoubleToBufferSize];
+  char buffer[kFastToBufferSize];
   return DoubleToBuffer(value, buffer);
 }
 
 string SimpleFtoa(float value) {
-  char buffer[kFloatToBufferSize];
+  char buffer[kFastToBufferSize];
   return FloatToBuffer(value, buffer);
 }
 
@@ -1312,18 +1254,18 @@ char* DoubleToBuffer(double value, char* buffer) {
   COMPILE_ASSERT(DBL_DIG < 20, DBL_DIG_is_too_big);
 
   int snprintf_result =
-    snprintf(buffer, kDoubleToBufferSize, "%.*g", DBL_DIG, value);
+    snprintf(buffer, kFastToBufferSize, "%.*g", DBL_DIG, value);
 
   // The snprintf should never overflow because the buffer is significantly
   // larger than the precision we asked for.
-  DCHECK(snprintf_result > 0 && snprintf_result < kDoubleToBufferSize);
+  DCHECK(snprintf_result > 0 && snprintf_result < kFastToBufferSize);
 
   if (strtod(buffer, NULL) != value) {
     snprintf_result =
-      snprintf(buffer, kDoubleToBufferSize, "%.*g", DBL_DIG+2, value);
+      snprintf(buffer, kFastToBufferSize, "%.*g", DBL_DIG+2, value);
 
     // Should never overflow; see above.
-    DCHECK(snprintf_result > 0 && snprintf_result < kDoubleToBufferSize);
+    DCHECK(snprintf_result > 0 && snprintf_result < kFastToBufferSize);
   }
   return buffer;
 }
@@ -1336,144 +1278,28 @@ char* FloatToBuffer(float value, char* buffer) {
   COMPILE_ASSERT(FLT_DIG < 10, FLT_DIG_is_too_big);
 
   int snprintf_result =
-    snprintf(buffer, kFloatToBufferSize, "%.*g", FLT_DIG, value);
+    snprintf(buffer, kFastToBufferSize, "%.*g", FLT_DIG, value);
 
   // The snprintf should never overflow because the buffer is significantly
   // larger than the precision we asked for.
-  DCHECK(snprintf_result > 0 && snprintf_result < kFloatToBufferSize);
+  DCHECK(snprintf_result > 0 && snprintf_result < kFastToBufferSize);
 
   float parsed_value;
   if (!safe_strtof(buffer, &parsed_value) || parsed_value != value) {
     snprintf_result =
-      snprintf(buffer, kFloatToBufferSize, "%.*g", FLT_DIG+2, value);
+      snprintf(buffer, kFastToBufferSize, "%.*g", FLT_DIG+2, value);
 
     // Should never overflow; see above.
-    DCHECK(snprintf_result > 0 && snprintf_result < kFloatToBufferSize);
+    DCHECK(snprintf_result > 0 && snprintf_result < kFastToBufferSize);
   }
   return buffer;
 }
 
+string SimpleBtoa(bool value) {
+  return value ? string("true") : string("false");
+}
+
 // ----------------------------------------------------------------------
-// SimpleItoaWithCommas()
-//    Description: converts an integer to a string.
-//    Puts commas every 3 spaces.
-//    Faster than printf("%d")?
-//
-//    Return value: string
-// ----------------------------------------------------------------------
-string SimpleItoaWithCommas(int32 i) {
-  // 10 digits, 3 commas, and sign are good for 32-bit or smaller ints.
-  // Longest is -2,147,483,648.
-  char local[14];
-  char *p = local + sizeof(local);
-  // Need to use uint32 instead of int32 to correctly handle
-  // -2,147,483,648.
-  uint32 n = i;
-  if (i < 0)
-    n = 0 - n;  // negate the unsigned value to avoid overflow
-  *--p = '0' + n % 10;          // this case deals with the number "0"
-  n /= 10;
-  while (n) {
-    *--p = '0' + n % 10;
-    n /= 10;
-    if (n == 0) break;
-
-    *--p = '0' + n % 10;
-    n /= 10;
-    if (n == 0) break;
-
-    *--p = ',';
-    *--p = '0' + n % 10;
-    n /= 10;
-    // For this unrolling, we check if n == 0 in the main while loop
-  }
-  if (i < 0)
-    *--p = '-';
-  return string(p, local + sizeof(local));
-}
-
-// We need this overload because otherwise SimpleItoaWithCommas(5U) wouldn't
-// compile.
-string SimpleItoaWithCommas(uint32 i) {
-  // 10 digits and 3 commas are good for 32-bit or smaller ints.
-  // Longest is 4,294,967,295.
-  char local[13];
-  char *p = local + sizeof(local);
-  *--p = '0' + i % 10;          // this case deals with the number "0"
-  i /= 10;
-  while (i) {
-    *--p = '0' + i % 10;
-    i /= 10;
-    if (i == 0) break;
-
-    *--p = '0' + i % 10;
-    i /= 10;
-    if (i == 0) break;
-
-    *--p = ',';
-    *--p = '0' + i % 10;
-    i /= 10;
-    // For this unrolling, we check if i == 0 in the main while loop
-  }
-  return string(p, local + sizeof(local));
-}
-
-string SimpleItoaWithCommas(int64 i) {
-  // 19 digits, 6 commas, and sign are good for 64-bit or smaller ints.
-  char local[26];
-  char *p = local + sizeof(local);
-  // Need to use uint64 instead of int64 to correctly handle
-  // -9,223,372,036,854,775,808.
-  uint64 n = i;
-  if (i < 0)
-    n = 0 - n;
-  *--p = '0' + n % 10;          // this case deals with the number "0"
-  n /= 10;
-  while (n) {
-    *--p = '0' + n % 10;
-    n /= 10;
-    if (n == 0) break;
-
-    *--p = '0' + n % 10;
-    n /= 10;
-    if (n == 0) break;
-
-    *--p = ',';
-    *--p = '0' + n % 10;
-    n /= 10;
-    // For this unrolling, we check if n == 0 in the main while loop
-  }
-  if (i < 0)
-    *--p = '-';
-  return string(p, local + sizeof(local));
-}
-
-// We need this overload because otherwise SimpleItoaWithCommas(5ULL) wouldn't
-// compile.
-string SimpleItoaWithCommas(uint64 i) {
-  // 20 digits and 6 commas are good for 64-bit or smaller ints.
-  // Longest is 18,446,744,073,709,551,615.
-  char local[26];
-  char *p = local + sizeof(local);
-  *--p = '0' + i % 10;          // this case deals with the number "0"
-  i /= 10;
-  while (i) {
-    *--p = '0' + i % 10;
-    i /= 10;
-    if (i == 0) break;
-
-    *--p = '0' + i % 10;
-    i /= 10;
-    if (i == 0) break;
-
-    *--p = ',';
-    *--p = '0' + i % 10;
-    i /= 10;
-    // For this unrolling, we check if i == 0 in the main while loop
-  }
-  return string(p, local + sizeof(local));
-}
-
 // ----------------------------------------------------------------------
 // ItoaKMGT()
 //    Description: converts an integer to a string
@@ -1508,23 +1334,4 @@ string ItoaKMGT(int64 i) {
   }
 
   return StringPrintf("%s%" GG_LL_FORMAT "d%s", sign, val, suffix);
-}
-
-// DEPRECATED(wadetregaskis).
-// These are non-inline because some BUILD files turn on -Wformat-non-literal.
-
-string FloatToString(float f, const char* format) {
-  return StringPrintf(format, f);
-}
-
-string IntToString(int i, const char* format) {
-  return StringPrintf(format, i);
-}
-
-string Int64ToString(int64 i64, const char* format) {
-  return StringPrintf(format, i64);
-}
-
-string UInt64ToString(uint64 ui64, const char* format) {
-  return StringPrintf(format, ui64);
 }

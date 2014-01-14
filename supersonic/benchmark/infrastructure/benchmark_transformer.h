@@ -19,6 +19,8 @@
 #ifndef SUPERSONIC_BENCHMARK_INFRASTRUCTURE_BENCHMARK_TRANSFORMER_H_
 #define SUPERSONIC_BENCHMARK_INFRASTRUCTURE_BENCHMARK_TRANSFORMER_H_
 
+#include <memory>
+
 #include "supersonic/cursor/core/spy.h"
 #include "supersonic/cursor/infrastructure/history_transformer.h"
 #include "supersonic/utils/macros.h"
@@ -33,9 +35,7 @@ class BenchmarkListener;
 // already owned by either other cursors, or some other entity.
 class CursorWithBenchmarkListener {
  public:
-  CursorWithBenchmarkListener()
-      : listener_(NULL),
-        cursor_(NULL) {}
+  CursorWithBenchmarkListener() : cursor_(NULL) {}
 
   // Takes ownership of the listener, does not take ownership of the cursor.
   CursorWithBenchmarkListener(Cursor* cursor, BenchmarkListener* listener)
@@ -52,7 +52,7 @@ class CursorWithBenchmarkListener {
   BenchmarkListener* release_listener() { return listener_.release(); }
 
  private:
-  scoped_ptr<BenchmarkListener> listener_;
+  std::unique_ptr<BenchmarkListener> listener_;
   Cursor* cursor_;
 
   DISALLOW_COPY_AND_ASSIGN(CursorWithBenchmarkListener);

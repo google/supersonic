@@ -1,6 +1,10 @@
 Supersonic-Specific Installation Notes
 ================================
 
+TL;DR; './install_supersonic.sh {target directory}' installs Supersonic
+toghether with glog, gflags and re2 (not on OSX) to {target directory}
+
+
 This code in its current version should work on any Unix-like system.
 The following libraries should be installed before proceeding to the usual
 "config, make -j 16, make install".
@@ -37,151 +41,18 @@ packages are already installed on your machine in the /usr/local/lib and
 When running Supersonic in an environment where root access is not available
 and the aforementioned libraries are missing, they should be downloaded
 and compiled locally after which include and linker paths should be specified.
-There are two instruction sets below, a quick-n-dirty, copy-paste one
-and a shorter description of what actually needs to be done with an example.
-Instruction Set 1 should at some point be turned into an automatic script.
 
-Instruction Set 1:
-(Don't care about the specifics, please make it just work.)
+For convenience we provide 'install_supersonic.sh' script.
+It installs Supersonic toghether with its dependencies: gflags, glog and
+(optionally) re2 into given directory (/usr/local).
 
+So to install Supersonic locally (without root access) toghether with the
+dependencies you might call:
 
-# 1) Let's assume you have downloaded and untarred the Supersonic package
-# and also stripped the folder name of the version suffix. Now the library
-# resides in the "supersonic" folder (directly in which you have this INSTALL
-# file). Position yourself one step outside that folder.
-#
-# 2) Execute the following commands, if the corresponding library is not
-# available in your environment.
-#
-# a) glog
-#
-  wget https://google-glog.googlecode.com/files/glog-0.3.2.tar.gz && \
-  tar zxf glog-0.3.2.tar.gz && \
-  mv glog-0.3.2 glog && \
-  rm glog-0.3.2.tar.gz && \
-  (cd glog && ./configure && make -j 16)
-#
-# b) gflags
-#
-  wget http://gflags.googlecode.com/files/gflags-2.0.tar.gz && \
-  tar zxf gflags-2.0.tar.gz && \
-  mv gflags-2.0 gflags && \
-  rm gflags-2.0.tar.gz && \
-  (cd gflags && ./configure && make -j 16)
-#
-# c) protobuf
-#
-  wget http://protobuf.googlecode.com/files/protobuf-2.4.1.tar.gz && \
-  tar zxf protobuf-2.4.1.tar.gz && \
-  mv protobuf-2.4.1 protobuf && \
-  rm protobuf-2.4.1.tar.gz && \
-  (cd protobuf && ./configure && make -j 16)
-#
-# d) re2 - If you don't have mercurial installed on your system, this won't
-#    work.
-#    In that case you'll have to fetch the libary in some other way.
-#
-  hg clone https://re2.googlecode.com/hg re2 && \
-  (cd re2 && make -j 16)
-#
-#
-# 3) Go back to supersonic
-#
-  cd supersonic
-#
-#
-# 4) Export environment variables before configuring the package (only for
-# downloaded packages).
-#
-# a) glog
-#
-  export GLOG_CFLAGS='-I../glog/src'
-  export GLOG_LIBS='-L../glog -lglog'
-  export CPPFLAGS=$CPPFLAGS' -I../glog/src'
-#
-# b) gflags
-#
-  export GFLAGS_CFLAGS='-I../gflags/src'
-  export GFLAGS_LIBS='-L../gflags -lgflags'
-  export CPPFLAGS=$CPPFLAGS' -I../gflags/src'
-#
-# c) protobuf
-#
-  export PROTO_CFLAGS='-I../protobuf/src'
-  export PROTO_LIBS='-L../protobuf/src -lprotobuf'
-  export CPPFLAGS=$CPPFLAGS' -I../protobuf/src'
-  export PROTOC=$(readlink -f ../protobuf/src/protoc)
-#
-# d) re2
-#
-  SO_PATH=$(readlink -f ../re2/obj/so) && \
-  export LDFLAGS=$LDFLAGS' -L../re2/obj/so -Wl,-rpath -Wl,'$SO_PATH
-  export CPPFLAGS=$CPPFLAGS' -I../re2'
-#
-#
-# 5) And finally...
-#
-  ./configure && make -j 16 && make check
+./install_supersonic.sh $USER/supersonic
 
-If you see an "X tests passed." message, you've made it!
+See the content of the script so more in-depth instructions.
 
-
-Instruction Set 2:
-(Describing the rationale behind the process, also useful if Instruction Set 1
-actually didn't just work.)
-
-The example walks through the local set-up of gflags, for others it should be
-fairly analogous, with the infamous exception being RE2 (see below).
-
-1)
-"download and unpack gflags to {gflags-dir}"
-
-2)
-cd {gflags-dir}
-
-3)
-./configure && make
-
-4)
-"go back to top-level Supersonic folder"
-
-4) (Note that the lines below constitute a single shell command.)
-GFLAGS_CFLAGS=-I{gflags-dir}/src \
-CPPFLAGS=-I{gflags-dir}/src \
-GFLAGS_LIBS='-L{gflags-dir} -lgflags' \
-./configure
-
-Comment: in this approach we override the compilation flags to make them point
-to our gflags sources. The -I flag tells the compiler where to look for include
-headers, which are in this case located in the src subdirectory of the gflags
-project. We do the same for library files - libtool will create an .la file
-in the gflags directory. This is just one option, it is also possible to set
-the general include and linker paths, but this is usually deprecated.
-
-For other packages substitute GFLAGS and -lgflags with one of the following.
-Package flag prefixes: GLOG PROTO RE2
-Linker flags: -lglog -lprotobuf -lre2
-
-Another comment: You will have to use the same flags when compiling a program
-that uses Supersonic.
-
-Last comment: RE2 as of now does not use libtool. To set it up without
-installation one has to define the following:
-LDFLAGS='-L{re2-dir}/obj/so -R{re2-dir}/obj/so' \
-CPPFLAGS=-I{re2-dir} \
-./configure
-
-5)
-make
-
-The following library is required for testing only, it will be included with
-the package, compiled locally and NOT installed.
-
-1. Googlemock
-http://code.google.com/p/googlemock/
-
-The package will contain Googletest which is available at
-http://code.google.com/p/googletest/
 
 Below are generic autotools installation instructions.
 --------------------------------------------------------------------------------
@@ -200,7 +71,7 @@ Basic Installation
 
 These are generic installation instructions.
 
-   The `configure' shell script attempts to guess correct values for
+The `configure' shell script attempts to guess correct values for
 various system-dependent variables used during compilation.  It uses
 those values to create a `Makefile' in each directory of the package.
 It may also create one or more `.h' files containing system-dependent
@@ -209,51 +80,51 @@ you can run in the future to recreate the current configuration, and a
 file `config.log' containing compiler output (useful mainly for
 debugging `configure').
 
-   It can also use an optional file (typically called `config.cache'
+It can also use an optional file (typically called `config.cache'
 and enabled with `--cache-file=config.cache' or simply `-C') that saves
 the results of its tests to speed up reconfiguring.  (Caching is
 disabled by default to prevent problems with accidental use of stale
 cache files.)
 
-   If you need to do unusual things to compile the package, please try
+If you need to do unusual things to compile the package, please try
 to figure out how `configure' could check whether to do them, and mail
 diffs or instructions to the address given in the `README' so they can
 be considered for the next release.  If you are using the cache, and at
 some point `config.cache' contains results you don't want to keep, you
 may remove or edit it.
 
-   The file `configure.ac' (or `configure.in') is used to create
+The file `configure.ac' (or `configure.in') is used to create
 `configure' by a program called `autoconf'.  You only need
 `configure.ac' if you want to change it or regenerate `configure' using
 a newer version of `autoconf'.
 
 The simplest way to compile this package is:
 
-  1. `cd' to the directory containing the package's source code and type
-     `./configure' to configure the package for your system.  If you're
-     using `csh' on an old version of System V, you might need to type
-     `sh ./configure' instead to prevent `csh' from trying to execute
-     `configure' itself.
+1. `cd' to the directory containing the package's source code and type
+`./configure' to configure the package for your system.  If you're
+using `csh' on an old version of System V, you might need to type
+`sh ./configure' instead to prevent `csh' from trying to execute
+`configure' itself.
 
-     Running `configure' takes awhile.  While running, it prints some
-     messages telling which features it is checking for.
+Running `configure' takes awhile.  While running, it prints some
+messages telling which features it is checking for.
 
-  2. Type `make' to compile the package.
+2. Type `make' to compile the package.
 
-  3. Optionally, type `make check' to run any self-tests that come with
-     the package.
+3. Optionally, type `make check' to run any self-tests that come with
+the package.
 
-  4. Type `make install' to install the programs and any data files and
-     documentation.
+4. Type `make install' to install the programs and any data files and
+documentation.
 
-  5. You can remove the program binaries and object files from the
-     source code directory by typing `make clean'.  To also remove the
-     files that `configure' created (so you can compile the package for
-     a different kind of computer), type `make distclean'.  There is
-     also a `make maintainer-clean' target, but that is intended mainly
-     for the package's developers.  If you use it, you may have to get
-     all sorts of other programs in order to regenerate files that came
-     with the distribution.
+5. You can remove the program binaries and object files from the
+source code directory by typing `make clean'.  To also remove the
+files that `configure' created (so you can compile the package for
+a different kind of computer), type `make distclean'.  There is
+also a `make maintainer-clean' target, but that is intended mainly
+for the package's developers.  If you use it, you may have to get
+all sorts of other programs in order to regenerate files that came
+with the distribution.
 
 Compilers and Options
 =====================
@@ -262,13 +133,13 @@ Some systems require unusual options for compilation or linking that the
 `configure' script does not know about.  Run `./configure --help' for
 details on some of the pertinent environment variables.
 
-   You can give `configure' initial values for configuration parameters
+You can give `configure' initial values for configuration parameters
 by setting variables in the command line or in the environment.  Here
 is an example:
 
-     ./configure CC=c89 CFLAGS=-O2 LIBS=-lposix
+./configure CC=c89 CFLAGS=-O2 LIBS=-lposix
 
-   *Note Defining Variables::, for more details.
+*Note Defining Variables::, for more details.
 
 Compiling For Multiple Architectures
 ====================================
@@ -281,7 +152,7 @@ directory where you want the object files and executables to go and run
 the `configure' script.  `configure' automatically checks for the
 source code in the directory that `configure' is in and in `..'.
 
-   If you have to use a `make' that does not support the `VPATH'
+If you have to use a `make' that does not support the `VPATH'
 variable, you have to compile the package for one architecture at a
 time in the source code directory.  After you have installed the
 package for one architecture, use `make distclean' before reconfiguring
@@ -295,18 +166,18 @@ By default, `make install' installs the package's commands under
 can specify an installation prefix other than `/usr/local' by giving
 `configure' the option `--prefix=PREFIX'.
 
-   You can specify separate installation prefixes for
+You can specify separate installation prefixes for
 architecture-specific files and architecture-independent files.  If you
 pass the option `--exec-prefix=PREFIX' to `configure', the package uses
 PREFIX as the prefix for installing programs and libraries.
 Documentation and other data files still use the regular prefix.
 
-   In addition, if you use an unusual directory layout you can give
+In addition, if you use an unusual directory layout you can give
 options like `--bindir=DIR' to specify different values for particular
 kinds of files.  Run `configure --help' for a list of the directories
 you can set and what kinds of files go in them.
 
-   If the package supports it, you can cause programs to be installed
+If the package supports it, you can cause programs to be installed
 with an extra prefix or suffix on their names by giving `configure' the
 option `--program-prefix=PREFIX' or `--program-suffix=SUFFIX'.
 
@@ -320,7 +191,7 @@ is something like `gnu-as' or `x' (for the X Window System).  The
 `README' should mention any `--enable-' and `--with-' options that the
 package recognizes.
 
-   For packages that use the X Window System, `configure' can usually
+For packages that use the X Window System, `configure' can usually
 find the X include and library files automatically, but if it doesn't,
 you can use the `configure' options `--x-includes=DIR' and
 `--x-libraries=DIR' to specify their locations.
@@ -336,21 +207,21 @@ message saying it cannot guess the machine type, give it the
 `--build=TYPE' option.  TYPE can either be a short name for the system
 type, such as `sun4', or a canonical name which has the form:
 
-     CPU-COMPANY-SYSTEM
+CPU-COMPANY-SYSTEM
 
 where SYSTEM can have one of these forms:
 
-     OS KERNEL-OS
+OS KERNEL-OS
 
-   See the file `config.sub' for the possible values of each field.  If
+See the file `config.sub' for the possible values of each field.  If
 `config.sub' isn't included in this package, then this package doesn't
 need to know the machine type.
 
-   If you are _building_ compiler tools for cross-compiling, you should
+If you are _building_ compiler tools for cross-compiling, you should
 use the option `--target=TYPE' to select the type of system they will
 produce code for.
 
-   If you want to _use_ a cross compiler, that generates code for a
+If you want to _use_ a cross compiler, that generates code for a
 platform different from the build platform, you should specify the
 "host" platform (i.e., that on which the generated programs will
 eventually be run) with `--host=TYPE'.
@@ -375,12 +246,12 @@ configure again during the build, and the customized values of these
 variables may be lost.  In order to avoid this problem, you should set
 them in the `configure' command line, using `VAR=value'.  For example:
 
-     ./configure CC=/usr/local2/bin/gcc
+./configure CC=/usr/local2/bin/gcc
 
 causes the specified `gcc' to be used as the C compiler (unless it is
 overridden in the site shell script).  Here is a another example:
 
-     /bin/bash ./configure CONFIG_SHELL=/bin/bash
+/bin/bash ./configure CONFIG_SHELL=/bin/bash
 
 Here the `CONFIG_SHELL=/bin/bash' operand causes subsequent
 configuration-related scripts to be executed by `/bin/bash'.
@@ -392,32 +263,32 @@ configuration-related scripts to be executed by `/bin/bash'.
 
 `--help'
 `-h'
-     Print a summary of the options to `configure', and exit.
+Print a summary of the options to `configure', and exit.
 
 `--version'
 `-V'
-     Print the version of Autoconf used to generate the `configure'
-     script, and exit.
+Print the version of Autoconf used to generate the `configure'
+script, and exit.
 
 `--cache-file=FILE'
-     Enable the cache: use and save the results of the tests in FILE,
-     traditionally `config.cache'.  FILE defaults to `/dev/null' to
-     disable caching.
+Enable the cache: use and save the results of the tests in FILE,
+traditionally `config.cache'.  FILE defaults to `/dev/null' to
+disable caching.
 
 `--config-cache'
 `-C'
-     Alias for `--cache-file=config.cache'.
+Alias for `--cache-file=config.cache'.
 
 `--quiet'
 `--silent'
 `-q'
-     Do not print messages saying which checks are being made.  To
-     suppress all normal output, redirect it to `/dev/null' (any error
-     messages will still be shown).
+Do not print messages saying which checks are being made.  To
+suppress all normal output, redirect it to `/dev/null' (any error
+messages will still be shown).
 
 `--srcdir=DIR'
-     Look for the package's source code in directory DIR.  Usually
-     `configure' can determine that directory automatically.
+Look for the package's source code in directory DIR.  Usually
+`configure' can determine that directory automatically.
 
 `configure' also accepts some other, not widely useful, options.  Run
 `configure --help' for more details.

@@ -14,6 +14,8 @@
 //
 // Author: tomasz.kaftal@gmail.com (Tomasz Kaftal)
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/benchmark_listener.h"
 #include "supersonic/benchmark/infrastructure/benchmark_transformer.h"
 #include "supersonic/cursor/base/cursor_mock.h"
@@ -89,7 +91,7 @@ class CursorTransformerWithHistoryTest : public testing::Test {
     return ExtractCursor<T>(entry);
   }
 
-  scoped_ptr<CursorTransformerWithVectorHistory<T>> transformer_;
+  std::unique_ptr<CursorTransformerWithVectorHistory<T>> transformer_;
   TupleSchema schema_;
 };
 
@@ -99,10 +101,10 @@ EntryTypes;
 TYPED_TEST_CASE(CursorTransformerWithHistoryTest, EntryTypes);
 
 TYPED_TEST(CursorTransformerWithHistoryTest, CorrectHistory) {
-  scoped_ptr<Cursor> cursor1(this->Init(new StrictMock<MockCursor>));
-  scoped_ptr<Cursor> cursor2(this->Init(new StrictMock<MockCursor>));
-  scoped_ptr<Cursor> cursor3(this->Init(new StrictMock<MockCursor>));
-  scoped_ptr<Cursor> cursor4(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor1(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor2(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor3(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor4(this->Init(new StrictMock<MockCursor>));
 
   Cursor* cursor_p1 = cursor1.get();
   Cursor* cursor_p2 = cursor2.get();
@@ -138,9 +140,9 @@ TYPED_TEST(CursorTransformerWithHistoryTest, CorrectHistory) {
 }
 
 TYPED_TEST(CursorTransformerWithHistoryTest, ReleaseHistory) {
-  scoped_ptr<Cursor> cursor1(this->Init(new StrictMock<MockCursor>));
-  scoped_ptr<Cursor> cursor2(this->Init(new StrictMock<MockCursor>));
-  scoped_ptr<Cursor> cursor3(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor1(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor2(this->Init(new StrictMock<MockCursor>));
+  std::unique_ptr<Cursor> cursor3(this->Init(new StrictMock<MockCursor>));
 
   Cursor* cursor_p1 = cursor1.get();
   Cursor* cursor_p2 = cursor2.get();
@@ -155,7 +157,8 @@ TYPED_TEST(CursorTransformerWithHistoryTest, ReleaseHistory) {
 
   ASSERT_EQ(3, transformer->GetHistoryLength());
 
-  scoped_ptr<PointerVector<TypeParam>> history(transformer->ReleaseHistory());
+  std::unique_ptr<PointerVector<TypeParam>> history(
+      transformer->ReleaseHistory());
   ASSERT_EQ(cursor_p1, this->Extract((*history)[0].get()));
   ASSERT_EQ(cursor_p2, this->Extract((*history)[1].get()));
   ASSERT_EQ(cursor_p3, this->Extract((*history)[2].get()));

@@ -20,16 +20,13 @@
 #ifndef SUPERSONIC_EXPRESSION_VECTOR_VECTOR_PRIMITIVES_H_
 #define SUPERSONIC_EXPRESSION_VECTOR_VECTOR_PRIMITIVES_H_
 
-#include <emmintrin.h>
 #include <string.h>
+#ifdef  __SSE2__
+#include <emmintrin.h>
 #include <xmmintrin.h>
+#endif
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -188,6 +185,8 @@ struct VectorBinaryPrimitive <operation_type,
   }
 };
 
+#ifdef __SSE2__
+
 // Different simd operations (single precision, double precision, integer)
 // operate on different registers. SimdLoader is unified interface to
 // load/store data in right CPU register.
@@ -245,6 +244,20 @@ void EvaluateSimd(const DataCppType* left, const DataCppType* right,
     simd_loader.StoreAligned(xmm3, result + i);
   }
 }
+
+#else   // __SSE2__
+
+template<OperatorId operation_type, typename DataCppType>
+void EvaluateNoSimd(const DataCppType* left, const DataCppType* right,
+                    const index_t size, DataCppType* result);
+
+template<OperatorId operation_type, typename DataCppType>
+void EvaluateSimd(const DataCppType* left, const DataCppType* right,
+                  const index_t size, DataCppType* result) {
+  EvaluateNoSimd(left, right, size, result);
+}
+
+#endif  // __SSE2__
 
 template<OperatorId operation_type, typename DataCppType>
 void EvaluateNoSimd(const DataCppType* left, const DataCppType* right,

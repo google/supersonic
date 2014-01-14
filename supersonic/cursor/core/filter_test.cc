@@ -15,11 +15,11 @@
 
 #include "supersonic/cursor/core/filter.h"
 
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -194,9 +194,8 @@ TEST(FilterCursorTest, OutOfMemoryError) {
   Expression* predicate = new FakePredicate(vector<bool>(true),
                                             vector<bool>(true));
   MemoryLimit memory_limit(0);
-  scoped_ptr<Operation> filter(
-      Filter(predicate,
-             ProjectAllAttributes(),
+  std::unique_ptr<Operation> filter(
+      Filter(predicate, ProjectAllAttributes(),
              new Table(BlockBuilder<INT32, STRING>().Build())));
   filter->SetBufferAllocator(&memory_limit, true);
   FailureOrOwned<Cursor> result = filter->CreateCursor();
@@ -330,21 +329,22 @@ TEST(FilterCursorTest, FilterOnDropped) {
 }
 
 TEST(FilterCursorTest, MaxRowCount) {
-  scoped_ptr<Table> table(new Table(
-      BlockBuilder<INT32>().AddRow(-12).AddRow(12).Build()));
-  scoped_ptr<Cursor> cursor(SucceedOrDie(table->CreateCursor()));
-  scoped_ptr<BoundExpressionTree> bound(DefaultBind(
-      table->schema(), 1, Greater(AttributeAt(0), ConstInt32(0))));
+  std::unique_ptr<Table> table(
+      new Table(BlockBuilder<INT32>().AddRow(-12).AddRow(12).Build()));
+  std::unique_ptr<Cursor> cursor(SucceedOrDie(table->CreateCursor()));
+  std::unique_ptr<BoundExpressionTree> bound(
+      DefaultBind(table->schema(), 1, Greater(AttributeAt(0), ConstInt32(0))));
 
-  scoped_ptr<const SingleSourceProjector> projector(ProjectAllAttributes());
-  scoped_ptr<const BoundSingleSourceProjector> bound_projector(
+  std::unique_ptr<const SingleSourceProjector> projector(
+      ProjectAllAttributes());
+  std::unique_ptr<const BoundSingleSourceProjector> bound_projector(
       SucceedOrDie(projector->Bind(table->schema())));
 
   FailureOrOwned<Cursor> filter_result =
       BoundFilter(bound.release(), bound_projector.release(),
                   HeapBufferAllocator::Get(), cursor.release());
   ASSERT_TRUE(filter_result.is_success());
-  scoped_ptr<Cursor> filter_cursor(filter_result.release());
+  std::unique_ptr<Cursor> filter_cursor(filter_result.release());
   filter_cursor->Next(1);
 }
 

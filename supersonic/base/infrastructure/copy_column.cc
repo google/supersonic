@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -335,6 +335,8 @@ struct CopyColumnResolver {
                         DATA_LOOP_COPY_SELECTION_SKIP_VECTOR>();
     }
     LOG(FATAL) << "Unhandled case";
+    // Opensource compilers does not recognize LOG(FATAL) as terminal.
+    return NULL;
   }
 
   template<DataType type, IsNullCopierType is_null_copier_type_p,

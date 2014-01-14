@@ -49,11 +49,13 @@ class TempFile {
   static string TempFilename(const char *directory_prefix);
 };
 
-class FileDeleter {
+namespace file {
+
+class FileRemover {
  public:
   // Takes ownership of 'fp' and deletes it upon going out of
   // scope.
-  explicit FileDeleter(File* fp) : fp_(fp) { }
+  explicit FileRemover(File* fp) : fp_(fp) { }
   File* get() const { return fp_; }
   File& operator*() const { return *fp_; }
   File* operator->() const { return fp_; }
@@ -72,12 +74,14 @@ class FileDeleter {
     fp_ = new_fp;
   }
   // Delete (unlink, remove) the underlying file.
-  ~FileDeleter() { reset(NULL); }
+  ~FileRemover() { reset(NULL); }
 
  private:
   File* fp_;
-  DISALLOW_COPY_AND_ASSIGN(FileDeleter);
+  DISALLOW_COPY_AND_ASSIGN(FileRemover);
 };
+
+}  // namespace file
 
 class FileCloser {
  public:

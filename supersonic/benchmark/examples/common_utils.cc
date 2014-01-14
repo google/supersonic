@@ -18,6 +18,8 @@
 
 #include "supersonic/benchmark/examples/common_utils.h"
 
+#include <memory>
+
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/benchmark/manager/benchmark_manager.h"
 #include "supersonic/cursor/base/operation.h"
@@ -33,7 +35,7 @@ void BenchmarkOperation(Operation* operation,
                         GraphVisualisationOptions options,
                         rowcount_t max_block_size,
                         bool log_result) {
-  scoped_ptr<Operation> operation_owner(operation);
+  std::unique_ptr<Operation> operation_owner(operation);
   string operation_info;
   operation_owner->AppendDebugDescription(&operation_info);
   LOG(INFO) << "Benchmarking: " << operation_info;
@@ -44,10 +46,10 @@ void BenchmarkOperation(Operation* operation,
 
   ViewPrinter printer;
 
-  scoped_ptr<BenchmarkDataWrapper> data_wrapper(
+  std::unique_ptr<BenchmarkDataWrapper> data_wrapper(
       SetUpBenchmarkForCursor(cursor_owner.release()));
 
-  scoped_ptr<Cursor> benchmarked_cursor(data_wrapper->release_cursor());
+  std::unique_ptr<Cursor> benchmarked_cursor(data_wrapper->release_cursor());
 
   while (true) {
     ResultView view = benchmarked_cursor->Next(max_block_size);
@@ -56,7 +58,7 @@ void BenchmarkOperation(Operation* operation,
     }
 
     if (log_result) {
-      printer.AppendResultViewToStream(view, &LOG(INFO));
+      LOG(INFO) << ViewPrinter::StreamResultViewAdapter(printer, view);
     }
   }
 

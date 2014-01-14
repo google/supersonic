@@ -18,7 +18,7 @@
 
 #include <cmath>
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/proto/supersonic.pb.h"

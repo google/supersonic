@@ -16,9 +16,9 @@
 #ifndef SUPERSONIC_CURSOR_CORE_AGGREGATOR_H_
 #define SUPERSONIC_CURSOR_CORE_AGGREGATOR_H_
 
+#include <memory>
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -78,7 +78,7 @@ class Aggregator {
                      rowcount_t result_initial_row_capacity);
 
   TupleSchema schema_;
-  scoped_ptr<Block> data_;
+  std::unique_ptr<Block> data_;
 
   // Pairs of input column position (can be -1 for COUNT) and aggregators that
   // should be used to compute aggregation on given inputs.

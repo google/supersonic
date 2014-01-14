@@ -16,8 +16,9 @@
 
 #include "supersonic/expression/infrastructure/terminal_expressions.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -95,7 +96,7 @@ class RandInt32Expression : public Expression {
   string ToString(bool verbose) const { return "RANDINT32()"; }
 
  private:
-  scoped_ptr<RandomBase> random_generator_;
+  std::unique_ptr<RandomBase> random_generator_;
   DISALLOW_COPY_AND_ASSIGN(RandInt32Expression);
 };
 

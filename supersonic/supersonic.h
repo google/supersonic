@@ -67,6 +67,5 @@
 #include "supersonic/expression/ext/hashing/hashing_expressions.h"  // IWYU pragma: keep
 #include "supersonic/expression/infrastructure/terminal_bound_expressions.h"  // IWYU pragma: keep
 #include "supersonic/expression/infrastructure/terminal_expressions.h"  // IWYU pragma: keep
-#include "supersonic/serialization/build_expression_from_proto.h"  // IWYU pragma: keep
 
 #endif  // SUPERSONIC_PUBLIC_SUPERSONIC_H_

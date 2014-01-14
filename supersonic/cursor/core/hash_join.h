@@ -16,6 +16,8 @@
 #ifndef SUPERSONIC_CURSOR_CORE_HASH_JOIN_H_
 #define SUPERSONIC_CURSOR_CORE_HASH_JOIN_H_
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/result.h"
 #include "supersonic/cursor/infrastructure/basic_operation.h"
@@ -60,9 +62,9 @@ class HashJoinOperation : public BasicOperation {
       Cursor* rhs_cursor) const;
 
   const JoinType join_type_;
-  scoped_ptr<const SingleSourceProjector> lhs_key_selector_;
-  scoped_ptr<const SingleSourceProjector> rhs_key_selector_;
-  scoped_ptr<const MultiSourceProjector> result_projector_;
+  std::unique_ptr<const SingleSourceProjector> lhs_key_selector_;
+  std::unique_ptr<const SingleSourceProjector> rhs_key_selector_;
+  std::unique_ptr<const MultiSourceProjector> result_projector_;
   const KeyUniqueness rhs_key_uniqueness_;
 };
 

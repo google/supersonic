@@ -21,12 +21,8 @@
 #include <stddef.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <vector>
 using std::vector;
 
@@ -94,7 +90,7 @@ class BoundSortOrder {
   }
 
  private:
-  scoped_ptr<const BoundSingleSourceProjector> projector_;
+  std::unique_ptr<const BoundSingleSourceProjector> projector_;
   vector<ColumnOrder> column_order_;
   DISALLOW_COPY_AND_ASSIGN(BoundSortOrder);
 };
@@ -217,7 +213,9 @@ class Permutation {
   rowid_t at(rowcount_t position) const { return permutation_[position]; }
 
   // Returns the entire permutation as a selection vector.
-  const rowid_t* permutation() const { return &permutation_.front(); }
+  const rowid_t* permutation() const {
+    return (!permutation_.empty()) ? &permutation_.front() : NULL;
+  }
 
  private:
   vector<rowid_t> permutation_;

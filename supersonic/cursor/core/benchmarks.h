@@ -16,8 +16,9 @@
 #ifndef SUPERSONIC_CURSOR_CORE_BENCHMARKS_H_
 #define SUPERSONIC_CURSOR_CORE_BENCHMARKS_H_
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -90,7 +91,7 @@ class BenchmarkedOperation : public Operation {
 
  private:
   // Original operation being benchmarked.
-  const scoped_ptr<Operation> operation_;
+  const std::unique_ptr<Operation> operation_;
   OperationBenchmarkListener* const benchmark_listener_;
 
   DISALLOW_COPY_AND_ASSIGN(BenchmarkedOperation);

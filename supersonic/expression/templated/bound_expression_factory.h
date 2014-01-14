@@ -22,8 +22,9 @@
 #define SUPERSONIC_EXPRESSION_TEMPLATED_BOUND_EXPRESSION_FACTORY_H_
 
 #include <stddef.h>
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -384,8 +385,8 @@ template<OperatorId op, DataType left_type, DataType right_type,
 FailureOrOwned<BoundExpression> CreateTypedBoundBinaryExpression(
     BufferAllocator* const allocator, rowcount_t row_capacity,
     BoundExpression* left_ptr, BoundExpression* right_ptr) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   CHECK_EQ(1, left->result_schema().attribute_count());
   CHECK_EQ(1, right->result_schema().attribute_count());
   bool promote = BinaryExpressionTraits<op>::supports_promotions;
@@ -486,8 +487,8 @@ template<OperatorId op>
 FailureOrOwned<BoundExpression> CreateBinaryEqualTypesExpression(
     BufferAllocator* const allocator, rowcount_t row_capacity,
     BoundExpression* left_ptr, BoundExpression* right_ptr) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   FailureOr<DataType> common_type = CalculateCommonExpressionType(left.get(),
                                                                   right.get());
   PROPAGATE_ON_FAILURE(common_type);
@@ -505,8 +506,8 @@ template<OperatorId op>
 FailureOrOwned<BoundExpression> CreateBinaryNumericExpression(
     BufferAllocator* const allocator, rowcount_t row_capacity,
     BoundExpression* left_ptr, BoundExpression* right_ptr) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   FailureOr<DataType> common_type = CalculateCommonExpressionType(left.get(),
                                                                   right.get());
   PROPAGATE_ON_FAILURE(common_type);
@@ -522,8 +523,8 @@ template<OperatorId op>
 FailureOrOwned<BoundExpression> CreateBinaryIntegerExpression(
     BufferAllocator* const allocator, rowcount_t row_capacity,
     BoundExpression* left_ptr, BoundExpression* right_ptr) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   FailureOr<DataType> common_type = CalculateCommonExpressionType(left.get(),
                                                                   right.get());
   PROPAGATE_ON_FAILURE(common_type);
@@ -548,9 +549,9 @@ FailureOrOwned<BoundExpression> CreateTypedBoundTernaryExpression(
     BoundExpression* left_ptr,
     BoundExpression* middle_ptr,
     BoundExpression* right_ptr) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> middle(middle_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> middle(middle_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   CHECK_EQ(1, left->result_schema().attribute_count());
   CHECK_EQ(1, middle->result_schema().attribute_count());
   CHECK_EQ(1, right->result_schema().attribute_count());

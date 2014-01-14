@@ -16,6 +16,8 @@
 
 #include "supersonic/cursor/base/lookup_index.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/exception.h"
 #include "supersonic/base/exception/exception_macros.h"
@@ -46,9 +48,11 @@ class MockLookupIndex : public LookupIndex {
     return *key_selector_.get();
   }
 
+  virtual bool empty() const { return false; }
+
  private:
   TupleSchema schema_;
-  scoped_ptr<BoundSingleSourceProjector> key_selector_;
+  std::unique_ptr<BoundSingleSourceProjector> key_selector_;
 };
 
 TEST(LookupIndexTest, ValueSelectorBasic) {
@@ -58,7 +62,7 @@ TEST(LookupIndexTest, ValueSelectorBasic) {
   schema.add_attribute(Attribute("col3", STRING, NULLABLE));
   schema.add_attribute(Attribute("col4", DATE, NOT_NULLABLE));
 
-  scoped_ptr<BoundSingleSourceProjector> projector(
+  std::unique_ptr<BoundSingleSourceProjector> projector(
       new BoundSingleSourceProjector(schema));
 
   ASSERT_TRUE(projector->Add(1));
@@ -78,7 +82,7 @@ TEST(LookupIndexTest, ValueSelectorNoKey) {
   TupleSchema schema;
   schema.add_attribute(Attribute("col1", INT32, NOT_NULLABLE));
 
-  scoped_ptr<BoundSingleSourceProjector> projector(
+  std::unique_ptr<BoundSingleSourceProjector> projector(
       new BoundSingleSourceProjector(schema));
 
   MockLookupIndex index(schema, projector.release());
@@ -92,7 +96,7 @@ TEST(LookupIndexTest, ValueSelectorNoValues) {
   TupleSchema schema;
   schema.add_attribute(Attribute("col1", INT32, NOT_NULLABLE));
 
-  scoped_ptr<BoundSingleSourceProjector> projector(
+  std::unique_ptr<BoundSingleSourceProjector> projector(
       new BoundSingleSourceProjector(schema));
   ASSERT_TRUE(projector->Add(0));
 
@@ -105,7 +109,7 @@ TEST(LookupIndexTest, ValueSelectorNoValues) {
 TEST(LookupIndexTest, ValueSelectorNoSchema) {
   TupleSchema schema;
 
-  scoped_ptr<BoundSingleSourceProjector> projector(
+  std::unique_ptr<BoundSingleSourceProjector> projector(
       new BoundSingleSourceProjector(schema));
 
   MockLookupIndex index(schema, projector.release());

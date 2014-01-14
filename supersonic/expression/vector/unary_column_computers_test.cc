@@ -16,6 +16,8 @@
 
 #include "supersonic/expression/vector/unary_column_computers.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/bit_pointers.h"
 #include "supersonic/base/infrastructure/block.h"
@@ -63,7 +65,7 @@ class UnaryComputersTestBlockWrapper {
     return builder.Build();
   }
 
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
 };
 
 TEST(UnaryColumnComputersTest, EvaluationFailure) {

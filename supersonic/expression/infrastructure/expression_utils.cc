@@ -17,7 +17,7 @@
 #include "supersonic/expression/infrastructure/expression_utils.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"

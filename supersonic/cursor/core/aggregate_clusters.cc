@@ -14,12 +14,8 @@
 //
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <vector>
 using std::vector;
 
@@ -154,7 +150,7 @@ class AggregateClustersKeySet {
       const BoundSingleSourceProjector* group_by,
       BufferAllocator* allocator,
       rowcount_t output_block_capacity) {
-    scoped_ptr<AggregateClustersKeySet> key_set(
+    std::unique_ptr<AggregateClustersKeySet> key_set(
         new AggregateClustersKeySet(group_by, allocator));
     PROPAGATE_ON_FAILURE(key_set->Init(output_block_capacity));
     return Success(key_set.release());
@@ -247,7 +243,7 @@ class AggregateClustersKeySet {
 
   // View over an input view from child but with only key columns.
   View child_key_view_;
-  scoped_ptr<const BoundSingleSourceProjector> key_projector_;
+  std::unique_ptr<const BoundSingleSourceProjector> key_projector_;
 
   // Contains all the inserted rows.
   Block indexed_block_;
@@ -256,7 +252,7 @@ class AggregateClustersKeySet {
   rowcount_t indexed_block_row_count_;
 
   // Pointer to last added row. Is NULL when indexed_block_ is empty.
-  scoped_ptr<Row> last_added_;
+  std::unique_ptr<Row> last_added_;
 
   // comparator_[index] is used for index-th column comparison
   vector<const ValueComparatorInterface*> comparators_;
@@ -377,8 +373,8 @@ class AggregateClustersCursor : public BasicCursor {
   // The input.
   CursorIterator child_;
 
-  scoped_ptr<AggregateClustersKeySet> key_set_;
-  scoped_ptr<Aggregator> aggregator_;
+  std::unique_ptr<AggregateClustersKeySet> key_set_;
+  std::unique_ptr<Aggregator> aggregator_;
 
   // Iterates over a result of last call to ProcessInput. When result_.next()
   // returns false and result_.is_eos() is true and input_exhausted() is false,
@@ -553,8 +549,8 @@ FailureOrOwned<Cursor> AggregateClustersCursor::Create(
     Cursor* child) {
   CHECK(allocator != NULL);
   CHECK_GT(block_size, 0);
-  scoped_ptr<Cursor> child_owner(child);
-  scoped_ptr<Aggregator> aggregator_owner(aggregator);
+  std::unique_ptr<Cursor> child_owner(child);
+  std::unique_ptr<Aggregator> aggregator_owner(aggregator);
 
   FailureOrOwned<AggregateClustersKeySet> key_row_set =
       AggregateClustersKeySet::Create(group_by, allocator, block_size);
@@ -620,8 +616,8 @@ class AggregateClustersOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const SingleSourceProjector> group_by_;
-  scoped_ptr<const AggregationSpecification> aggregation_specification_;
+  std::unique_ptr<const SingleSourceProjector> group_by_;
+  std::unique_ptr<const AggregationSpecification> aggregation_specification_;
   rowcount_t block_size_;
   DISALLOW_COPY_AND_ASSIGN(AggregateClustersOperation);
 };

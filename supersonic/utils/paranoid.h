@@ -22,7 +22,7 @@
 // [basic.fundamental] 3.9.1 -5- footnote 42: "Using a bool value in ways
 // described by this International standard as "undefined", such as by
 // examining the value of an uninitialized automatic variable, might cause
-// it to behave as if niether true nor false."
+// it to behave as if neither true nor false."
 //
 // Specifically, this program fragment:
 //   bool b;
@@ -57,11 +57,10 @@
 //
 // -- mec 2006-07-06
 
-inline bool SanitizeBool(bool b) {
-  unsigned char c = static_cast<unsigned char>(b);
-  volatile unsigned char* p = &c;
-  DCHECK_LT(*p, 2);
-  return (*p != '\0') ? true : false;
+inline bool SanitizeBool(const bool &b) {
+  unsigned char c = reinterpret_cast<const volatile unsigned char&>(b);
+  DCHECK_LT(c, 2);
+  return (c != '\0') ? true : false;
 }
 
 // Returns true iff. a given bool is either true (0x1) or false (0x0).
@@ -71,9 +70,11 @@ inline bool SanitizeBool(bool b) {
 // Protocol Buffer runtime as mentioned above.
 //
 // Uses an assembler sequence so as not to be compiler-optimization sensitive.
-inline bool IsSaneBool(bool b) {
+inline bool IsSaneBool(const bool &b) {
 #if (defined __i386__ || defined __x86_64__) && defined __GNUC__
-  bool result;
+  // Result is initialized to keep MemorySanitizer happy (as it does not see
+  // the real initialization in the inline asm block).
+  bool result = false;
   // Set result to true if b is below or equal to 0x1.
   __asm__("cmpb  $0x1, %1\n\t"
           "setbe %0"
@@ -82,9 +83,8 @@ inline bool IsSaneBool(bool b) {
           : "cc");         // Clobbers condition-codes
   return result;
 #else
-  unsigned char c = static_cast<unsigned char>(b);
-  volatile unsigned char* p = &c;
-  return *p <= 1;
+  unsigned char c = reinterpret_cast<const volatile unsigned char&>(b);
+  return c <= 1;
 #endif
 }
 

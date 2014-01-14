@@ -14,12 +14,8 @@
 //
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -85,7 +81,7 @@ class ScalarAggregateCursor : public BasicCursor {
  private:
   CursorIterator child_;
   bool eos_;  // Set after the result row has been returned.
-  scoped_ptr<Aggregator> aggregator_;
+  std::unique_ptr<Aggregator> aggregator_;
 
   // We aggregate all the results to a single row. Aggregators operate on a
   // block-by-block basis, and expect to be informed to which output row should
@@ -117,7 +113,7 @@ class ScalarAggregateOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<AggregationSpecification> aggregation_specification_;
+  std::unique_ptr<AggregationSpecification> aggregation_specification_;
   DISALLOW_COPY_AND_ASSIGN(ScalarAggregateOperation);
 };
 

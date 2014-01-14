@@ -21,9 +21,8 @@
 #include <stddef.h>
 
 #include <iosfwd>
-using std::ostream;
+#include <memory>
 #include <ostream>
-using std::endl;
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -59,16 +58,16 @@ class ComparableCursor : public Streamable {
     return !static_cast<bool>(*this == other);
   }
 
-  virtual void AppendToStream(ostream* s) const;
+  virtual void AppendToStream(std::ostream* s) const;
 
  private:
-  scoped_ptr<StatsListener> spy_;
+  std::unique_ptr<StatsListener> spy_;
   CursorIterator iterator_;
   size_t row_id_;
   DISALLOW_COPY_AND_ASSIGN(ComparableCursor);
 };
 
-ostream& operator<<(ostream& s, const ResultView& result);
+std::ostream& operator<<(std::ostream& s, const ResultView& result);
 
 testing::AssertionResult CompareResultViews(
     const ResultView& a, const ResultView& b);

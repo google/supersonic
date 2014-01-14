@@ -12,7 +12,7 @@
 #define UTIL_SYMBOLIZE_DEMANGLE_H__
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include "supersonic/utils/basictypes.h"
 
 namespace util {

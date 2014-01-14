@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#include <memory>
+
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/base/memory/memory.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -50,7 +52,7 @@ FailureOrOwned<Cursor> CreateAggregateClusters(
     const SingleSourceProjector& group_by,
     const AggregationSpecification& aggregation,
     Cursor* input) {
-  scoped_ptr<Cursor> input_owner(input);
+  std::unique_ptr<Cursor> input_owner(input);
   FailureOrOwned<Aggregator> aggregator = Aggregator::Create(
       aggregation, input_owner->schema(), HeapBufferAllocator::Get(), 1);
   PROPAGATE_ON_FAILURE(aggregator);
@@ -82,22 +84,20 @@ TEST_F(AggregateClustersCursorTest, AggregateClusters) {
 TEST_F(AggregateClustersCursorTest, AggregateClustersWithSpyTransform) {
   CreateSampleData();
   Cursor* input = sample_input_builder_.BuildCursor();
-  scoped_ptr<const SingleSourceProjector> projector(
+  std::unique_ptr<const SingleSourceProjector> projector(
       ProjectNamedAttribute("col0"));
   AggregationSpecification aggregator;
   aggregator.AddAggregation(SUM, "col1", "sum");
 
-  scoped_ptr<Cursor> clusters(SucceedOrDie(CreateAggregateClusters(
-      *projector,
-      aggregator,
-      input)));
+  std::unique_ptr<Cursor> clusters(
+      SucceedOrDie(CreateAggregateClusters(*projector, aggregator, input)));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   clusters->ApplyToChildren(spy_transformer.get());
   clusters.reset(spy_transformer->Transform(clusters.release()));
 
-  scoped_ptr<Cursor> expected_result(sample_output_builder_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(sample_output_builder_.BuildCursor());
   EXPECT_CURSORS_EQUAL(expected_result.release(), clusters.release());
 }
 
@@ -270,16 +270,14 @@ TEST_F(AggregateClustersCursorTest, AggregateClustersWithDefaultCreate) {
 TEST_F(AggregateClustersCursorTest, TransformTest) {
   // Empty input cursor.
   Cursor* input = sample_input_builder_.BuildCursor();
-  scoped_ptr<const SingleSourceProjector> projector(
+  std::unique_ptr<const SingleSourceProjector> projector(
       ProjectNamedAttribute("col0"));
   AggregationSpecification aggregator;
 
-  scoped_ptr<Cursor> clusters(SucceedOrDie(CreateAggregateClusters(
-      *projector,
-      aggregator,
-      input)));
+  std::unique_ptr<Cursor> clusters(
+      SucceedOrDie(CreateAggregateClusters(*projector, aggregator, input)));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   clusters->ApplyToChildren(spy_transformer.get());
 

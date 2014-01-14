@@ -25,6 +25,7 @@ using std::vector;
 
 #include "supersonic/utils/walltime.h"
 #include "supersonic/utils/timer.h"
+#include "supersonic/utils/port.h"
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/stringprintf.h"
@@ -66,14 +67,14 @@ File* TempFile::Create(const char *directory_prefix) {
 // Creates a temporary file name using standard library utilities.
 static inline void TempFilenameInDir(const char *directory_prefix,
                                      string *filename) {
-  int32 tid = static_cast<int32>(pthread_self());
+  pthread_t tid = pthread_self();
   int32 pid = static_cast<int32>(getpid());
   int64 now = CycleClock::Now();
   int64 now_usec = GetCurrentTimeMicros();
   *filename = File::JoinPath(
       directory_prefix,
-      StringPrintf("tempfile-%x-%d-%llx-%llx",
-                   tid, pid, now, now_usec));
+      StringPrintf("tempfile-%" GPRIxPTHREAD "-%d-%llx-%llx",
+                   PRINTABLE_PTHREAD(tid), pid, now, now_usec));
 }
 
 /* static */

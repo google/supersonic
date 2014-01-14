@@ -16,8 +16,9 @@
 
 #include "supersonic/cursor/infrastructure/view_cursor.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -75,17 +76,17 @@ class ViewCursorTest : public ::testing::Test {
 
  private:
   int64 selection_vector[4];
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
 };
 
 TEST_F(ViewCursorTest, ViewCursorHasCorrectSchema) {
-  scoped_ptr<Cursor> cursor(view_cursor());
+  std::unique_ptr<Cursor> cursor(view_cursor());
   EXPECT_TUPLE_SCHEMAS_EQUAL(input_schema(), cursor->schema());
 }
 
 TEST_F(ViewCursorTest, ViewCursorDescription) {
   string name = "(prefix)";
-  scoped_ptr<Cursor> cursor(view_cursor());
+  std::unique_ptr<Cursor> cursor(view_cursor());
   cursor->AppendDebugDescription(&name);
   EXPECT_EQ(name, string("(prefix)ViewCursor(col1: INT32 NOT NULL, "
                          "col2: INT64)"));
@@ -94,7 +95,7 @@ TEST_F(ViewCursorTest, ViewCursorDescription) {
 // Not using the testing fixture for Cursors, because the fixture uses tables
 // and CursorOverView.
 TEST_F(ViewCursorTest, ViewCursorNext) {
-  scoped_ptr<Cursor> cursor(view_cursor());
+  std::unique_ptr<Cursor> cursor(view_cursor());
   ResultView view = cursor->Next(20);
   EXPECT_TRUE(view.has_data());
   EXPECT_TUPLE_SCHEMAS_EQUAL(input_schema(), view.view().schema());
@@ -111,13 +112,13 @@ TEST_F(ViewCursorTest, ViewCursorNext) {
 }
 
 TEST_F(ViewCursorTest, SelectionViewCursorHasCorrectSchema) {
-  scoped_ptr<Cursor> cursor(selection_cursor(10));
+  std::unique_ptr<Cursor> cursor(selection_cursor(10));
   EXPECT_TUPLE_SCHEMAS_EQUAL(input_schema(), cursor->schema());
 }
 
 TEST_F(ViewCursorTest, SelectionViewCursorDescription) {
   string name = "(prefix)";
-  scoped_ptr<Cursor> cursor(selection_cursor(1));
+  std::unique_ptr<Cursor> cursor(selection_cursor(1));
   cursor->AppendDebugDescription(&name);
   EXPECT_EQ(name, string("(prefix)ViewCursorWithSelectionVector("
                          "col1: INT32 NOT NULL, "
@@ -125,7 +126,7 @@ TEST_F(ViewCursorTest, SelectionViewCursorDescription) {
 }
 
 TEST_F(ViewCursorTest, SelectionViewCursorNext) {
-  scoped_ptr<Cursor> cursor(selection_cursor(3));
+  std::unique_ptr<Cursor> cursor(selection_cursor(3));
   ResultView view = cursor->Next(20);
   EXPECT_TRUE(view.has_data());
   EXPECT_EQ(3, view.view().row_count());

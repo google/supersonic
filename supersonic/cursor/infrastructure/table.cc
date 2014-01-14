@@ -16,12 +16,8 @@
 #include "supersonic/cursor/infrastructure/table.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -130,7 +126,7 @@ FailureOrOwned<Cursor> Table::CreateCursor() const {
 
 FailureOrOwned<Table> MaterializeTable(BufferAllocator* allocator,
                                        Cursor* cursor) {
-  scoped_ptr<Table> table(new Table(cursor->schema(), allocator));
+  std::unique_ptr<Table> table(new Table(cursor->schema(), allocator));
   TableSink sink(table.get());
   PROPAGATE_ON_FAILURE(WriteCursor(cursor, &sink));
   return Success(table.release());

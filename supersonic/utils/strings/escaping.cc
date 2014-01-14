@@ -1,5 +1,4 @@
 // Copyright 2008 Google Inc. All Rights Reserved.
-// Authors: Numerous. See the .h for contact people.
 
 #include "supersonic/utils/strings/escaping.h"
 
@@ -8,19 +7,26 @@
 #include <string.h>
 
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <string>
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
 #include "supersonic/utils/integral_types.h"
+#include "supersonic/utils/macros.h"
 #include "supersonic/utils/port.h"
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/strings/join.h"
+#include "supersonic/utils/strings/stringpiece.h"
 #include "supersonic/utils/utf/utf.h"  // for runetochar
 #include "supersonic/utils/charmap.h"
 #include "supersonic/utils/stl_util.h"
 
 namespace strings {
+
+// Digit conversion.
+static char hex_char[] = "0123456789abcdef";
 
 // These are used for the leave_nulls_escaped argument to CUnescapeInternal().
 static bool kUnescapeNulls = false;
@@ -93,7 +99,7 @@ int UnescapeCEscapeSequences(const char* source, char* dest,
     } else {
       switch ( *++p ) {                    // skip past the '\\'
         case '\0':
-          LOG_STRING(ERROR, errors) << "String cannot end with \\";
+          LOG_STRING(ERROR, errors) << "String cannot end with \\: " << source;
           *d = '\0';
           return d - dest;   // we're done with p
         case 'a':  *d++ = '\a';  break;
@@ -144,7 +150,7 @@ int UnescapeCEscapeSequences(const char* source, char* dest,
         }
         case 'u': {
           // \uhhhh => convert 4 hex digits to UTF-8
-          char32 rune = 0;
+          Rune rune = 0;
           const char *hex_start = p;
           for (int i = 0; i < 4; ++i) {
             if (ascii_isxdigit(p[1])) {  // Look one char ahead.
@@ -161,13 +167,13 @@ int UnescapeCEscapeSequences(const char* source, char* dest,
         }
         case 'U': {
           // \Uhhhhhhhh => convert 8 hex digits to UTF-8
-          char32 rune = 0;
+          Rune rune = 0;
           const char *hex_start = p;
           for (int i = 0; i < 8; ++i) {
             if (ascii_isxdigit(p[1])) {  // Look one char ahead.
               // Don't change rune until we're sure this
               // is within the Unicode limit, but do advance p.
-              char32 newrune = (rune << 4) + hex_digit_to_int(*++p);
+              Rune newrune = (rune << 4) + hex_digit_to_int(*++p);
               if (newrune > 0x10FFFF) {
                 LOG_STRING(ERROR, errors)
                   << "Value of \\"
@@ -229,7 +235,7 @@ int UnescapeCEscapeString(const string& src, string* dest,
 }
 
 string UnescapeCEscapeString(const string& src) {
-  scoped_array<char> unescaped(new char[src.size() + 1]);
+  scoped_ptr<char[]> unescaped(new char[src.size() + 1]);
   int len = UnescapeCEscapeSequences(src.c_str(), unescaped.get(), NULL);
   return string(unescaped.get(), len);
 }
@@ -251,7 +257,7 @@ string UnescapeCEscapeString(const string& src) {
 //     NOTE: any changes to this function must also be reflected in the older
 //     UnescapeCEscapeSequences().
 // ----------------------------------------------------------------------
-static bool CUnescapeInternal(const StringPiece& source,
+static bool CUnescapeInternal(StringPiece source,
                               bool leave_nulls_escaped,
                               char* dest,
                               int* dest_len,
@@ -345,7 +351,7 @@ static bool CUnescapeInternal(const StringPiece& source,
         }
         case 'u': {
           // \uhhhh => convert 4 hex digits to UTF-8
-          char32 rune = 0;
+          Rune rune = 0;
           const char *hex_start = p;
           if (p + 4 >= end) {
             if (error) {
@@ -378,7 +384,7 @@ static bool CUnescapeInternal(const StringPiece& source,
         }
         case 'U': {
           // \Uhhhhhhhh => convert 8 hex digits to UTF-8
-          char32 rune = 0;
+          Rune rune = 0;
           const char *hex_start = p;
           if (p + 8 >= end) {
             if (error) {
@@ -392,7 +398,7 @@ static bool CUnescapeInternal(const StringPiece& source,
             if (ascii_isxdigit(p[1])) {
               // Don't change rune until we're sure this
               // is within the Unicode limit, but do advance p.
-              char32 newrune = (rune << 4) + hex_digit_to_int(*++p);
+              Rune newrune = (rune << 4) + hex_digit_to_int(*++p);
               if (newrune > 0x10FFFF) {
                 if (error) {
                   *error = "Value of \\" +
@@ -439,7 +445,7 @@ static bool CUnescapeInternal(const StringPiece& source,
 //    Same as above but uses a C++ string for output. 'source' and 'dest'
 //    may be the same.
 // ----------------------------------------------------------------------
-bool CUnescapeInternal(const StringPiece& source,
+bool CUnescapeInternal(StringPiece source,
                        bool leave_nulls_escaped,
                        string* dest,
                        string* error) {
@@ -461,12 +467,12 @@ bool CUnescapeInternal(const StringPiece& source,
 //
 // See CUnescapeInternal() for implementation details.
 // ----------------------------------------------------------------------
-bool CUnescape(const StringPiece& source, char* dest, int* dest_len,
+bool CUnescape(StringPiece source, char* dest, int* dest_len,
                string* error) {
   return CUnescapeInternal(source, kUnescapeNulls, dest, dest_len, error);
 }
 
-bool CUnescape(const StringPiece& source, string* dest, string* error) {
+bool CUnescape(StringPiece source, string* dest, string* error) {
   return CUnescapeInternal(source, kUnescapeNulls, dest, error);
 }
 
@@ -475,95 +481,17 @@ bool CUnescape(const StringPiece& source, string* dest, string* error) {
 //
 // See CUnescapeInternal() for implementation details.
 // ----------------------------------------------------------------------
-bool CUnescapeForNullTerminatedString(const StringPiece& source,
+bool CUnescapeForNullTerminatedString(StringPiece source,
                                       char* dest,
                                       int* dest_len,
                                       string* error) {
   return CUnescapeInternal(source, kLeaveNullsEscaped, dest, dest_len, error);
 }
 
-bool CUnescapeForNullTerminatedString(const StringPiece& source,
+bool CUnescapeForNullTerminatedString(StringPiece source,
                                       string* dest,
                                       string* error) {
   return CUnescapeInternal(source, kLeaveNullsEscaped, dest, error);
-}
-
-// ----------------------------------------------------------------------
-// CEscapeString()
-// CHexEscapeString()
-// Utf8SafeCEscapeString()
-// Utf8SafeCHexEscapeString()
-//    Copies 'src' to 'dest', escaping dangerous characters using
-//    C-style escape sequences. This is very useful for preparing query
-//    flags. 'src' and 'dest' should not overlap. The 'Hex' version uses
-//    hexadecimal rather than octal sequences. The 'Utf8Safe' version doesn't
-//    touch UTF-8 bytes.
-//    Returns the number of bytes written to 'dest' (not including the \0)
-//    or -1 if there was insufficient space.
-//
-//    Currently only \n, \r, \t, ", ', \ and !ascii_isprint() chars are escaped.
-// ----------------------------------------------------------------------
-int CEscapeInternal(const char* src, int src_len, char* dest,
-                    int dest_len, bool use_hex, bool utf8_safe) {
-  const char* src_end = src + src_len;
-  int used = 0;
-  bool last_hex_escape = false;  // true if last output char was \xNN
-
-  for (; src < src_end; src++) {
-    if (dest_len - used < 2)   // Need space for two letter escape
-      return -1;
-
-    bool is_hex_escape = false;
-    switch (*src) {
-      case '\n': dest[used++] = '\\'; dest[used++] = 'n';  break;
-      case '\r': dest[used++] = '\\'; dest[used++] = 'r';  break;
-      case '\t': dest[used++] = '\\'; dest[used++] = 't';  break;
-      case '\"': dest[used++] = '\\'; dest[used++] = '\"'; break;
-      case '\'': dest[used++] = '\\'; dest[used++] = '\''; break;
-      case '\\': dest[used++] = '\\'; dest[used++] = '\\'; break;
-      default:
-        // Note that if we emit \xNN and the src character after that is a hex
-        // digit then that digit must be escaped too to prevent it being
-        // interpreted as part of the character code by C.
-        if ((!utf8_safe || *src < 0x80) &&
-            (!ascii_isprint(*src) ||
-             (last_hex_escape && ascii_isxdigit(*src)))) {
-          if (dest_len - used < 4)  // need space for 4 letter escape
-            return -1;
-          sprintf(dest + used, (use_hex ? "\\x%02x" : "\\%03o"), *src);
-          is_hex_escape = use_hex;
-          used += 4;
-        } else {
-          dest[used++] = *src;
-          break;
-        }
-    }
-    last_hex_escape = is_hex_escape;
-  }
-
-  if (dest_len - used < 1)   // make sure that there is room for \0
-    return -1;
-
-  dest[used] = '\0';   // doesn't count towards return value though
-  return used;
-}
-
-int CEscapeString(const char* src, int src_len, char* dest, int dest_len) {
-  return CEscapeInternal(src, src_len, dest, dest_len, false, false);
-}
-
-int CHexEscapeString(const char* src, int src_len, char* dest, int dest_len) {
-  return CEscapeInternal(src, src_len, dest, dest_len, true, false);
-}
-
-int Utf8SafeCEscapeString(const char* src, int src_len, char* dest,
-                          int dest_len) {
-  return CEscapeInternal(src, src_len, dest, dest_len, false, true);
-}
-
-int Utf8SafeCHexEscapeString(const char* src, int src_len, char* dest,
-                             int dest_len) {
-  return CEscapeInternal(src, src_len, dest, dest_len, true, true);
 }
 
 // ----------------------------------------------------------------------
@@ -571,96 +499,185 @@ int Utf8SafeCHexEscapeString(const char* src, int src_len, char* dest,
 // CHexEscape()
 // Utf8SafeCEscape()
 // Utf8SafeCHexEscape()
-//    Copies 'src' to result, escaping dangerous characters using
-//    C-style escape sequences. This is very useful for preparing query
-//    flags. 'src' and 'dest' should not overlap. The 'Hex' version
-//    hexadecimal rather than octal sequences. The 'Utf8Safe' version
-//    doesn't touch UTF-8 bytes.
+//    Escapes 'src' using C-style escape sequences.  This is useful for
+//    preparing query flags.  The 'Hex' version uses hexadecimal rather than
+//    octal sequences.  The 'Utf8Safe' version does not touch UTF-8 bytes.
 //
-//    Currently only \n, \r, \t, ", ', \ and !ascii_isprint() chars are escaped.
+//    Escaped chars: \n, \r, \t, ", ', \, and !ascii_isprint().
 // ----------------------------------------------------------------------
-string CEscape(const StringPiece& src) {
-  const int dest_length = src.size() * 4 + 1;  // Maximum possible expansion
-  scoped_array<char> dest(new char[dest_length]);
-  const int len = CEscapeInternal(src.data(), src.size(),
-                                  dest.get(), dest_length, false, false);
-  DCHECK_GE(len, 0);
-  return string(dest.get(), len);
+static string CEscapeInternal(StringPiece src, bool use_hex, bool utf8_safe) {
+  string dest;
+  bool last_hex_escape = false;  // true if last output char was \xNN.
+
+  for (const char* p = src.begin(); p < src.end(); ++p) {
+    unsigned char c = *p;
+    bool is_hex_escape = false;
+    switch (c) {
+      case '\n': dest.append("\\" "n"); break;
+      case '\r': dest.append("\\" "r"); break;
+      case '\t': dest.append("\\" "t"); break;
+      case '\"': dest.append("\\" "\""); break;
+      case '\'': dest.append("\\" "'"); break;
+      case '\\': dest.append("\\" "\\"); break;
+      default:
+        // Note that if we emit \xNN and the src character after that is a hex
+        // digit then that digit must be escaped too to prevent it being
+        // interpreted as part of the character code by C.
+        if ((!utf8_safe || c < 0x80) &&
+            (!ascii_isprint(c) ||
+             (last_hex_escape && ascii_isxdigit(c)))) {
+          if (use_hex) {
+            dest.append("\\" "x");
+            dest.push_back(hex_char[c / 16]);
+            dest.push_back(hex_char[c % 16]);
+            is_hex_escape = true;
+          } else {
+            dest.append("\\");
+            dest.push_back(hex_char[c / 64]);
+            dest.push_back(hex_char[(c % 64) / 8]);
+            dest.push_back(hex_char[c % 8]);
+          }
+        } else {
+          dest.push_back(c);
+          break;
+        }
+    }
+    last_hex_escape = is_hex_escape;
+  }
+
+  return dest;
 }
 
-string CHexEscape(const StringPiece& src) {
-  const int dest_length = src.size() * 4 + 1;  // Maximum possible expansion
-  scoped_array<char> dest(new char[dest_length]);
-  const int len = CEscapeInternal(src.data(), src.size(),
-                                  dest.get(), dest_length, true, false);
-  DCHECK_GE(len, 0);
-  return string(dest.get(), len);
+string CEscape(StringPiece src) {
+  return CEscapeInternal(src, false, false);
 }
 
-string Utf8SafeCEscape(const StringPiece& src) {
-  const int dest_length = src.size() * 4 + 1;  // Maximum possible expansion
-  scoped_array<char> dest(new char[dest_length]);
-  const int len = CEscapeInternal(src.data(), src.size(),
-                                  dest.get(), dest_length, false, true);
-  DCHECK_GE(len, 0);
-  return string(dest.get(), len);
+string CHexEscape(StringPiece src) {
+  return CEscapeInternal(src, true, false);
 }
 
-string Utf8SafeCHexEscape(const StringPiece& src) {
-  const int dest_length = src.size() * 4 + 1;  // Maximum possible expansion
-  scoped_array<char> dest(new char[dest_length]);
-  const int len = CEscapeInternal(src.data(), src.size(),
-                                  dest.get(), dest_length, true, true);
-  DCHECK_GE(len, 0);
-  return string(dest.get(), len);
+string Utf8SafeCEscape(StringPiece src) {
+  return CEscapeInternal(src, false, true);
+}
+
+string Utf8SafeCHexEscape(StringPiece src) {
+  return CEscapeInternal(src, true, true);
 }
 
 // ----------------------------------------------------------------------
-// BackslashEscape and BackslashUnescape
+// BackslashEscape, BackslashUnescape, and BackslashUnescapedFind
 // ----------------------------------------------------------------------
-void BackslashEscape(const StringPiece& src,
+
+void BackslashEscape(StringPiece src,
                      const strings::CharSet& to_escape,
                      string* dest) {
-  dest->reserve(dest->size() + src.size());
-  for (const char *p = src.data(), *end = src.data() + src.size();
-       p != end; ) {
+  typedef StringPiece::const_iterator Iter;
+  Iter first = src.begin();
+  Iter last = src.end();
+  while (first != last) {
     // Advance to next character we need to escape, or to end of source
-    const char* next = p;
-    while (next < end && !to_escape.Test(*next)) {
-      next++;
+    Iter next = first;
+    while (next != last && !to_escape.Test(*next)) {
+      ++next;
     }
     // Append the whole run of non-escaped chars
-    dest->append(p, next - p);
-    if (next == end) break;
-    // Char at *next needs to be escaped.  Append backslash followed by *next
-    char c[2];
-    c[0] = '\\';
-    c[1] = *next;
-    dest->append(c, 2);
-    p = next + 1;
+    dest->append(first, next);
+    if (next != last) {
+      // Char at *next needs to be escaped.
+      char c[2] = { '\\', *next++ };
+      dest->append(c, c + arraysize(c));
+    }
+    first = next;
   }
 }
 
-void BackslashUnescape(const StringPiece& src,
+void BackslashUnescape(StringPiece src,
                        const strings::CharSet& to_unescape,
                        string* dest) {
-  dest->reserve(dest->size() + src.size());
+  typedef StringPiece::const_iterator Iter;
+  Iter first = src.begin();
+  Iter last = src.end();
   bool escaped = false;
-  for (const char* p = src.data(), *end = src.data() + src.size();
-       p != end; ++p) {
+  for (; first != last; ++first) {
     if (escaped) {
-      if (!to_unescape.Test(*p)) {
-        // Keep the backslash
+      if (to_unescape.Test(*first)) {
+        dest->push_back(*first);
+        escaped = false;
+      } else {
         dest->push_back('\\');
+        if (*first == '\\') {
+          escaped = true;
+        } else {
+          escaped = false;
+          dest->push_back(*first);
+        }
       }
-      dest->push_back(*p);
-      escaped = false;
-    } else if (*p == '\\') {
-      escaped = true;
     } else {
-      dest->push_back(*p);
+      if (*first == '\\') {
+        escaped = true;
+      } else {
+        dest->push_back(*first);
+      }
     }
   }
+  if (escaped) {
+    dest->push_back('\\');  // trailing backslash
+  }
+}
+
+static inline StringPiece::const_iterator BackslashUnescapedFindIter(
+    StringPiece::const_iterator first,
+    StringPiece::const_iterator last,
+    const strings::CharSet& chars) {
+  bool escaped = false;
+  StringPiece::const_iterator slash_pos;  // valid only if escaped
+  for (; first != last; ++first) {
+    if (escaped) {
+      if (chars.Test('\\')) {
+        if (*first == '\\') {
+          continue;
+        }
+        if ((std::distance(slash_pos, first) & 1) == 0) {
+          escaped = false;
+          if (chars.Test(*first)) {
+            return first;
+          }
+          continue;
+        }
+        // odd distance to 'first': an unescaped '\' is at (first-1).
+        if (chars.Test(*first)) {
+          continue;
+        }
+        return first - 1;
+      } else {
+        escaped = false;
+        continue;
+      }
+    }
+    if (*first == '\\') {
+      escaped = true;
+      slash_pos = first;
+      continue;
+    }
+    if (chars.Test(*first)) {
+      return first;
+    }
+  }
+  if (escaped && chars.Test('\\')) {
+    if ((std::distance(slash_pos, first) & 1) == 1) {
+      return first - 1;
+    }
+  }
+  return first;
+}
+
+stringpiece_ssize_type BackslashUnescapedFind(StringPiece src,
+                                              const strings::CharSet& chars) {
+  StringPiece::const_iterator pos =
+      BackslashUnescapedFindIter(src.begin(), src.end(), chars);
+  if (pos == src.end())
+    return StringPiece::npos;
+  return std::distance(src.begin(), pos);
 }
 
 // ----------------------------------------------------------------------
@@ -895,10 +912,10 @@ int Base64UnescapeInternal(const char *src, int szsrc,
       // szsrc claims the string is).
 
       if (!src[0] || !src[1] || !src[2] ||
-          (temp = ((unbase64[src[0]] << 18) |
-                   (unbase64[src[1]] << 12) |
-                   (unbase64[src[2]] << 6) |
-                   (unbase64[src[3]]))) & 0x80000000) {
+          (temp = ((unsigned(unbase64[src[0]]) << 18) |
+                   (unsigned(unbase64[src[1]]) << 12) |
+                   (unsigned(unbase64[src[2]]) << 6) |
+                   (unsigned(unbase64[src[3]])))) & 0x80000000) {
         // Iff any of those four characters was bad (null, illegal,
         // whitespace, padding), then temp's high bit will be set
         // (because unbase64[] is -1 for all bad characters).
@@ -937,10 +954,10 @@ int Base64UnescapeInternal(const char *src, int szsrc,
   } else {
     while (szsrc >= 4)  {
       if (!src[0] || !src[1] || !src[2] ||
-          (temp = ((unbase64[src[0]] << 18) |
-                   (unbase64[src[1]] << 12) |
-                   (unbase64[src[2]] << 6) |
-                   (unbase64[src[3]]))) & 0x80000000) {
+          (temp = ((unsigned(unbase64[src[0]]) << 18) |
+                   (unsigned(unbase64[src[1]]) << 12) |
+                   (unsigned(unbase64[src[2]]) << 6) |
+                   (unsigned(unbase64[src[3]])))) & 0x80000000) {
         GET_INPUT(first_no_dest, 4);
         GET_INPUT(second_no_dest, 3);
         GET_INPUT(third_no_dest, 2);
@@ -1644,7 +1661,7 @@ static const Charmap escape_file_name_exceptions(
     "0123456789"  // digits
     "-_.");
 
-void EscapeFileName(const StringPiece& src, string* dst) {
+void EscapeFileName(StringPiece src, string* dst) {
   // Reserve at least src.size() chars
   dst->reserve(dst->size() + src.size());
 
@@ -1667,7 +1684,7 @@ void EscapeFileName(const StringPiece& src, string* dst) {
   }
 }
 
-void UnescapeFileName(const StringPiece& src_piece, string* dst) {
+void UnescapeFileName(StringPiece src_piece, string* dst) {
   const char* src = src_piece.data();
   const int len = src_piece.size();
   for (int i = 0; i < len; ++i) {
@@ -1705,8 +1722,6 @@ static char hex_value[256] = {
   0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0,  0,  0,  0,  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
-
-static char hex_char[] = "0123456789abcdef";
 
 // This is a templated function so that T can be either a char*
 // or a string.  This works because we use the [] operator to access
@@ -1779,7 +1794,7 @@ string b2a_hex(const char* b, int len) {
   return result;
 }
 
-string b2a_hex(const StringPiece& b) {
+string b2a_hex(StringPiece b) {
   return b2a_hex(b.data(), b.size());
 }
 
@@ -1821,7 +1836,7 @@ string ShellEscape(StringPiece src) {
         case '"':
         case '`':
           result.push_back('\\');
-      };
+      }
       result.push_back(src[i]);
     }
     result.push_back('"');

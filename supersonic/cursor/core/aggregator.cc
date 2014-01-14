@@ -17,8 +17,9 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -40,7 +41,7 @@ FailureOrOwned<Aggregator> Aggregator::Create(
     const TupleSchema& input_schema,
     BufferAllocator* allocator,
     rowcount_t result_initial_row_capacity) {
-  scoped_ptr<Aggregator> aggregator(new Aggregator());
+  std::unique_ptr<Aggregator> aggregator(new Aggregator());
   PROPAGATE_ON_FAILURE(aggregator->Init(
       aggregation_specification, input_schema, allocator,
       result_initial_row_capacity));

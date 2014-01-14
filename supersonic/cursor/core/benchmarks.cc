@@ -15,8 +15,9 @@
 
 #include "supersonic/cursor/core/benchmarks.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -39,8 +40,7 @@ class TupleSchema;
 class BenchmarkedCursor : public Cursor {
  public:
   explicit BenchmarkedCursor(OperationBenchmarkListener* benchmark_listener)
-      : cursor_(NULL),
-        benchmark_listener_(benchmark_listener),
+      : benchmark_listener_(benchmark_listener),
         num_rows_generated_(0),
         benchmark_done_(true) {
     CHECK_NOTNULL(benchmark_listener);
@@ -121,7 +121,7 @@ class BenchmarkedCursor : public Cursor {
         time_measurer_.active_system_time());
   }
 
-  scoped_ptr<Cursor> cursor_;
+  std::unique_ptr<Cursor> cursor_;
   OperationBenchmarkListener* benchmark_listener_;
   rowcount_t num_rows_generated_;
   Timer<true> time_measurer_;
@@ -130,7 +130,7 @@ class BenchmarkedCursor : public Cursor {
 };
 
 FailureOrOwned<Cursor> BenchmarkedOperation::CreateCursor() const {
-  scoped_ptr<BenchmarkedCursor> benchmarked_cursor(
+  std::unique_ptr<BenchmarkedCursor> benchmarked_cursor(
       new BenchmarkedCursor(benchmark_listener_));
   PROPAGATE_ON_FAILURE(benchmarked_cursor->Create(operation_.get()));
   return Success(benchmarked_cursor.release());

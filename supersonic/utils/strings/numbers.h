@@ -11,12 +11,10 @@
 #include <string.h>
 #include <time.h>
 #include <functional>
-using std::binary_function;
-using std::less;
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -25,65 +23,133 @@ using std::vector;
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/port.h"
 #include "supersonic/utils/stringprintf.h"
+#include "supersonic/utils/strings/ascii_ctype.h"
+#include "supersonic/utils/strings/stringpiece.h"
 
 // START DOXYGEN NumbersFunctions grouping
 /* @defgroup NumbersFunctions
  * @{ */
 
-// Convert a fingerprint to 16 hex digits.
-string FpToString(Fprint fp);
-
-// Formats a uint128 as a 32-digit hex string.
-string Uint128ToHexString(uint128 ui128);
-
 // Convert strings to numeric values, with strict error checking.
 // Leading and trailing spaces are allowed.
 // Negative inputs are not allowed for unsigned ints (unlike strtoul).
-// Numbers must be in base 10; see the _base variants below for other bases.
-// Returns false on errors (including overflow/underflow).
-bool safe_strto32(const char* str, int32* value);
-bool safe_strto64(const char* str, int64* value);
-bool safe_strtou32(const char* str, uint32* value);
-bool safe_strtou64(const char* str, uint64* value);
+//
+// Base must be [0, 2-36].
+// Base 0:
+//   auto-select base from first two chars:
+//    "0x" -> hex
+//    "0" -> octal
+//    else -> decimal
+// Base 16:
+//   Number can start with "0x"
+//
+// On error, returns false, and sets *value to:
+//   std::numeric_limits<T>::max() on overflow
+//   std::numeric_limits<T>::min() on underflow
+//   conversion of leading substring if available ("123@@@" -> 123)
+//   0 if no leading substring available
+// The effect on errno is unspecified.
+// Do not depend on testing errno.
+bool safe_strto32_base(StringPiece text, int32* value, int base);
+bool safe_strto64_base(StringPiece text, int64* value, int base);
+bool safe_strtou32_base(StringPiece text, uint32* value, int base);
+bool safe_strtou64_base(StringPiece text, uint64* value, int base);
+bool safe_strtosize_t_base(StringPiece text, size_t* value, int base);
+
+// Convenience functions with base == 10.
+inline bool safe_strto32(StringPiece text, int32* value) {
+  return safe_strto32_base(text, value, 10);
+}
+
+inline bool safe_strto64(StringPiece text, int64* value) {
+  return safe_strto64_base(text, value, 10);
+}
+
+inline bool safe_strtou32(StringPiece text, uint32* value) {
+  return safe_strtou32_base(text, value, 10);
+}
+
+inline bool safe_strtou64(StringPiece text, uint64* value) {
+  return safe_strtou64_base(text, value, 10);
+}
+
+inline bool safe_strtosize_t(StringPiece text, size_t* value) {
+  return safe_strtosize_t_base(text, value, 10);
+}
+
+// 8 obsolete functions.
+// I would like to deprecate these functions but there are technical
+// problems with SplitStringAndParse callbacks.
+//
+//  4  safe_strtofoo(const char*, ...);
+//  4  safe_strtofoo(const string&, ...);
+//
+// If you want to see the technical problems, delete these overloads
+// and build strings:strings.
+
+// ---
+
+inline bool safe_strto32(const char* str, int32* value) {
+  return safe_strto32(StringPiece(str), value);
+}
+
+inline bool safe_strto32(const string& str, int32* value) {
+  return safe_strto32(StringPiece(str), value);
+}
+
+// ---
+
+inline bool safe_strto64(const char* str, int64* value) {
+  return safe_strto64(StringPiece(str), value);
+}
+
+inline bool safe_strto64(const string& str, int64* value) {
+  return safe_strto64(StringPiece(str), value);
+}
+
+// ---
+
+inline bool safe_strtou32(const char* str, uint32* value) {
+  return safe_strtou32(StringPiece(str), value);
+}
+
+inline bool safe_strtou32(const string& str, uint32* value) {
+  return safe_strtou32(StringPiece(str), value);
+}
+
+// ---
+
+inline bool safe_strtou64(const char* str, uint64* value) {
+  return safe_strtou64(StringPiece(str), value);
+}
+
+inline bool safe_strtou64(const string& str, uint64* value) {
+  return safe_strtou64(StringPiece(str), value);
+}
+
+// ---
+
+// Convert a fingerprint to 16 hex digits.
+string FpToString(Fprint fp);
+// Convert between uint128 and 32-digit hex string (sans leading 0x).
+string Uint128ToHexString(uint128 ui128);
+// Returns true on successful conversion; false on invalid input.
+bool HexStringToUint128(StringPiece hex, uint128* value);
+
 // Convert strings to floating point values.
 // Leading and trailing spaces are allowed.
 // Values may be rounded on over- and underflow.
 bool safe_strtof(const char* str, float* value);
-bool safe_strtod(const char* str, double* value);
-
-bool safe_strto32(const string& str, int32* value);
-bool safe_strto64(const string& str, int64* value);
-bool safe_strtou32(const string& str, uint32* value);
-bool safe_strtou64(const string& str, uint64* value);
 bool safe_strtof(const string& str, float* value);
+bool safe_strtod(const char* str, double* value);
 bool safe_strtod(const string& str, double* value);
 
-// Parses buffer_size many characters from startptr into value.
-bool safe_strto32(const char* startptr, int buffer_size, int32* value);
-bool safe_strto64(const char* startptr, int buffer_size, int64* value);
-
-// Parses with a fixed base between 2 and 36. For base 16, leading "0x" is ok.
-// If base is set to 0, its value is inferred from the beginning of str:
-// "0x" means base 16, "0" means base 8, otherwise base 10 is used.
-bool safe_strto32_base(const char* str, int32* value, int base);
-bool safe_strto64_base(const char* str, int64* value, int base);
-bool safe_strtou32_base(const char* str, uint32* value, int base);
-bool safe_strtou64_base(const char* str, uint64* value, int base);
-
-bool safe_strto32_base(const string& str, int32* value, int base);
-bool safe_strto64_base(const string& str, int64* value, int base);
-bool safe_strtou32_base(const string& str, uint32* value, int base);
-bool safe_strtou64_base(const string& str, uint64* value, int base);
-
-bool safe_strto32_base(const char* startptr, int buffer_size,
-                       int32* value, int base);
-bool safe_strto64_base(const char* startptr, int buffer_size,
-                       int64* value, int base);
-
-bool safe_strtou32_base(const char* startptr, int buffer_size,
-                        uint32* value, int base);
-bool safe_strtou64_base(const char* startptr, int buffer_size,
-                        uint64* value, int base);
+// Parses text (case insensitive) into a boolean. The following strings are
+// interpreted to boolean true: "true", "t", "yes", "y", "1". The following
+// strings are interpreted to boolean false: "false", "f", "no", "n", "0".
+// Returns true on success. On failure the boolean value will not have been
+// changed.
+bool safe_strtob(StringPiece str, bool* value);
 
 // u64tostr_base36()
 //    The inverse of safe_strtou64_base, converts the number agument to
@@ -104,8 +170,7 @@ inline uint64 atoi_kmgt(const string& s) { return atoi_kmgt(s.c_str()); }
 // FastHex64ToBuffer()
 // FastHex32ToBuffer()
 // FastTimeToBuffer()
-//    These are intended for speed.  FastIntToBuffer() assumes the
-//    integer is non-negative.  FastHexToBuffer() puts output in
+//    These are intended for speed.  FastHexToBuffer() puts output in
 //    hex rather than decimal.  FastTimeToBuffer() puts the output
 //    into RFC822 format.
 //
@@ -129,32 +194,20 @@ inline uint64 atoi_kmgt(const string& s) { return atoi_kmgt(s.c_str()); }
 
 // Previously documented minimums -- the buffers provided must be at least this
 // long, though these numbers are subject to change:
-//     Int32, UInt32:        12 bytes
-//     Int64, UInt64, Hex:   22 bytes
-//     Time:                 30 bytes
-//     Hex32:                 9 bytes
-//     Hex64:                17 bytes
+//     Int32, UInt32:                   12 bytes
+//     Int64, UInt64, Hex, Int, Uint:   22 bytes
+//     Time:                            30 bytes
+//     Hex32:                            9 bytes
+//     Hex64:                           17 bytes
 // Use kFastToBufferSize rather than hardcoding constants.
 static const int kFastToBufferSize = 32;
 
-char* FastInt32ToBuffer(int32 i, char* buffer);
-char* FastInt64ToBuffer(int64 i, char* buffer);
 char* FastUInt32ToBuffer(uint32 i, char* buffer);
 char* FastUInt64ToBuffer(uint64 i, char* buffer);
 char* FastHexToBuffer(int i, char* buffer) MUST_USE_RESULT;
 char* FastTimeToBuffer(time_t t, char* buffer);
 char* FastHex64ToBuffer(uint64 i, char* buffer);
 char* FastHex32ToBuffer(uint32 i, char* buffer);
-
-// at least 22 bytes long
-inline char* FastIntToBuffer(int i, char* buffer) {
-  return (sizeof(i) == 4 ?
-          FastInt32ToBuffer(i, buffer) : FastInt64ToBuffer(i, buffer));
-}
-inline char* FastUIntToBuffer(unsigned int i, char* buffer) {
-  return (sizeof(i) == 4 ?
-          FastUInt32ToBuffer(i, buffer) : FastUInt64ToBuffer(i, buffer));
-}
 
 // ----------------------------------------------------------------------
 // FastInt32ToBufferLeft()
@@ -178,13 +231,30 @@ char* FastInt64ToBufferLeft(int64 i, char* buffer);    // at least 22 bytes
 char* FastUInt64ToBufferLeft(uint64 i, char* buffer);    // at least 22 bytes
 
 // Just define these in terms of the above.
+
+inline char* FastInt32ToBuffer(int32 i, char* buffer) {
+  FastInt32ToBufferLeft(i, buffer);
+  return buffer;
+}
 inline char* FastUInt32ToBuffer(uint32 i, char* buffer) {
   FastUInt32ToBufferLeft(i, buffer);
+  return buffer;
+}
+inline char* FastInt64ToBuffer(int64 i, char* buffer) {
+  FastInt64ToBufferLeft(i, buffer);
   return buffer;
 }
 inline char* FastUInt64ToBuffer(uint64 i, char* buffer) {
   FastUInt64ToBufferLeft(i, buffer);
   return buffer;
+}
+inline char* FastIntToBuffer(int i, char* buffer) {
+  return (sizeof(i) == 4 ?
+          FastInt32ToBuffer(i, buffer) : FastInt64ToBuffer(i, buffer));
+}
+inline char* FastUIntToBuffer(unsigned int i, char* buffer) {
+  return (sizeof(i) == 4 ?
+          FastUInt32ToBuffer(i, buffer) : FastUInt64ToBuffer(i, buffer));
 }
 
 // ----------------------------------------------------------------------
@@ -448,33 +518,29 @@ bool MUST_USE_RESULT SimpleAtoi(const string& s, int_type* out) {
 // ----------------------------------------------------------------------
 // SimpleDtoa()
 // SimpleFtoa()
-// DoubleToBuffer()
-// FloatToBuffer()
-//    Description: converts a double or float to a string which, if
-//    passed to strtod(), will produce the exact same original double
-//    (except in case of NaN; all NaNs are considered the same value).
-//    We try to keep the string short but it's not guaranteed to be as
-//    short as possible.
+//    Description: converts a double or float to a string which, if passed to
+//    strtod() or strtof() respectively, will produce the exact same original
+//    double or float.  Exception: for NaN values, strtod(SimpleDtoa(NaN)) or
+//    strtof(SimpleFtoa(NaN)) may produce any NaN value, not necessarily the
+//    exact same original NaN value.
 //
-//    DoubleToBuffer() and FloatToBuffer() write the text to the given
-//    buffer and return it.  The buffer must be at least
-//    kDoubleToBufferSize bytes for doubles and kFloatToBufferSize
-//    bytes for floats.  kFastToBufferSize is also guaranteed to be large
-//    enough to hold either.
+//    The output string is not guaranteed to be as short as possible.
 //
-//    Return value: string
+//    The output string, including terminating NUL, will have length
+//    less than or equal to kFastToBufferSize defined above.  Of course,
+//    we would prefer that your code not depend on this property of
+//    the output string.  This guarantee derives from a similar guarantee
+//    from the previous generation of char-buffer-based functions.
+//    We had to carry it forward to preserve compatibility.
 // ----------------------------------------------------------------------
 string SimpleDtoa(double value);
 string SimpleFtoa(float value);
 
-char* DoubleToBuffer(double i, char* buffer);
-char* FloatToBuffer(float i, char* buffer);
-
-// In practice, doubles should never need more than 24 bytes and floats
-// should never need more than 14 (including null terminators), but we
-// overestimate to be safe.
-static const int kDoubleToBufferSize = 32;
-static const int kFloatToBufferSize = 24;
+// DEPRECATED(mec).  Call SimpleDtoa or SimpleFtoa instead.
+// Required buffer size for DoubleToBuffer is kFastToBufferSize.
+// Required buffer size for FloatToBuffer is kFastToBufferSize.
+char* DoubleToBuffer(double i, char* buffer);  // DEPRECATED(mec)
+char* FloatToBuffer(float i, char* buffer);  // DEPRECATED(mec)
 
 // ----------------------------------------------------------------------
 // SimpleItoaWithCommas()
@@ -484,19 +550,32 @@ static const int kFloatToBufferSize = 24;
 //
 //    Return value: string
 // ----------------------------------------------------------------------
-string SimpleItoaWithCommas(int32 i);
-string SimpleItoaWithCommas(uint32 i);
-string SimpleItoaWithCommas(int64 i);
-string SimpleItoaWithCommas(uint64 i);
-#ifdef _LP64
-inline string SimpleItoaWithCommas(size_t i) {
-  return SimpleItoaWithCommas(static_cast<uint64>(i));
+
+template <typename IntType>
+inline string SimpleItoaWithCommas(IntType ii) {
+  string s1 = SimpleItoa(ii);
+  StringPiece sp1(s1);
+  string output;
+  // Copy leading non-digit characters unconditionally.
+  // This picks up the leading sign.
+  while (sp1.size() > 0 && !ascii_isdigit(sp1[0])) {
+    output.push_back(sp1[0]);
+    sp1.remove_prefix(1);
+  }
+  // Copy rest of input characters.
+  for (size_t i = 0; i < sp1.size(); ++i) {
+    if (i > 0 && i < sp1.size() && (sp1.size() - i) % 3 == 0) {
+      output.push_back(',');
+    }
+    output.push_back(sp1[i]);
+  }
+  return output;
 }
 
-inline string SimpleItoaWithCommas(ptrdiff_t i) {
-  return SimpleItoaWithCommas(static_cast<int64>(i));
-}
-#endif
+// Converts a boolean to a string, which if passed to safe_strtob will produce
+// the exact same original boolean. The returned string will be "true" if
+// value == true, and "false" otherwise.
+string SimpleBtoa(bool value);
 
 // ----------------------------------------------------------------------
 // ItoaKMGT()
@@ -565,40 +644,5 @@ bool ParseDoubleRange(const char* text, int len, const char** end,
 
 // END DOXYGEN SplitFunctions grouping
 /* @} */
-
-// These functions are deprecated.
-// Do not use in new code.
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf or SimpleFtoa.
-string FloatToString(float f, const char* format);
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf or SimpleItoa.
-string IntToString(int i, const char* format);
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf or SimpleItoa.
-string Int64ToString(int64 i64, const char* format);
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf or SimpleItoa.
-string UInt64ToString(uint64 ui64, const char* format);
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf.
-inline string FloatToString(float f) {
-  return StringPrintf("%7f", f);
-}
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf.
-inline string IntToString(int i) {
-  return StringPrintf("%7d", i);
-}
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf.
-inline string Int64ToString(int64 i64) {
-  return StringPrintf("%7" GG_LL_FORMAT "d", i64);
-}
-
-// DEPRECATED(wadetregaskis).  Just call StringPrintf.
-inline string UInt64ToString(uint64 ui64) {
-  return StringPrintf("%7" GG_LL_FORMAT "u", ui64);
-}
 
 #endif  // STRINGS_NUMBERS_H_

@@ -20,13 +20,6 @@
 #ifndef SUPERSONIC_OPENSOURCE_AUXILIARY_INIT_H_
 #define SUPERSONIC_OPENSOURCE_AUXILIARY_INIT_H_
 
-#if defined(__GNUC__) && (defined(__i386) || defined(__x86_64__))
-#include "supersonic/utils/atomicops-internals-x86.h"
-const bool archX86 = true;
-#else
-const bool archX86 = false;
-#endif
-
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -38,9 +31,6 @@ namespace supersonic {
 inline void SupersonicInit(int* argc, char*** argv) {
   google::ParseCommandLineFlags(argc, argv, true);
   google::InitGoogleLogging(*argv[0]);
-  if (archX86) {
-    AtomicOps_x86CPUFeaturesInit();
-  }
 }
 }  // namespace supersonic
 #endif  // SUPERSONIC_OPENSOURCE_AUXILIARY_INIT_H_

@@ -17,12 +17,10 @@
 #include "supersonic/cursor/core/spy.h"
 
 #include <iosfwd>
-using std::ostream;
 #include <iostream>
-using std::cout;
-using std::endl;
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -39,7 +37,6 @@ using std::string;
 #include "supersonic/cursor/infrastructure/history_transformer.h"
 #include "supersonic/cursor/infrastructure/writer.h"
 #include "supersonic/cursor/infrastructure/view_printer.h"
-#include "supersonic/utils/singleton.h"
 
 namespace supersonic {
 
@@ -116,7 +113,7 @@ class SpySink : public Sink {
   virtual FailureOrVoid Finalize() { return sink_->Finalize(); }
 
  private:
-  scoped_ptr<Sink> sink_;
+  std::unique_ptr<Sink> sink_;
   string id_;
   SpyListener* listener_;
   WallTimer timer_;
@@ -179,11 +176,12 @@ class PrintSpyListener : public SpyListener {
 
   // Returns a singleton instance of the PrintSpyListener.
   static PrintSpyListener* Get() {
-    return Singleton<PrintSpyListener>::get();
+    static PrintSpyListener listener;
+    return &listener;
   }
 
   virtual void BeforeNext(const string& id, rowcount_t max_row_count) {
-    cout << "Calling Next(" << max_row_count << ") on " << id << ":\n";
+    std::cout << "Calling Next(" << max_row_count << ") on " << id << ":\n";
   }
 
   virtual void AfterNext(const string& id,
@@ -191,9 +189,9 @@ class PrintSpyListener : public SpyListener {
                          const ResultView& result_view,
                          int64 time_nanos) {
     double time_ms = time_nanos / static_cast<double>(kNumNanosPerMilli);
-    cout << "Next(" << max_row_count << ") on " << id
-         << " result in " << time_ms << " ms:";
-    view_printer_.AppendResultViewToStream(result_view, &cout);
+    std::cout << "Next(" << max_row_count << ") on " << id
+              << " result in " << time_ms << " ms:";
+    view_printer_.AppendResultViewToStream(result_view, &std::cout);
   }
 
  private:

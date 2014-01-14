@@ -11,11 +11,13 @@
 // copying.  Systematic use of StringPiece for arguments reduces data
 // copies and strlen() calls.
 //
-// You may pass a StringPiece argument by value or const reference.
-// Passing by value generates slightly smaller code.
-//   void MyFunction(const StringPiece& arg);
-//   // Slightly better, but same lifetime requirements as const-ref parameter:
+// Prefer passing StringPieces by value:
 //   void MyFunction(StringPiece arg);
+// If circumstances require, you may also pass by const reference:
+//   void MyFunction(const StringPiece& arg);  // not preferred
+// Both of these have the same lifetime semantics.  Passing by value
+// generates slightly smaller code.  For more discussion, see the thread
+// go/stringpiecebyvalue on c-users.
 //
 // StringPiece is also suitable for local variables if you know that
 // the lifetime of the underlying object is longer than the lifetime
@@ -51,7 +53,7 @@
 //   StringPiece(NULL, 0)
 // For all of the above, sp.data() == NULL, sp.length() == 0,
 // and sp.empty() == true.  Also, if you create a StringPiece with
-// a non-NULL pointer then sp.data() != non-NULL.  Once created,
+// a non-NULL pointer then sp.data() != NULL.  Once created,
 // sp.data() will stay either NULL or not-NULL, except if you call
 // sp.clear() or sp.set().
 //
@@ -115,19 +117,17 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
+#include <unordered_map>
 #include <iosfwd>
-using std::ostream;
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/port.h"
-#include "supersonic/utils/type_traits.h"
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"
 #include "supersonic/utils/strings/fastmem.h"
 #include "supersonic/utils/hash/hash.h"
 
@@ -190,13 +190,16 @@ class StringPiece {
     }
   }
 
-  StringPiece(const std::string& str)  // NOLINT(runtime/explicit)
+  template <class Allocator>
+  StringPiece(const std::basic_string<char, std::char_traits<char>,
+              Allocator> &str)  // NOLINT(runtime/explicit)
       : ptr_(str.data()), length_(0) {
     length_ = CheckedSsizeTFromSizeT(str.size());
   }
-
 #if defined(HAS_GLOBAL_STRING)
-  StringPiece(const string& str)  // NOLINT(runtime/explicit)
+  template <class Allocator>
+  StringPiece(const basic_string<char, std::char_traits<char>,
+              Allocator> &str)  // NOLINT(runtime/explicit)
       : ptr_(str.data()), length_(0) {
     length_ = CheckedSsizeTFromSizeT(str.size());
   }
@@ -357,7 +360,8 @@ class StringPiece {
 };
 
 #ifndef SWIG
-DECLARE_POD(StringPiece);  // So vector<StringPiece> becomes really fast
+// Enable use of StringPiece in small_set and other google collections.
+DECLARE_POD(StringPiece);
 #endif
 
 // This large function is defined inline so that in a fairly common case where
@@ -407,9 +411,7 @@ template <class X> struct GoodFastHash;
 
 // SWIG doesn't know how to parse this stuff properly. Omit it.
 #ifndef SWIG
-#include <ext/hash_set>
-namespace __gnu_cxx {
-
+namespace std {
 template<> struct hash<StringPiece> {
   size_t operator()(StringPiece s) const;
   // Less than operator, for MSVC.
@@ -419,9 +421,7 @@ template<> struct hash<StringPiece> {
   static const size_t bucket_size = 4;  // These are required by MSVC
   static const size_t min_buckets = 8;  // 4 and 8 are defaults.
 };
-
-}  // namespace __gnu_cxx
-
+}  // namespace std
 
 // An implementation of GoodFastHash for StringPiece.  See
 // GoodFastHash values.

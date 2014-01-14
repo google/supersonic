@@ -23,7 +23,7 @@
 #include <vector>
 using std::vector;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -56,6 +56,7 @@ class AggregationSpecification {
         : aggregation_(aggregation),
           input_name_(input_name.as_string()),
           output_name_(output_name.as_string()),
+          output_type_(),
           output_type_specified_(false),
           distinct_(distinct) {}
 
@@ -162,21 +163,34 @@ class GroupAggregateOptions {
   GroupAggregateOptions()
       : memory_quota_(std::numeric_limits<size_t>::max()),
         enforce_quota_(false),
-        estimated_result_row_count_(kDefaultResultEstimatedGroupCount) {}
+        estimated_result_row_count_(kDefaultResultEstimatedGroupCount),
+        max_unique_keys_in_result_(kint64max) {}
   size_t memory_quota() const { return memory_quota_; }
   bool enforce_quota() const { return enforce_quota_; }
   int64 estimated_result_row_count() const {
     return estimated_result_row_count_;
   }
 
+  int64 max_unique_keys_in_result() const {
+    return max_unique_keys_in_result_;
+  }
+
   GroupAggregateOptions* set_memory_quota(size_t memory_quota) {
     memory_quota_ = memory_quota;
     return this;
   }
+
   GroupAggregateOptions* set_enforce_quota(bool enforce_quota) {
     enforce_quota_ = enforce_quota;
     return this;
   }
+
+  GroupAggregateOptions* set_max_unique_keys_in_result_(
+      int64 max_unique_keys_in_result) {
+    max_unique_keys_in_result_ = max_unique_keys_in_result;
+    return this;
+  }
+
   GroupAggregateOptions* set_estimated_result_row_count(int64 estimate) {
     estimated_result_row_count_ = estimate;
     return this;
@@ -186,6 +200,7 @@ class GroupAggregateOptions {
   size_t memory_quota_;
   bool enforce_quota_;
   int64 estimated_result_row_count_;
+  int64 max_unique_keys_in_result_;
   DISALLOW_COPY_AND_ASSIGN(GroupAggregateOptions);
 };
 
@@ -244,6 +259,20 @@ BoundGroupAggregate(
     BufferAllocator* original_allocator,  // Doesn't take ownership.
                                             // Can be equal allocator or NULL.
     bool best_effort,
+    Cursor* child);
+
+// Limiting version of BoundGroupAggregate, which only aggregates first
+// max_unique_keys_in_result, unique key combinations separately and
+// aggregates rest of the rows in one single row of output view.
+FailureOrOwned<Cursor>
+BoundGroupAggregateWithLimit(
+    const BoundSingleSourceProjector* group_by,
+    Aggregator* aggregator,
+    BufferAllocator* allocator,             // Takes ownership.
+    BufferAllocator* original_allocator,  // Doesn't take ownership.
+                                            // Can be equal allocator or NULL.
+    bool best_effort,
+    const int64 max_unique_keys_in_result,
     Cursor* child);
 
 // Creates a cursor to aggregate input that is already clustered by

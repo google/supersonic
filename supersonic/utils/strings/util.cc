@@ -13,14 +13,9 @@
 #include <string.h>
 #include <time.h>           // for FastTimeToBuffer()
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -29,7 +24,7 @@ using std::vector;
 #include "supersonic/utils/strings/ascii_ctype.h"
 #include "supersonic/utils/strings/numbers.h"
 #include "supersonic/utils/strings/stringpiece.h"
-#include "supersonic/utils/stl_util.h"  // for string_as_array, STLAppendToString
+#include "supersonic/utils/stl_util.h"  // for STLAppendToString
 
 #ifdef OS_WINDOWS
 #ifdef min  // windows.h defines this to something silly
@@ -188,8 +183,8 @@ bool IsAscii(const char* str, int len) {
 //    happened or not.
 // ----------------------------------------------------------------------
 
-string StringReplace(const StringPiece& s, const StringPiece& oldsub,
-                     const StringPiece& newsub, bool replace_all) {
+string StringReplace(StringPiece s, StringPiece oldsub,
+                     StringPiece newsub, bool replace_all) {
   string ret;
   StringReplace(s, oldsub, newsub, replace_all, &ret);
   return ret;
@@ -203,8 +198,8 @@ string StringReplace(const StringPiece& s, const StringPiece& oldsub,
 //    it only replaces the first instance of "old."
 // ----------------------------------------------------------------------
 
-void StringReplace(const StringPiece& s, const StringPiece& oldsub,
-                   const StringPiece& newsub, bool replace_all,
+void StringReplace(StringPiece s, StringPiece oldsub,
+                   StringPiece newsub, bool replace_all,
                    string* res) {
   if (oldsub.empty()) {
     res->append(s.data(), s.length());  // If empty, append the given string.
@@ -234,8 +229,8 @@ void StringReplace(const StringPiece& s, const StringPiece& oldsub,
 //    NOTE: The string pieces must not overlap s.
 // ----------------------------------------------------------------------
 
-int GlobalReplaceSubstring(const StringPiece& substring,
-                           const StringPiece& replacement,
+int GlobalReplaceSubstring(StringPiece substring,
+                           StringPiece replacement,
                            string* s) {
   CHECK(s != NULL);
   if (s->empty() || substring.empty())
@@ -276,9 +271,10 @@ void RemoveStrings(vector<string>* v, const vector<int>& indices) {
   for (int lcv = indices.size() - 1; lcv >= 0; --lcv) {
 #ifndef NDEBUG
     // verify that indices is sorted least->greatest
-    if (indices.size() >= 2 && lcv > 0)
+    if (indices.size() >= 2 && lcv > 0) {
       // use LT and not LE because we should never see repeat indices
       CHECK_LT(indices[lcv-1], indices[lcv]);
+    }
 #endif
     assert(indices[lcv] >= 0);
     assert(indices[lcv] < v->size());
@@ -645,7 +641,13 @@ char* FastTimeToBuffer(time_t s, char* buffer) {
   buffer[11] = ' ';
 
   int32 year = tm.tm_year + 1900;
-  PutTwoDigits(year/100, buffer+12);
+  if (year >= 0 && year <= 9999) {
+    PutTwoDigits(year/100, buffer+12);
+  } else {
+    memcpy(buffer, "Invalid:", sizeof("Invalid:"));
+    FastInt64ToBufferLeft(s, buffer+strlen(buffer));
+    return buffer;
+  }
   PutTwoDigits(year%100, buffer+14);
   buffer[16] = ' ';
 
@@ -754,7 +756,6 @@ const char *AdvanceIdentifier(const char *str) {
   }
 }
 
-
 // ----------------------------------------------------------------------
 // IsIdentifier()
 //    This function returns true if str is a C-style identifier.
@@ -764,51 +765,6 @@ const char *AdvanceIdentifier(const char *str) {
 bool IsIdentifier(const char *str) {
   const char *end = AdvanceIdentifier(str);
   return end && *end == '\0';
-}
-
-
-// ----------------------------------------------------------------------
-// FindTagValuePair
-//    Given a string of the form
-//    <something><attr_sep><tag><tag_value_sep><value><attr_sep>...<string_term>
-//    where the part before the first attr_sep is optional,
-//    this function extracts the first tag and value, if any.
-//    The function returns true if successful, in which case "tag" and "value"
-//    are set to point to the beginning of the tag and the value, respectively,
-//    and "tag_len" and "value_len" are set to the respective lengths.
-// ----------------------------------------------------------------------
-
-bool FindTagValuePair(const char* arg_str, char tag_value_separator,
-                      char attribute_separator, char string_terminal,
-                      char **tag, int *tag_len,
-                      char **value, int *value_len) {
-  char* in_str = const_cast<char*>(arg_str);  // For msvc8.
-  if (in_str == NULL)
-    return false;
-  char tv_sep_or_term[3] = {tag_value_separator, string_terminal, '\0'};
-  char attr_sep_or_term[3] = {attribute_separator, string_terminal, '\0'};
-
-  // Look for beginning of tag
-  *tag = strpbrk(in_str, attr_sep_or_term);
-  // If string_terminal is '\0', strpbrk won't find it but return null.
-  if (*tag == NULL || **tag == string_terminal)
-    *tag = in_str;
-  else
-    (*tag)++;   // Move past separator
-  // Now look for value...
-  char *tv_sep_pos = strpbrk(*tag, tv_sep_or_term);
-  if (tv_sep_pos == NULL || *tv_sep_pos == string_terminal)
-    return false;
-  // ...and end of value
-  char *attr_sep_pos = strpbrk(tv_sep_pos, attr_sep_or_term);
-
-  *tag_len = tv_sep_pos - *tag;
-  *value = tv_sep_pos + 1;
-  if (attr_sep_pos != NULL)
-    *value_len = attr_sep_pos - *value;
-  else
-    *value_len = strlen(*value);
-  return true;
 }
 
 void UniformInsertString(string* s, int interval, const char* separator) {
@@ -950,14 +906,14 @@ StringPiece FindEol(StringPiece s) {
 // OnlyWhitespace()
 //  return true if string s contains only whitespace characters
 //------------------------------------------------------------------------
-bool OnlyWhitespace(const StringPiece& s) {
+bool OnlyWhitespace(StringPiece s) {
   for ( int i = 0; i < s.size(); ++i ) {
     if ( !ascii_isspace(s[i]) ) return false;
   }
   return true;
 }
 
-string PrefixSuccessor(const StringPiece& prefix) {
+string PrefixSuccessor(StringPiece prefix) {
   // We can increment the last character in the string and be done
   // unless that character is 255, in which case we have to erase the
   // last character and increment the previous character, unless that
@@ -982,7 +938,7 @@ string PrefixSuccessor(const StringPiece& prefix) {
   }
 }
 
-string ImmediateSuccessor(const StringPiece& s) {
+string ImmediateSuccessor(StringPiece s) {
   // Return the input string, with an additional NUL byte appended.
   string out;
   out.reserve(s.size() + 1);
@@ -991,8 +947,8 @@ string ImmediateSuccessor(const StringPiece& s) {
   return out;
 }
 
-void FindShortestSeparator(const StringPiece& start,
-                           const StringPiece& limit,
+void FindShortestSeparator(StringPiece start,
+                           StringPiece limit,
                            string* separator) {
   // Find length of common prefix
   size_t min_length = std::min(start.size(), limit.size());

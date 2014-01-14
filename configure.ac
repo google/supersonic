@@ -1,12 +1,19 @@
 m4_define([supersonic_major], [0])
 m4_define([supersonic_minor], [9])
-m4_define([supersonic_patch], [3])
+m4_define([supersonic_patch], [4])
 
 AC_PREREQ([2.65])
-AC_INIT([supersonic], [supersonic.major.supersonic_minor.supersonic_patch])
+AC_INIT([supersonic], [supersonic_major.supersonic_minor.supersonic_patch])
 AC_CONFIG_SRCDIR([supersonic/base/exception/exception.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER(config.h)
+
+AC_ARG_WITH([re2],
+[AS_HELP_STRING([--without-re2],
+[Disables usage of RE2 library, so support for regular expressions in Supersonic])],
+[],
+[with_re2=yes])
+
 
 # Set forced failure checking to true.
 AC_DEFINE([FORCE_FAILURE_CHECK], [1], [Force failure checking.])
@@ -16,7 +23,7 @@ AC_DEFINE([FORCE_FAILURE_CHECK], [1], [Force failure checking.])
 AX_PREFIX_CONFIG_H(supersonic/supersonic-config.h, SUPERSONIC)
 
 # The gflags are used for automake, not GCC!
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 
 # Required by Automake 1.12, but not recognised in older versions.
 m4_pattern_allow([AM_PROG_AR])
@@ -33,12 +40,14 @@ AX_CHECK_COMPILE_FLAG([-msse], [CXXFLAGS="$CXXFLAGS -msse"])
 AX_CHECK_COMPILE_FLAG([-msse2], [CXXFLAGS="$CXXFLAGS -msse2"])
 
 # Checks for programs.
-AC_LANG([C++])
 AC_PROG_CXX
+AC_LANG([C++])
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AM_CONDITIONAL(GCC, test "$GCC" = yes)   # let the Makefile know if we're gcc
+
+AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
 
 # Check for libraries.
 PKG_CHECK_MODULES(GLOG, libglog)
@@ -52,15 +61,25 @@ AX_BOOST_TIMER
 
 # Checks for header files.
 AC_CHECK_HEADERS([limits.h stddef.h stdint.h stdlib.h string.h string \
-                  sys/stat.h sys/time.h])
+sys/stat.h sys/time.h])
 AC_CHECK_HEADERS([glog/logging.h], [],
-                 AC_MSG_ERROR([google-glog is required. See INSTALL file.]))
+AC_MSG_ERROR([google-glog is required. See INSTALL file.]))
 AC_CHECK_HEADERS([google/protobuf/text_format.h], [],
-                 AC_MSG_ERROR([protobuf is required. See INSTALL file.]))
+AC_MSG_ERROR([protobuf is required. See INSTALL file.]))
 AC_CHECK_HEADERS([gflags/gflags.h], [],
-                 AC_MSG_ERROR([gflags library is required. See INSTALL file.]))
-AC_CHECK_HEADERS([re2/re2.h], [],
-                 AC_MSG_ERROR([re2 library is required. See INSTALL file.]))
+AC_MSG_ERROR([gflags library is required. See INSTALL file.]))
+
+
+HAVE_RE2=
+AS_IF([test "x$with_re2" != xno],
+[AC_CHECK_HEADERS([re2/re2.h],
+AC_SUBST([HAVE_RE2], [1]),
+AC_MSG_FAILURE([re2 test failed (--without-re2 to disable)]))
+],
+[ AC_SUBST([HAVE_RE2], [0]) ]
+)
+
+AM_CONDITIONAL([USE_RE2], [test "$HAVE_RE2" -eq 1])
 
 # A lot of the code in this directory depends on pthreads
 ACX_PTHREAD
@@ -79,7 +98,7 @@ AC_INTERLOCKED_EXCHANGE_NONVOLATILE
 # manually.
 if test -z $PROTOC;
 then
-  AC_PATH_PROG(PROTOC, protoc, [AC_MSG_ERROR([protoc was not found])])
+AC_PATH_PROG(PROTOC, protoc, [AC_MSG_ERROR([protoc was not found])])
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.

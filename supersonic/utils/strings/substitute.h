@@ -1,8 +1,66 @@
 // Copyright 2008 Google Inc.  All rights reserved.
+//
+// #status: RECOMMENDED
+// #category: operations on strings
+// #summary: Substitutes variables into a format string.
+//
+// This file defines functions for substituting variables into strings using a
+// format string with positional notation and a set of arguments.
+//
+//   (1) strings::Substitute()
+//   (2) strings::SubstituteAndAppend()
+//
+// The format string uses positional identifiers indicated by a dollar sign ($)
+// and a single digit rather than printf-style format specifiers. These
+// positional ids indicate which of the following substitution arguments to use
+// at that location within the format string.
+//
+// Arguments following the format string may be alphanumeric types, such as
+// strings, StringPiece, ints, floats, bool, etc (see below for a list of
+// supported types). These types will be converted to strings in the natural
+// way.
+//
+// There is no way to specify *how* to format a value, beyond the default
+// conversion to string. For example, you cannot format an integer in hex.
+//
+// Example 1:
+//   string s = strings::Substitute("$1 purchased $0 $2. Thanks $1!",
+//                                  5, "Bob", "Apples");
+//   EXPECT_EQ("Bob purchased 5 Apples. Thanks Bob!", s);
+//
+// Example 2:
+//   string s = "Hi. ";
+//   strings::SubstituteAndAppend(&s, "My name is $0 and I am $1 years old.",
+//                                "Bob", 5);
+//   EXPECT_EQ("Hi. My name is Bob and I am 5 years old.", s);
+//
+// Differences from StringPrintf():
+//   * The format string does not identify the types of arguments. Instead, the
+//     arguments are implicitly converted to strings. See below for a list of
+//     accepted types.
+//   * Substitutions in the format string are identified by a '$' followed by a
+//     single digit. You can use arguments out-of-order and use the same
+//     argument multiple times.
+//   * A '$$' sequence in the format string means output a literal '$'
+//     character.
+//   * strings::Substitute() is significantly faster than StringPrintf(). For
+//     very large strings, it may be orders of magnitude faster.
+//
+// Supported types:
+//   * StringPiece, string, const char* (NULL is equivalent to "")
+//   * int32, int64, uint32, uint64
+//   * float, double
+//   * bool (Printed as "true" or "false")
+//   * pointer types other than char* (Printed as "0x<lower case hex string>",
+//     except that NULL is printed as "NULL")
+//
+// If not enough arguments are supplied, a LOG(DFATAL) will be issued and the
+// empty string will be returned. If too many arguments are supplied, unused
+// arguments will be ignored.
 
 #include <string.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/basictypes.h"
 #include "supersonic/utils/strings/numbers.h"
@@ -13,164 +71,326 @@ using std::string;
 #define STRINGS_SUBSTITUTE_H_
 
 namespace strings {
+namespace substitute_internal {
 
-// ----------------------------------------------------------------------
-// strings::Substitute()
-// strings::SubstituteAndAppend()
-//   Kind of like StringPrintf, but different.
-//
-//   Example:
-//     string GetMessage(string first_name, string last_name, int age) {
-//       return strings::Substitute("My name is $0 $1 and I am $2 years old.",
-//                                  first_name, last_name, age);
-//     }
-//
-//   Differences from StringPrintf:
-//   * The format string does not identify the types of arguments.
-//     Instead, the magic of C++ deals with this for us.  See below
-//     for a list of accepted types.
-//   * Substitutions in the format string are identified by a '$'
-//     followed by a digit.  So, you can use arguments out-of-order and
-//     use the same argument multiple times.
-//   * '$$' in the format string means output a literal '$' character.
-//   * It's much faster than StringPrintf.
-//
-//   Supported types:
-//   * StringPiece (const char*, const string&) (NULL is equivalent to "")
-//     * Note that this means you do not have to add .c_str() to all of
-//       your strings.  In fact, you shouldn't; it will be slower.
-//   * int32, int64, uint32, uint64
-//   * float, double
-//   * bool:  Printed as "true" or "false".
-//   * pointer types other than char*: Printed as "0x<lower case hex string>",
-//             except that NULL is printed as "NULL".
-//
-//   If not enough arguments are supplied, a LOG(DFATAL) will be issued and
-//   the empty string will be returned. If too many arguments are supplied,
-//   just the first ones will be used (no warning).
-//
-//   SubstituteAndAppend() is like Substitute() but appends the result to
-//   *output.  Example:
-//
-//     string str;
-//     strings::SubstituteAndAppend(&str,
-//                                  "My name is $0 $1 and I am $2 years old.",
-//                                  first_name, last_name, age);
-//
-//   Substitute() is significantly faster than StringPrintf().  For very
-//   large strings, it may be orders of magnitude faster.
-// ----------------------------------------------------------------------
+// ========================================
+// NOTE:
+//   Do not depend on these internal details.
+//   They will change without notice.
+// ========================================
 
-namespace internal {  // Implementation details.
-
+// The argument type for strings::Substitute() and
+// strings::SubstituteAndAppend(). It handles the implicit conversion of various
+// types to a string. This is very similar to AlphaNum in strings/strcat.h.
+// TODO(user): Investigate replacing this class with AlphaNum.
 // This class has implicit constructors.
 // Style guide exception granted:
 // http://goto/style-guide-exception-20978288
-
-class SubstituteArg {
+class Arg {
  public:
-  // We must explicitly overload char* so that the compiler doesn't try to
-  // cast it to bool to construct a DynamicSubstituteArg.  Might as well
-  // overload const string& as well, since this allows us to avoid a temporary
-  // object.
-  inline SubstituteArg(const char* value)  // NOLINT(runtime/explicit)
-    : text_(value), size_(value == NULL ? 0 : strlen(text_)) {}
-  inline SubstituteArg(const string& value)  // NOLINT(runtime/explicit)
-    : text_(value.data()), size_(value.size()) {}
-  inline SubstituteArg(const StringPiece& value)  // NOLINT(runtime/explicit)
-    : text_(value.data()), size_(value.size()) {}
+  // Explicitly overload const char* so the compiler doesn't cast to bool.
+  Arg(const char* value)  // NOLINT(runtime/explicit)
+      : piece_(value) {}
+  Arg(const string& value)  // NOLINT(runtime/explicit)
+      : piece_(value) {}
+  Arg(StringPiece value)  // NOLINT(runtime/explicit)
+      : piece_(value) {}
 
   // Primitives
-  // We don't overload for signed and unsigned char because if people are
-  // explicitly declaring their chars as signed or unsigned then they are
-  // probably actually using them as 8-bit integers and would probably
-  // prefer an integer representation.  But, we don't really know.  So, we
-  // make the caller decide what to do.
-  inline SubstituteArg(char value)  // NOLINT(runtime/explicit)
-    : text_(scratch_), size_(1) { scratch_[0] = value; }
-  inline SubstituteArg(short value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_(FastInt32ToBufferLeft(value, scratch_) - scratch_) {}
-  inline SubstituteArg(unsigned short value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_(FastUInt32ToBufferLeft(value, scratch_) - scratch_) {}
-  inline SubstituteArg(int value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_(FastInt32ToBufferLeft(value, scratch_) - scratch_) {}
-  inline SubstituteArg(unsigned int value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_(FastUInt32ToBufferLeft(value, scratch_) - scratch_) {}
-  inline SubstituteArg(long value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_((sizeof(value) == 4 ? FastInt32ToBufferLeft(value, scratch_)
-                                : FastInt64ToBufferLeft(value, scratch_))
-            - scratch_) {}
-  inline SubstituteArg(unsigned long value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_((sizeof(value) == 4 ? FastUInt32ToBufferLeft(value, scratch_)
-                                : FastUInt64ToBufferLeft(value, scratch_))
-            - scratch_) {}
-  inline SubstituteArg(long long value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_(FastInt64ToBufferLeft(value, scratch_) - scratch_) {}
-  inline SubstituteArg(unsigned long long value)  // NOLINT(runtime/explicit)
-    : text_(scratch_),
-      size_(FastUInt64ToBufferLeft(value, scratch_) - scratch_) {}
-  inline SubstituteArg(float value)  // NOLINT(runtime/explicit)
-    : text_(FloatToBuffer(value, scratch_)), size_(strlen(text_)) {}
-  inline SubstituteArg(double value)  // NOLINT(runtime/explicit)
-    : text_(DoubleToBuffer(value, scratch_)), size_(strlen(text_)) {}
-  inline SubstituteArg(bool value)  // NOLINT(runtime/explicit)
-    : text_(value ? "true" : "false"), size_(strlen(text_)) {}
+  //
+  // No overloads for signed and unsigned char because if people are explicitly
+  // declaring their chars as signed or unsigned then they are probably actually
+  // using them as 8-bit integers and would probably prefer an integer
+  // representation.  But, we don't really know.  So, we make the caller decide
+  // what to do.
+  Arg(char value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, 1) { scratch_[0] = value; }
+  Arg(short value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, FastInt32ToBufferLeft(value, scratch_) - scratch_) {}
+  Arg(unsigned short value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, FastUInt32ToBufferLeft(value, scratch_) - scratch_) {}
+  Arg(int value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, FastInt32ToBufferLeft(value, scratch_) - scratch_) {}
+  Arg(unsigned int value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, FastUInt32ToBufferLeft(value, scratch_) - scratch_) {}
+  Arg(long value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_,
+               (sizeof(value) == 4 ? FastInt32ToBufferLeft(value, scratch_)
+                                   : FastInt64ToBufferLeft(value, scratch_)) -
+                   scratch_) {}
+  Arg(unsigned long value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_,
+               (sizeof(value) == 4 ? FastUInt32ToBufferLeft(value, scratch_)
+                                   : FastUInt64ToBufferLeft(value, scratch_)) -
+                   scratch_) {}
+  Arg(long long value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, FastInt64ToBufferLeft(value, scratch_) - scratch_) {}
+  Arg(unsigned long long value)  // NOLINT(runtime/explicit)
+      : piece_(scratch_, FastUInt64ToBufferLeft(value, scratch_) - scratch_) {}
+  Arg(float value)  // NOLINT(runtime/explicit)
+      : piece_(FloatToBuffer(value, scratch_)) {}
+  Arg(double value)  // NOLINT(runtime/explicit)
+      : piece_(DoubleToBuffer(value, scratch_)) {}
+  Arg(bool value)  // NOLINT(runtime/explicit)
+      : piece_(value ? "true" : "false") {}
   // void* values, with the exception of char*, are printed as
   // StringPrintf with format "%p" would ("0x<hex value>"), with the
   // exception of NULL, which is printed as "NULL".
-  SubstituteArg(const void* value);  // NOLINT(runtime/explicit)
+  Arg(const void* value);  // NOLINT(runtime/explicit)
 
-  inline const char* data() const { return text_; }
-  inline int size() const { return size_; }
-
-  // Indicates that no argument was given.
-  static const SubstituteArg NoArg;
+  StringPiece piece() const { return piece_; }
 
  private:
-  inline SubstituteArg() : text_(NULL), size_(-1) {}
-
-  const char* text_;
-  int size_;
+  StringPiece piece_;
   char scratch_[kFastToBufferSize];
+
+  DISALLOW_COPY_AND_ASSIGN(Arg);
 };
 
-}  // namespace internal
+// Internal helper function. Not okay to call this from outside.
+// Interface will change without notice.
+void SubstituteAndAppendArray(
+    string* output, StringPiece format,
+    const StringPiece* args_array, size_t num_args);
 
-void SubstituteAndAppend(
-  string* output, StringPiece format,
-  const internal::SubstituteArg& arg0 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg1 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg2 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg3 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg4 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg5 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg6 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg7 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg8 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg9 = internal::SubstituteArg::NoArg);
+}  // namespace substitute_internal
+
+//
+// PUBLIC API
+//
+
+// Substitutes variables into a given format string and appends to "output".
+// See file comments above for usage.
+inline void SubstituteAndAppend(
+    string* output, StringPiece format) {
+  substitute_internal::SubstituteAndAppendArray(output, format, NULL, 0);
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0) {
+  const StringPiece args[] = { a0.piece() };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1) {
+
+  const StringPiece args[] = { a0.piece(), a1.piece() };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2) {
+  const StringPiece args[] = { a0.piece(), a1.piece(), a2.piece() };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece(), a4.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece(), a4.piece(),
+    a5.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece(), a4.piece(),
+    a5.piece(), a6.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6, const substitute_internal::Arg& a7) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece(), a4.piece(),
+    a5.piece(), a6.piece(), a7.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6, const substitute_internal::Arg& a7,
+    const substitute_internal::Arg& a8) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece(), a4.piece(),
+    a5.piece(), a6.piece(), a7.piece(), a8.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+inline void SubstituteAndAppend(
+    string* output, StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6, const substitute_internal::Arg& a7,
+    const substitute_internal::Arg& a8, const substitute_internal::Arg& a9) {
+  const StringPiece args[] = {
+    a0.piece(), a1.piece(), a2.piece(), a3.piece(), a4.piece(),
+    a5.piece(), a6.piece(), a7.piece(), a8.piece(), a9.piece()
+  };
+  substitute_internal::SubstituteAndAppendArray(output, format,
+                                                args, arraysize(args));
+}
+
+// Substitutes variables into a given format string.
+// See file comments above for usage.
+inline string Substitute(StringPiece format) {
+  string result;
+  SubstituteAndAppend(&result, format);
+  return result;
+}
 
 inline string Substitute(
-  StringPiece format,
-  const internal::SubstituteArg& arg0 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg1 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg2 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg3 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg4 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg5 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg6 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg7 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg8 = internal::SubstituteArg::NoArg,
-  const internal::SubstituteArg& arg9 = internal::SubstituteArg::NoArg) {
+    StringPiece format,
+    const substitute_internal::Arg& a0) {
   string result;
-  SubstituteAndAppend(&result, format, arg0, arg1, arg2, arg3, arg4,
-                                       arg5, arg6, arg7, arg8, arg9);
+  SubstituteAndAppend(&result, format, a0);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3, a4);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3, a4, a5);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3, a4, a5, a6);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6, const substitute_internal::Arg& a7) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3, a4, a5, a6, a7);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6, const substitute_internal::Arg& a7,
+    const substitute_internal::Arg& a8) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3, a4, a5, a6, a7, a8);
+  return result;
+}
+
+inline string Substitute(
+    StringPiece format,
+    const substitute_internal::Arg& a0, const substitute_internal::Arg& a1,
+    const substitute_internal::Arg& a2, const substitute_internal::Arg& a3,
+    const substitute_internal::Arg& a4, const substitute_internal::Arg& a5,
+    const substitute_internal::Arg& a6, const substitute_internal::Arg& a7,
+    const substitute_internal::Arg& a8, const substitute_internal::Arg& a9) {
+  string result;
+  SubstituteAndAppend(&result, format, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
   return result;
 }
 

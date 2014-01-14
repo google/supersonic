@@ -17,20 +17,22 @@
 // Template constructors for bound string expressions (which we do not want
 // to make visible in public).
 
-#ifndef SUPERSONIC_EXPRESSION_CORE_STRING_BOUND_EXPRESSIONS_INTERNAL_H_
-#define SUPERSONIC_EXPRESSION_CORE__STRING_BOUND_EXPRESSIONS_INTERNAL_H_
+#ifndef SUPERSONIC_EXPRESSION_CORE_REGEXP_BOUND_EXPRESSIONS_INTERNAL_H_
+#define SUPERSONIC_EXPRESSION_CORE_REGEXP_BOUND_EXPRESSIONS_INTERNAL_H_
 
-#include "supersonic/utils/strings/stringpiece.h"
-
-#include "supersonic/expression/proto/operators.pb.h"
-#include "supersonic/expression/base/expression.h"
 #include "supersonic/base/exception/result.h"
+#include "supersonic/base/infrastructure/types.h"
+#include "supersonic/expression/proto/operators.pb.h"
+#include "supersonic/utils/strings/stringpiece.h"
 
 namespace supersonic {
 
 // Creates a Regexp-type expression (taking a StringPiece, which is converted
 // to a RegExp pattern, and a single STRING argument). Used to avoid code
 // duplication between Full and Partial match expressions.
+class BoundExpression;
+class BufferAllocator;
+
 template<OperatorId operation_type>
 FailureOrOwned<BoundExpression> BoundGeneralRegexp(BoundExpression* str,
                                                    const StringPiece& pattern,
@@ -39,4 +41,4 @@ FailureOrOwned<BoundExpression> BoundGeneralRegexp(BoundExpression* str,
 
 }  // namespace supersonic
 
-#endif  // SUPERSONIC_EXPRESSION_CORE_STRING_BOUND_EXPRESSIONS_INTERNAL_H_
+#endif  // SUPERSONIC_EXPRESSION_CORE_REGEXP_BOUND_EXPRESSIONS_INTERNAL_H_

@@ -15,10 +15,10 @@
 
 #include "supersonic/testing/operation_testing.h"
 
-#include <ext/new_allocator.h>
 #include <cstddef>
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include "supersonic/utils/exception/failureor.h"
 #include "supersonic/base/exception/exception_macros.h"
@@ -47,11 +47,11 @@ namespace {
 Cursor* Sort(Cursor* input) {
   SortOrder sort_order;
   sort_order.add(ProjectAllAttributes(), ASCENDING);
-  scoped_ptr<const BoundSortOrder> bound_sort_order(
+  std::unique_ptr<const BoundSortOrder> bound_sort_order(
       SucceedOrDie(sort_order.Bind(input->schema())));
-  scoped_ptr<const SingleSourceProjector> result_projector(
+  std::unique_ptr<const SingleSourceProjector> result_projector(
       ProjectAllAttributes());
-  scoped_ptr<const BoundSingleSourceProjector> bound_result_projector(
+  std::unique_ptr<const BoundSingleSourceProjector> bound_result_projector(
       SucceedOrDie(result_projector->Bind(input->schema())));
   return SucceedOrDie(BoundSort(
       bound_sort_order.release(),
@@ -228,7 +228,7 @@ class TestCursor : public BasicDecoratorCursor {
   virtual CursorId GetCursorId() const { return TEST_DECORATOR; }
 
  private:
-  scoped_ptr<Exception> exception_;
+  std::unique_ptr<Exception> exception_;
   bool done_;
   DISALLOW_COPY_AND_ASSIGN(TestCursor);
 };
@@ -307,7 +307,7 @@ class InputWrapperOperation : public BasicOperation {
   virtual FailureOrOwned<Cursor> CreateCursor() const {
     FailureOrOwned<Cursor> child = child_->CreateCursor();
     PROPAGATE_ON_FAILURE(child);
-    scoped_ptr<Cursor> cursor(child.release());
+    std::unique_ptr<Cursor> cursor(child.release());
     if (barrier_probability_ > 0) {
       cursor.reset(new BarrierInjector(random_, barrier_probability_,
                                        cursor.release()));
@@ -331,7 +331,7 @@ class InputWrapperOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<Operation> child_;
+  std::unique_ptr<Operation> child_;
   size_t capped_max_row_count_;
   RandomBase* const random_;
   double barrier_probability_;
@@ -353,7 +353,6 @@ static size_t default_view_sizes[] = {
 
 OperationTest::OperationTest()
     : inputs_(),
-      expected_(NULL),
       expected_bind_result_(OK),
       ignore_row_order_(false),
       skip_barrier_checks_(false),
@@ -453,7 +452,7 @@ void OperationTest::ExecuteOnce(Operation* tested_operation,
 void OperationTest::Execute(Operation* tested_operation) {
   MemoryLimit tracker(std::numeric_limits<size_t>::max(), true,
                       buffer_allocator_);
-  scoped_ptr<Operation> deleter(tested_operation);
+  std::unique_ptr<Operation> deleter(tested_operation);
   tested_operation->SetBufferAllocator(&tracker, true);
   for (int i = 0; i < inputs_.size(); ++i) {
     CHECK(inputs_claimed_[i])
@@ -488,13 +487,15 @@ void OperationTest::Execute(Operation* tested_operation) {
   // Memory release checks.
   CHECK_EQ(0, tracker.GetUsage());
   {
-    scoped_ptr<Cursor> test(SucceedOrDie(tested_operation->CreateCursor()));
+    std::unique_ptr<Cursor> test(
+        SucceedOrDie(tested_operation->CreateCursor()));
   }
   ASSERT_EQ(0, tracker.GetUsage())
       << "Cursor constructor leaked " << tracker.GetUsage() << " bytes";
 
   {
-    scoped_ptr<Cursor> test(SucceedOrDie(tested_operation->CreateCursor()));
+    std::unique_ptr<Cursor> test(
+        SucceedOrDie(tested_operation->CreateCursor()));
     test->Next(1);
   }
   ASSERT_EQ(0, tracker.GetUsage())
@@ -502,7 +503,8 @@ void OperationTest::Execute(Operation* tested_operation) {
       << tracker.GetUsage() << " bytes";
 
   {
-    scoped_ptr<Cursor> test(SucceedOrDie(tested_operation->CreateCursor()));
+    std::unique_ptr<Cursor> test(
+        SucceedOrDie(tested_operation->CreateCursor()));
     test->Next(Cursor::kDefaultRowCount);
   }
   ASSERT_EQ(0, tracker.GetUsage())
@@ -510,7 +512,8 @@ void OperationTest::Execute(Operation* tested_operation) {
       << tracker.GetUsage() << " bytes";
 
   {
-    scoped_ptr<Cursor> test(SucceedOrDie(tested_operation->CreateCursor()));
+    std::unique_ptr<Cursor> test(
+        SucceedOrDie(tested_operation->CreateCursor()));
     if (test->Next(Cursor::kDefaultRowCount).has_data()) {
       test->Next(Cursor::kDefaultRowCount);
     }
@@ -520,7 +523,8 @@ void OperationTest::Execute(Operation* tested_operation) {
       << tracker.GetUsage() << " bytes";
 
   {
-    scoped_ptr<Cursor> test(SucceedOrDie(tested_operation->CreateCursor()));
+    std::unique_ptr<Cursor> test(
+        SucceedOrDie(tested_operation->CreateCursor()));
     test->Next(std::numeric_limits<rowcount_t>::max());
   }
   ASSERT_EQ(0, tracker.GetUsage())
@@ -529,7 +533,8 @@ void OperationTest::Execute(Operation* tested_operation) {
 
   if (!skip_barrier_checks_) {
     // Testing propagation of WAITING_ON_BARRIER.
-    scoped_ptr<Cursor> test(SucceedOrDie(tested_operation->CreateCursor()));
+    std::unique_ptr<Cursor> test(
+        SucceedOrDie(tested_operation->CreateCursor()));
     ASSERT_TRUE(test->IsWaitingOnBarrierSupported());
     ExecuteOnce(tested_operation, 1, 1, 0.1);
     if (testing::Test::HasFatalFailure()) return;
@@ -549,15 +554,13 @@ void OperationTest::Execute(Operation* tested_operation) {
     inputs_[i]->set_interruption_counter(&interruption_counter);
     inputs_[i]->set_capped_max_row_count(1);
   }
-  scoped_ptr<Cursor> test(
-      new BarrierSwallower(
-          kMaxBarrierRetries,
-          SucceedOrDie(tested_operation->CreateCursor())));
+  std::unique_ptr<Cursor> test(new BarrierSwallower(
+      kMaxBarrierRetries, SucceedOrDie(tested_operation->CreateCursor())));
   for (int i = 0; i < inputs_.size(); ++i) {
     inputs_[i]->set_interruption_counter(NULL);
   }
 
-  scoped_ptr<Cursor> expected(SucceedOrDie(expected_->CreateCursor()));
+  std::unique_ptr<Cursor> expected(SucceedOrDie(expected_->CreateCursor()));
   test->Interrupt();
   // Should propagate to all children.
   EXPECT_EQ(inputs_.size(), interruption_counter.value());
@@ -594,7 +597,7 @@ Cursor* AbstractTestDataBuilder::BuildCursor(const vector<string>& names)
 Cursor* RenameAttributesInCursorAs(const vector<string>& new_names,
                                    Cursor* input) {
   CHECK_EQ(new_names.size(), input->schema().attribute_count());
-  scoped_ptr<BoundSingleSourceProjector> projector(
+  std::unique_ptr<BoundSingleSourceProjector> projector(
       new BoundSingleSourceProjector(input->schema()));
   for (size_t i = 0; i < new_names.size(); ++i) {
     projector->AddAs(i, new_names[i]);

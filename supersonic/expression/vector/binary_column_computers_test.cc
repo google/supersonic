@@ -16,6 +16,8 @@
 
 #include "supersonic/expression/vector/binary_column_computers.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/bit_pointers.h"
 #include "supersonic/base/infrastructure/block.h"
@@ -66,7 +68,7 @@ class BinaryComputersTestBlockWrapper {
     return builder.Build();
   }
 
-  scoped_ptr<Block> block_;
+  std::unique_ptr<Block> block_;
 };
 
 TEST_F(BinaryColumnComputersTest, ReportError) {

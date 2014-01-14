@@ -19,7 +19,8 @@
 #include <string.h>
 
 #include "supersonic/utils/integral_types.h"
-#include "supersonic/utils/type_traits.h"
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"
 
 class Charmap {
  public:

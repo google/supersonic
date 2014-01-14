@@ -35,7 +35,7 @@
 // STL map will be useful for checking results.
 #include <map>
 using std::map;
-using std::multimap;
+#include <memory>
 
 // Include Googletest - we'll need it later on.
 #include "gtest/gtest.h"
@@ -101,7 +101,8 @@ using supersonic::Cursor;
 // clear distinction will create an outline of how Supersonic handles object
 // clean-ups.
 BoundExpressionTree* PrepareBoundExpression() {
-  scoped_ptr<const Expression> addition(Plus(AttributeAt(0), AttributeAt(1)));
+  std::unique_ptr<const Expression> addition(
+      Plus(AttributeAt(0), AttributeAt(1)));
   // The Plus construction method is self-explanatory - it takes two
   // expressions and returns their sum. The AttributeAt function will provide
   // values from the input residing in the column at the given index. Note that
@@ -210,7 +211,7 @@ TEST(PrimerExample1, ColumnAddTest) {
   int32 c[8] = {3, 5, 8, 11, 5, 7, 8, 16};
 
   // Go!
-  scoped_ptr<BoundExpressionTree> expr(PrepareBoundExpression());
+  std::unique_ptr<BoundExpressionTree> expr(PrepareBoundExpression());
   const int32* result = AddColumns(a, b, 8, expr.get());
 
   // Test results.
@@ -257,7 +258,7 @@ Cursor* GroupedSums(int32* keys, double* data, size_t row_number) {
   // output, but the following tutorial tests will convey more interesting
   // aggregations. For each registered aggregation we need three things:
   // its type and the names of the input and output columns.
-  scoped_ptr<AggregationSpecification> specification(
+  std::unique_ptr<AggregationSpecification> specification(
       new AggregationSpecification());
   specification->AddAggregation(SUM, "data", "data_sums");
 
@@ -266,8 +267,8 @@ Cursor* GroupedSums(int32* keys, double* data, size_t row_number) {
   // column projectors come in handy. Once again we will only group by one
   // column this time, but it is possible to do it with several columns at the
   // same time using a CompoundSingleSourceProjector.
-  scoped_ptr<const SingleSourceProjector>
-      key_projector(ProjectNamedAttribute("key"));
+  std::unique_ptr<const SingleSourceProjector> key_projector(
+      ProjectNamedAttribute("key"));
 
   // We've got the projector and specification taken care of, all we need now is
   // to create the aggregation and include the data source. Our data resides
@@ -277,15 +278,14 @@ Cursor* GroupedSums(int32* keys, double* data, size_t row_number) {
   // The third argument is an aggregation option object which allows us to be
   // more specific about memory handling. Passing a NULL will cause Supersonic
   // to use a viable default.
-  scoped_ptr<Operation> aggregation(GroupAggregate(key_projector.release(),
-                                                   specification.release(),
-                                                   NULL,
-                                                   ScanView(input_view)));
+  std::unique_ptr<Operation> aggregation(
+      GroupAggregate(key_projector.release(), specification.release(), NULL,
+                     ScanView(input_view)));
 
   // In order to have access to the aggregate results we create a cursor,
   // which will be our data iterator. The SucceedOrDie function will yank one
   // out of the FailureOrOwned<Cursor> wrapper if there has been no failure.
-  scoped_ptr<Cursor> bound_aggregation(
+  std::unique_ptr<Cursor> bound_aggregation(
       SucceedOrDie(aggregation->CreateCursor()));
 
   return bound_aggregation.release();
@@ -310,7 +310,7 @@ TEST(PrimerExample2, GroupAggregateTest) {
   }
 
   // Here's the aggregation's result cursor.
-  scoped_ptr<Cursor> result_cursor(GroupedSums(a, b, size));
+  std::unique_ptr<Cursor> result_cursor(GroupedSums(a, b, size));
 
   // The Next() function conveys an iterator's typical behaviour. We specify
   // how many rows the resulting view should consist of, or pass -1 to fetch

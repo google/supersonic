@@ -31,7 +31,7 @@
 #define SUPERSONIC_BASE_EXCEPTION_EXCEPTION_MACROS_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/strings/join.h"
 

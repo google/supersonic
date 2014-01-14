@@ -51,7 +51,7 @@ class RandomBase {
 //
 // Example:
 //   RandomBase* b = new MTRandom();
-//   cout << " Hello, a random number is: " << b->Rand32() << endl;
+//   cout << " Hello, a random number is: " << b->Rand32() << std::endl;
 //   delete b;
 //
 class MTRandom : public RandomBase {

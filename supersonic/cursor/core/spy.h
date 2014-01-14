@@ -22,7 +22,7 @@
 #define SUPERSONIC_CURSOR_CORE_SPY_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/base/infrastructure/types.h"

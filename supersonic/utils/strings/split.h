@@ -7,48 +7,27 @@
 // This file contains functions for splitting strings. The new and recommended
 // API for string splitting is the strings::Split() function. The old API is a
 // large collection of standalone functions declared at the bottom of this file
-// in the global scope.
-//
-// TODO(user): Rough migration plan from old API to new API
-// (1) Add comments to old Split*() functions showing how to do the same things
-//     with the new API.
-// (2) Reimplement some of the old Split*() functions in terms of the new
-//     Split() API. This will allow deletion of code in split.cc.
-// (3) (Optional) Replace old Split*() API calls at call sites with calls to new
-//     Split() API.
+// in the global scope. See go/split2 for details about why we built a new
+// splitting API.
 //
 #ifndef STRINGS_SPLIT_H_
 #define STRINGS_SPLIT_H_
 
 #include <stddef.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
-using __gnu_cxx::hash_multiset;
+#include "supersonic/utils/std_namespace.h"
+#include <unordered_map>
+#include <unordered_set>
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
 #include <map>
 using std::map;
-using std::multimap;
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -182,6 +161,16 @@ namespace strings {
 //   - Limit
 //   - FixedLength
 //
+// In addition to these:
+//
+//   - //util/regexp/re2:delimiter provides the re2::Delimiter class for
+//     splitting strings using regular expressions.
+//
+//   - //i18n/utf8:strutil provides the UTF8StringUtils::UTF8WhitespaceDelimiter
+//     class for splitting strings using whitespace.
+//     It also provides UTF8StringUtils::AnyOfUTF8Delimiter class that is
+//     similar to AnyOf, except that it uses utf8 characters instead of bytes.
+//
 // The following are examples of using some provided Delimiter objects:
 //
 // Example 1:
@@ -306,30 +295,34 @@ namespace delimiter {
 // A Delimiter object tells the splitter where a string should be broken. Some
 // examples are breaking a string wherever a given character or substring is
 // found, wherever a regular expression matches, or simply after a fixed length.
-// All Delimiter objects must have the following member:
+// All Delimiter objects must have the following member function:
 //
-//   StringPiece Find(StringPiece text);
+//   StringPiece Find(StringPiece text, size_t pos);
 //
-// This Find() member function should return a StringPiece referring to the next
-// occurrence of the represented delimiter, which is the location where the
-// input string should be broken. The returned StringPiece may be zero-length if
-// the Delimiter does not represent a part of the string (e.g., a fixed-length
-// delimiter). If no delimiter is found in the given text, a zero-length
-// StringPiece referring to text.end() should be returned (e.g.,
-// StringPiece(text.end(), 0)). It is important that the returned StringPiece
-// always be within the bounds of the StringPiece given as an argument--it must
-// not refer to a string that is physically located outside of the given string.
+// A Delimiter's Find() member function will be passed the input text that is to
+// be split and the position to begin searching for the next delimiter in the
+// input text. The returned StringPiece should refer to the next occurrence
+// (after pos) of the represented delimiter; this returned StringPiece
+// represents the next location where the input string should be broken. The
+// returned StringPiece may be zero-length if the Delimiter does not represent a
+// part of the string (e.g., a fixed-length delimiter). If no delimiter is found
+// in the given text, a zero-length StringPiece referring to text.end() should
+// be returned (e.g., StringPiece(text.end(), 0)). It is important that the
+// returned StringPiece always be within the bounds of input text given as an
+// argument--it must not refer to a string that is physically located outside of
+// the given string.
+//
 // The following example is a simple Delimiter object that is created with a
-// single char and will look for that char in the text given to the Find()
+// single char and will look for that char in the text passed to the Find()
 // function:
 //
 //   struct SimpleDelimiter {
 //     const char c_;
 //     explicit SimpleDelimiter(char c) : c_(c) {}
-//     StringPiece Find(StringPiece text) {
-//       int pos = text.find(c_);
-//       if (pos == StringPiece::npos) return StringPiece(text.end(), 0);
-//       return StringPiece(text, pos, 1);
+//     StringPiece Find(StringPiece text, size_t pos) {
+//       auto found = text.find(c_, pos);
+//       if (found == StringPiece::npos) return StringPiece(text.end(), 0);
+//       return StringPiece(text, found, 1);
 //     }
 //   };
 
@@ -361,7 +354,7 @@ namespace delimiter {
 class Literal {
  public:
   explicit Literal(StringPiece sp);
-  StringPiece Find(StringPiece text) const;
+  StringPiece Find(StringPiece text, size_t pos) const;
 
  private:
   const string delimiter_;
@@ -379,6 +372,7 @@ template <typename Delimiter>
 struct SelectDelimiter {
   typedef Delimiter Type;
 };
+template <> struct SelectDelimiter<char*>       { typedef Literal Type; };
 template <> struct SelectDelimiter<const char*> { typedef Literal Type; };
 template <> struct SelectDelimiter<StringPiece> { typedef Literal Type; };
 template <> struct SelectDelimiter<std::string> { typedef Literal Type; };
@@ -408,7 +402,7 @@ template <> struct SelectDelimiter<string> { typedef Literal Type; };
 class AnyOf {
  public:
   explicit AnyOf(StringPiece sp);
-  StringPiece Find(StringPiece text) const;
+  StringPiece Find(StringPiece text, size_t pos) const;
 
  private:
   const string delimiters_;
@@ -439,7 +433,7 @@ class AnyOf {
 class FixedLength {
  public:
   explicit FixedLength(int length);
-  StringPiece Find(StringPiece text) const;
+  StringPiece Find(StringPiece text, size_t pos) const;
 
  private:
   const int length_;
@@ -461,11 +455,11 @@ class LimitImpl {
  public:
   LimitImpl(Delimiter delimiter, int limit)
       : delimiter_(delimiter), limit_(limit), count_(0) {}
-  StringPiece Find(StringPiece text) {
+  StringPiece Find(StringPiece text, size_t pos) {
     if (count_++ == limit_) {
       return StringPiece(text.end(), 0);  // No more matches.
     }
-    return delimiter_.Find(text);
+    return delimiter_.Find(text, pos);
   }
 
  private:
@@ -528,68 +522,50 @@ struct SkipWhitespace {
 };
 
 // Definitions of the main Split() function. The use of SelectDelimiter<> allows
-// these functions to be called with a Delimiter template paramter that is an
+// these functions to be called with a Delimiter template parameter that is an
 // actual Delimiter object (e.g., Literal or AnyOf), OR called with a
 // string-like delimiter argument, (e.g., ","), in which case the delimiter used
 // will default to strings::delimiter::Literal.
+//
+// In C++11 mode, ConvertibleToStringPiece extends the lifetime of temporary
+// strings passed to it.  In C++98 mode, temporary strings only live to the end
+// of the current statement, but this is less of a problem without range-based
+// for loops and auto.
 template <typename Delimiter>
 inline internal::Splitter<
     typename delimiter::internal::SelectDelimiter<Delimiter>::Type>
-    Split(StringPiece text, Delimiter d) {
+Split(internal::ConvertibleToStringPiece text, Delimiter d) {
   typedef typename delimiter::internal::SelectDelimiter<Delimiter>::Type
       DelimiterType;
-  return internal::Splitter<DelimiterType>(text, DelimiterType(d));
+  return internal::Splitter<DelimiterType>(&text, DelimiterType(d));
 }
 
 template <typename Delimiter, typename Predicate>
 inline internal::Splitter<
     typename delimiter::internal::SelectDelimiter<Delimiter>::Type, Predicate>
-    Split(StringPiece text, Delimiter d, Predicate p) {
+Split(internal::ConvertibleToStringPiece text, Delimiter d, Predicate p) {
   typedef typename delimiter::internal::SelectDelimiter<Delimiter>::Type
       DelimiterType;
-  return internal::Splitter<DelimiterType, Predicate>(
-      text, DelimiterType(d), p);
+  return internal::Splitter<DelimiterType, Predicate>(&text, DelimiterType(d),
+                                                      p);
 }
 
 }  // namespace strings
 
-//
-// ==================== LEGACY SPLIT FUNCTIONS ====================
-//
-
-// NOTE: The instruction below creates a Module titled
-// GlobalSplitFunctions within the auto-generated Doxygen documentation.
-// This instruction is needed to expose global functions that are not
-// within a namespace.
-//
-// START DOXYGEN SplitFunctions grouping
-/* @defgroup SplitFunctions
- * @{ */
-
 // ----------------------------------------------------------------------
-// ClipString
-//    Clip a string to a max length. We try to clip on a word boundary
-//    if this is possible. If the string is clipped, we append an
-//    ellipsis.
+// Clips a string to a max length. We try to clip on a word boundary if this is
+// possible. If the string is clipped, we append an ellipsis.
 //
-//    ***NOTE***
-//    ClipString counts length with strlen.  If you have non-ASCII
-//    strings like UTF-8, this is wrong.  If you are displaying the
-//    clipped strings to users in a frontend, consider using
-//    ClipStringOnWordBoundary in
-//    webserver/util/snippets/rewriteboldtags, which considers the width
-//    of the string, not just the number of bytes.
+// ***NOTE***
+// ClipString counts length with strlen.  If you have non-ASCII strings like
+// UTF-8, this is wrong.  If you are displaying the clipped strings to users in
+// a frontend, consider using ClipStringOnWordBoundary in
+// webserver/util/snippets/rewriteboldtags, which considers the width of the
+// string, not just the number of bytes.
 //
-//    TODO(user) Move ClipString back to strutil.  The problem with this is
-//    that ClipStringHelper is used behind the scenes by SplitStringToLines, but
-//    probably shouldn't be exposed in the .h files.
-// ----------------------------------------------------------------------
-void ClipString(char* str, int max_len);
-
-// ----------------------------------------------------------------------
-// ClipString
-//    Version of ClipString() that uses string instead of char*.
-//    NOTE: See comment above.
+// TODO(user) Move ClipString back to strutil.  The problem with this is
+// that ClipStringHelper is used behind the scenes by SplitStringToLines, but
+// probably shouldn't be exposed in the .h files.
 // ----------------------------------------------------------------------
 void ClipString(string* full_str, int max_len);
 
@@ -608,6 +584,14 @@ void SplitStringToLines(const char* full,
                         vector<string>* result);
 
 // ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   std::pair<StringPiece, StringPiece> p =
+//       strings::Split("a-b-c", strings::delimiter::Limit("-", 1))
+//   // p.first = "a"
+//   // p.second = "b-c"
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitOneStringToken()
 //   Returns the first "delim" delimited string from "*source" and modifies
 //   *source to point after the delimiter that was found. If no delimiter is
@@ -618,7 +602,7 @@ void SplitStringToLines(const char* full,
 //
 //   "delim" is treated as a sequence of 1 or more character delimiters. Any one
 //   of the characters present in "delim" is considered to be a single
-//   delimiter; The delimiter is not "delim" as a whole. For example:
+//   delimiter; the delimiter is not "delim" as a whole. For example:
 //
 //     const char* s = "abc=;de";
 //     string r = SplitOneStringToken(&s, ";=");
@@ -628,17 +612,11 @@ void SplitStringToLines(const char* full,
 string SplitOneStringToken(const char** source, const char* delim);
 
 // ----------------------------------------------------------------------
-// SplitUsing()
-//    Split a string into substrings based on the nul-terminated list
-//    of bytes at delimiters (uses strsep) and return a vector of
-//    those strings. Modifies 'full' We allocate the return vector,
-//    and you should free it.  Note that empty fields are ignored.
-//    Use SplitToVector with last argument 'false' if you want the
-//    empty fields.
-//    ----------------------------------------------------------------------
-vector<char*>* SplitUsing(char* full, const char* delimiters);
-
-// ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   vector<StringPiece> v = strings::Split(text, delim)
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitToVector()
 //    Split a string into substrings based on the nul-terminated list
 //    of bytes at delim (uses strsep) and appends the split
@@ -653,6 +631,11 @@ void SplitToVector(char* full, const char* delimiters,
                    bool omit_empty_strings);
 
 // ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   vector<StringPiece> v = strings::Split(text, delim)
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitStringPieceToVector
 //    Split a StringPiece into sub-StringPieces based on the
 //    nul-terminated list of bytes at delim and appends the
@@ -661,12 +644,17 @@ void SplitToVector(char* full, const char* delimiters,
 //    Expects the original string (from which 'full' is derived) to exist
 //    for the full lifespan of 'vec'.
 // ----------------------------------------------------------------------
-void SplitStringPieceToVector(const StringPiece& full,
+void SplitStringPieceToVector(StringPiece full,
                               const char* delim,
                               vector<StringPiece>* vec,
                               bool omit_empty_strings);
 
 // ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   vector<string> v = strings::Split(text, delim, strings::SkipEmpty())
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitStringUsing()
 // SplitStringToHashsetUsing()
 // SplitStringToSetUsing()
@@ -681,7 +669,7 @@ void SplitStringPieceToVector(const StringPiece& full,
 // NOTE: Do not use this for multi-byte delimiters such as UTF-8 strings. Use
 // strings::Split() with strings::delimiter::Literal as the delimiter.
 //
-// ==> NEW API: Consider using the new Split API defined above. <==
+// ==> NEW API: Use the new Split API defined above. <==
 // Example:
 //
 //   using strings::SkipEmpty;
@@ -696,7 +684,7 @@ void SplitStringPieceToVector(const StringPiece& full,
 void SplitStringUsing(const string& full, const char* delimiters,
                       vector<string>* result);
 void SplitStringToHashsetUsing(const string& full, const char* delimiters,
-                               hash_set<string>* result);
+                               std::unordered_set<string>* result);
 void SplitStringToSetUsing(const string& full, const char* delimiters,
                            std::set<string>* result);
 // The even-positioned (0-based) components become the keys for the
@@ -705,9 +693,14 @@ void SplitStringToSetUsing(const string& full, const char* delimiters,
 // if the key was already present in the hash table, or will be the
 // empty string if the key is a newly inserted key.
 void SplitStringToHashmapUsing(const string& full, const char* delim,
-                               hash_map<string, string>* result);
+                               std::unordered_map<string, string>* result);
 
 // ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   vector<string> v = strings::Split(text, delim)
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitStringAllowEmpty()
 //
 // Split a string using one or more byte delimiters, presented as a
@@ -717,7 +710,7 @@ void SplitStringToHashmapUsing(const string& full, const char* delim,
 //
 // If "full" is the empty string, yields an empty string as the only value.
 //
-// ==> NEW API: Consider using the new Split API defined above. <==
+// ==> NEW API: Use the new Split API defined above. <==
 //
 //   using strings::Split;
 //   using strings::delimiter::AnyOf;
@@ -748,22 +741,26 @@ void SplitStringAllowEmpty(const string& full, const char* delim,
 //
 //   All versions other than "AllowEmpty" discard any empty substrings.
 // ----------------------------------------------------------------------
-void SplitStringWithEscaping(const string& full,
+void SplitStringWithEscaping(StringPiece full,
                              const strings::CharSet& delimiters,
                              vector<string>* result);
-void SplitStringWithEscapingAllowEmpty(const string& full,
+void SplitStringWithEscapingAllowEmpty(StringPiece full,
                                        const strings::CharSet& delimiters,
                                        vector<string>* result);
-void SplitStringWithEscapingToSet(const string& full,
+void SplitStringWithEscapingToSet(StringPiece full,
                                   const strings::CharSet& delimiters,
                                   std::set<string>* result);
-void SplitStringWithEscapingToHashset(const string& full,
+void SplitStringWithEscapingToHashset(StringPiece full,
                                       const strings::CharSet& delimiters,
-                                      hash_set<string>* result);
+                                      std::unordered_set<string>* result);
 
 // ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   vector<string> v = strings::Split(text, strings::delimiter::Limit("-", N))
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitStringIntoNPiecesAllowEmpty()
-
 //    Split a string using a nul-terminated list of byte
 //    delimiters. Append the components to 'result'.  If there are
 //    consecutive delimiters, this function will return corresponding
@@ -846,18 +843,29 @@ bool SplitStringAndParseToList(
 bool SplitRange(const char* rangestr, int* from, int* to);
 
 // ----------------------------------------------------------------------
+// LEGACY(jgm): The SplitCSV* functions are no longer recommended.
+// Use util::csv::Parser defined in util/csv/Parser.h instead.
+//
+// Example: To parse a single line:
+//   #include "util/csv/parser.h"
+//   vector<string> fields = util::csv::ParseLine(line).fields();
+//
+// Example: To parse an entire file:
+//   #include "util/csv/parser.h"
+//   for (const util::csv::Record& rec : Parser(source)) {
+//     vector<string> fields = rec.fields();
+//   }
+//
 // SplitCSVLineWithDelimiter()
 //    CSV lines come in many guises.  There's the Comma Separated Values
 //    variety, in which fields are separated by (surprise!) commas.  There's
 //    also the tab-separated values variant, in which tabs separate the
-//    fields.  This routine handles both, which makes it almost like
-//    SplitUsing(line, delimiter), but for some special processing.  For both
-//    delimiters, whitespace is trimmed from either side of the field value.
-//    If the delimiter is ',', we play additional games with quotes.  A
-//    field value surrounded by double quotes is allowed to contain commas,
-//    which are not treated as field separators.  Within a double-quoted
-//    string, a series of two double quotes signals an escaped single double
-//    quote.  It'll be clearer in the examples.
+//    fields.  This routine handles both.  For both delimiters, whitespace is
+//    trimmed from either side of the field value. If the delimiter is ',', we
+//    play additional games with quotes.  A field value surrounded by double
+//    quotes is allowed to contain commas, which are not treated as field
+//    separators.  Within a double-quoted string, a series of two double quotes
+//    signals an escaped single double quote. It'll be clearer in the examples.
 //    Example:
 //     Google , x , "Buchheit, Paul", "string with "" quote in it"
 //     -->  [Google], [x], [Buchheit, Paul], [string with " quote in it]
@@ -865,20 +873,6 @@ bool SplitRange(const char* rangestr, int* from, int* to);
 // SplitCSVLine()
 //    A convenience wrapper around SplitCSVLineWithDelimiter which uses
 //    ',' as the delimiter.
-//
-// The following variants of SplitCSVLine() are not recommended for new code.
-// Please consider the CSV parser in //util/csv as an alternative.  Examples:
-// To parse a single line:
-//     #include "util/csv/parser.h"
-//     vector<string> fields = util::csv::ParseLine(line).fields();
-//
-// To parse an entire file:
-//     #include "util/csv/parser.h"
-//     for (Record rec : Parser(source)) {
-//       vector<string> fields = rec.fields();
-//     }
-//
-// See //util/csv/parser.h for more complete documentation.
 //
 // ----------------------------------------------------------------------
 void SplitCSVLine(char* line, vector<char*>* cols);
@@ -890,11 +884,9 @@ void SplitCSVLineWithDelimiterForStrings(const string& line, char delimiter,
 
 // ----------------------------------------------------------------------
 // SplitStructuredLine()
-//    Splits a line using the given delimiter, and places the columns
-//    into 'cols'. This is unlike 'SplitUsing(line, ",")' because you can
-//    define pairs of opening closing symbols inside which the delimiter should
-//    be ignored. If the symbol_pair string has an odd number of characters,
-//    the last character (which cannot be paired) will be assumed to be both an
+//    Splits a line using the given delimiter, and places the columns into
+//    'cols'. If the symbol_pair string has an odd number of characters, the
+//    last character (which cannot be paired) will be assumed to be both an
 //    opening and closing symbol.
 //    WARNING : The input string 'line' is destroyed in the process.
 //    The function returns 0 if the line was parsed correctly (i.e all the
@@ -954,8 +946,14 @@ bool SplitStructuredLineWithEscapes(StringPiece line,
                                     vector<StringPiece>* cols);
 
 // ----------------------------------------------------------------------
-// DEPRECATED(jgm): See the "NEW API" comment about this function below for
-// example code showing an alternative.
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   using strings::delimiter::Limit;
+//
+//   // kv.first is the key; kv.second contains all the values
+//   std::pair<string, string> kv = strings::Split(text, Limit(kv_delim, 1));
+//   vector<string> values = Split(kv.second, vv_delim);
+//
+//   See the strings::Split() documentation above for more details.
 //
 // SplitStringIntoKeyValues()
 // Split a line into a key string and a vector of value strings. The line has
@@ -985,22 +983,6 @@ bool SplitStructuredLineWithEscapes(StringPiece line,
 // Returns false if the line has no <kvsep> or if the number of values is
 // zero.
 //
-// ==> NEW API: Consider using the new Split API defined above. <==
-//
-// The SplitStringIntoKeyValues() function has some subtle and surprising
-// semantics in various corner cases. To avoid this the strings::Split API is
-// recommended. The following example shows how to split a string of delimited
-// key-value pairs into a vector of pairs using the strings::Split API.
-//
-//   using strings::Split;
-//   using strings::delimiter::AnyOf;
-//   using strings::delimiter::Limit;
-//
-//   pair<string, StringPiece> key_values =
-//       Split(line, Limit(AnyOf(kv_delim), 1));
-//   string key = key_values.first;
-//   vector<string> values = Split(key_values.second, AnyOf(vv_delim));
-//
 // ----------------------------------------------------------------------
 bool SplitStringIntoKeyValues(const string& line,
                               const string& key_value_delimiters,
@@ -1008,6 +990,16 @@ bool SplitStringIntoKeyValues(const string& line,
                               string* key, vector<string>* values);
 
 // ----------------------------------------------------------------------
+// DEPRECATED(jgm): Use strings::Split() instead, e.g.,:
+//   using strings::delimiter::Limit;
+//
+//   vector<pair<string, string>> pairs;  // or even map<string, string>
+//   for (StringPiece sp : strings::Split(line, pair_delim)) {
+//     pairs.push_back(strings::Split(sp, Limit(kv_delim, 1)));
+//   }
+//
+//   See the strings::Split() documentation above for more details.
+//
 // SplitStringIntoKeyValuePairs()
 // Split a line into a vector of <key, value> pairs. The line has
 // the following format:
@@ -1029,23 +1021,6 @@ bool SplitStringIntoKeyValues(const string& line,
 //
 // Returns false for pairs with no <kvsep> specified and for pairs with
 // empty strings as values.
-//
-// ==> NEW API: Consider using the new Split API defined above. <==
-//
-// The SplitStringIntoKeyValuePairs() function has some subtle and surprising
-// semantics in various corner cases. To avoid this the strings::Split API is
-// recommended. The following example shows how to split a string of delimited
-// key-value pairs into a vector of pairs using the strings::Split API.
-//
-//   using strings::SkipEmpty;
-//   using strings::Split;
-//   using strings::delimiter::AnyOf;
-//   using strings::delimiter::Limit;
-//
-//   vector<pair<string, string>> pairs;  // or even map<string, string>
-//   for (StringPiece sp : Split(line, AnyOf(pair_delim), SkipEmpty())) {
-//     pairs.push_back(Split(sp, Limit(AnyOf(kv_delim), 1), SkipEmpty()));
-//   }
 //
 // ----------------------------------------------------------------------
 bool SplitStringIntoKeyValuePairs(const string& line,
@@ -1217,8 +1192,5 @@ bool SplitStringAndParseToList(
   return strings::internal::SplitStringAndParseToInserter(
       source, delim, parse, result, strings::internal::BackInsertPolicy());
 }
-
-// END DOXYGEN SplitFunctions grouping
-/* @} */
 
 #endif  // STRINGS_SPLIT_H_

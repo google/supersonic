@@ -16,7 +16,7 @@
 #include "supersonic/cursor/infrastructure/writer.h"
 
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"

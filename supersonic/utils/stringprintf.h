@@ -12,7 +12,7 @@
 
 #include <stdarg.h>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -43,6 +43,7 @@ extern const int kStringPrintfVectorMaxArgs;
 // You can use this version when all your arguments are strings, but
 // you don't know how many arguments you'll have at compile time.
 // StringPrintfVector will LOG(FATAL) if v.size() > kStringPrintfVectorMaxArgs
-extern string StringPrintfVector(const char* format, const vector<string>& v);
+extern string StringPrintfVector(
+    const char* format, const std::vector<string>& v);
 
 #endif /* _BASE_STRINGPRINTF_H */

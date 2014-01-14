@@ -18,6 +18,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/base/memory/memory.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -30,6 +32,44 @@
 #include "gtest/gtest.h"
 
 namespace supersonic {
+
+CompoundSingleSourceProjector* column_0_selector() {
+  CompoundSingleSourceProjector* selector =
+      new CompoundSingleSourceProjector();
+  selector->add(ProjectAttributeAt(0));
+  return selector;
+}
+
+CompoundSingleSourceProjector* column_01_selector() {
+  CompoundSingleSourceProjector* selector =
+      new CompoundSingleSourceProjector();
+  selector->add(ProjectAttributeAt(0));
+  selector->add(ProjectAttributeAt(1));
+  return selector;
+}
+
+CompoundMultiSourceProjector* all_columns_projector() {
+  CompoundMultiSourceProjector* projector =
+      new CompoundMultiSourceProjector();
+  projector->add(0, ProjectAllAttributes("L."));
+  projector->add(1, ProjectAllAttributes("R."));
+  return projector;
+}
+
+Operation* CreateOperation(
+    JoinType join_type,
+    const SingleSourceProjector* lhs_key_selector,
+    const SingleSourceProjector* rhs_key_selector,
+    const MultiSourceProjector* result_projector,
+    KeyUniqueness rhs_key_uniqueness,
+    Operation* lhs, Operation* rhs) {
+  return new HashJoinOperation(
+      join_type,
+      lhs_key_selector, rhs_key_selector, result_projector,
+      rhs_key_uniqueness,
+      lhs, rhs);
+}
+
 
 class HashJoinTest : public testing::TestWithParam<KeyUniqueness> {
  public:
@@ -79,52 +119,9 @@ class HashJoinTest : public testing::TestWithParam<KeyUniqueness> {
         .AddRow(2, "c", 2, "b")
         .AddRow(2, "c", 2, "b")
         .AddRow(2, "c", 2, "c");
-
-    const KeyUniqueness* param = &GetParam();
-    if (param != NULL) {
-      // Parametrized in TEST_Ps.
-      rhs_key_uniqueness_ = *param;
-    } else {
-      // Const in TEST_Fs
-      rhs_key_uniqueness_ = NOT_UNIQUE;
-    }
   }
 
-  Operation* CreateOperation(
-      JoinType join_type,
-      const SingleSourceProjector* lhs_key_selector,
-      const SingleSourceProjector* rhs_key_selector,
-      const MultiSourceProjector* result_projector,
-      Operation* lhs, Operation* rhs) {
-    return new HashJoinOperation(
-        join_type,
-        lhs_key_selector, rhs_key_selector, result_projector,
-        rhs_key_uniqueness_,
-        lhs, rhs);
-  }
-
-  const CompoundSingleSourceProjector* column_0_selector() {
-    CompoundSingleSourceProjector* selector =
-        new CompoundSingleSourceProjector();
-    selector->add(ProjectAttributeAt(0));
-    return selector;
-  }
-
-  const CompoundSingleSourceProjector* column_01_selector() {
-    CompoundSingleSourceProjector* selector =
-        new CompoundSingleSourceProjector();
-    selector->add(ProjectAttributeAt(0));
-    selector->add(ProjectAttributeAt(1));
-    return selector;
-  }
-
-  const CompoundMultiSourceProjector* all_columns_projector() {
-    CompoundMultiSourceProjector* projector =
-        new CompoundMultiSourceProjector();
-    projector->add(0, ProjectAllAttributes("L."));
-    projector->add(1, ProjectAllAttributes("R."));
-    return projector;
-  }
+  KeyUniqueness rhs_key_uniqueness() { return GetParam(); }
 
   TestDataBuilder<INT64, STRING>
     builder_1_, builder_2_,
@@ -132,8 +129,6 @@ class HashJoinTest : public testing::TestWithParam<KeyUniqueness> {
     builder_2b2b2c_, builder_1a1b2a2b_, builder_1a1NNaNN_;
 
   TestDataBuilder<INT64, STRING, INT64, STRING> builder_2b2b2c_x2_output_;
-
-  KeyUniqueness rhs_key_uniqueness_;
 
  private:
 };
@@ -150,7 +145,7 @@ TEST_P(HashJoinTest, _1_InnerJoin_1) {
                          .AddRow(1, "a", 1, "a")
                          .Build());
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -163,7 +158,7 @@ TEST_P(HashJoinTest, _1_LeftOuterJoin_1) {
                          .Build());
   test.Execute(CreateOperation(LEFT_OUTER, column_0_selector(),
                                column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -174,7 +169,7 @@ TEST_P(HashJoinTest, _1_InnerJoin_2) {
   test.SetExpectedResult(TestDataBuilder<INT64, STRING, INT64, STRING>()
                          .Build());
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -187,6 +182,7 @@ TEST_P(HashJoinTest, _1_LeftOuterJoin_2) {
                          .Build());
   test.Execute(CreateOperation(LEFT_OUTER, column_0_selector(),
                                column_0_selector(), all_columns_projector(),
+                               rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -202,7 +198,7 @@ TEST_P(HashJoinTest, _12345_InnerJoin_654321) {
                          .AddRow(5, "e", 5, "e")
                          .Build());
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -218,7 +214,7 @@ TEST_P(HashJoinTest, _654321_InnerJoin_12345) {
                          .AddRow(1, "a", 1, "a")
                          .Build());
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -237,6 +233,7 @@ TEST_P(HashJoinTest, _654321_LeftOuterJoin_12345) {
                          .Build());
   test.Execute(CreateOperation(LEFT_OUTER, column_0_selector(),
                                column_0_selector(), all_columns_projector(),
+                               rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -249,9 +246,8 @@ TEST_F(HashJoinTest, _12345_InnerJoin_2b2b2c) {
                          .AddRow(2, "b", 2, "b")
                          .AddRow(2, "b", 2, "c")
                          .Build());
-  ASSERT_EQ(NOT_UNIQUE, rhs_key_uniqueness_);
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), NOT_UNIQUE,
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -268,9 +264,9 @@ TEST_F(HashJoinTest, _12345_LeftOuterJoin_2b2b2c) {
                          .AddRow(4, "d", __, __)
                          .AddRow(5, "e", __, __)
                          .Build());
-  ASSERT_EQ(NOT_UNIQUE, rhs_key_uniqueness_);
   test.Execute(CreateOperation(LEFT_OUTER, column_0_selector(),
                                column_0_selector(), all_columns_projector(),
+                               NOT_UNIQUE,
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -279,9 +275,8 @@ TEST_F(HashJoinTest, _2b2b2c_InnerJoin_2b2b2c) {
   test.AddInput(builder_2b2b2c_.Build());
   test.AddInput(builder_2b2b2c_.Build());
   test.SetExpectedResult(builder_2b2b2c_x2_output_.Build());
-  ASSERT_EQ(NOT_UNIQUE, rhs_key_uniqueness_);
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), NOT_UNIQUE,
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -289,19 +284,17 @@ TEST_F(HashJoinTest, _2b2b2c_InnerJoin_2b2b2cWithSpyTransform) {
   Operation* lhs = builder_2b2b2c_.Build();
   Operation* rhs = builder_2b2b2c_.Build();
 
-  scoped_ptr<Cursor> expected_result(builder_2b2b2c_x2_output_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(
+      builder_2b2b2c_x2_output_.BuildCursor());
 
-  ASSERT_EQ(NOT_UNIQUE, rhs_key_uniqueness_);
-
-  scoped_ptr<Operation> hash_join_operation(
+  std::unique_ptr<Operation> hash_join_operation(
       CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                      all_columns_projector(),
-                      lhs, rhs));
+                      all_columns_projector(), NOT_UNIQUE, lhs, rhs));
 
-  scoped_ptr<Cursor> hash_join(
+  std::unique_ptr<Cursor> hash_join(
       SucceedOrDie(hash_join_operation->CreateCursor()));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   hash_join->ApplyToChildren(spy_transformer.get());
   hash_join.reset(spy_transformer->Transform(hash_join.release()));
@@ -321,6 +314,7 @@ TEST_P(HashJoinTest, _1a1b2a2b_InnerJoin_1a1b2a2b) {
                          .Build());
   test.Execute(CreateOperation(INNER, column_01_selector(),
                                column_01_selector(), all_columns_projector(),
+                               rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -353,9 +347,8 @@ TEST_F(HashJoinTest, _12345_InnerJoin_5k_Rows) {
       expected_output_builder.AddRow(i, buf, i, buf);
   }
   test.SetExpectedResult(expected_output_builder.Build());
-  ASSERT_EQ(NOT_UNIQUE, rhs_key_uniqueness_);
   test.Execute(CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                               all_columns_projector(),
+                               all_columns_projector(), NOT_UNIQUE,
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -368,6 +361,7 @@ TEST_P(HashJoinTest, _1a1NNaNN_InnerJoin_1a1NNaNN) {
                          .Build());
   test.Execute(CreateOperation(INNER, column_01_selector(),
                                column_01_selector(), all_columns_projector(),
+                               rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -383,6 +377,7 @@ TEST_P(HashJoinTest, _1a1NNaNN_LeftOuterJoin_1a1NNaNN) {
                          .Build());
   test.Execute(CreateOperation(LEFT_OUTER, column_01_selector(),
                                column_01_selector(), all_columns_projector(),
+                               rhs_key_uniqueness(),
                                test.input_at(0), test.input_at(1)));
 }
 
@@ -402,10 +397,10 @@ TEST_F(HashJoinTest, HashJoinShallowCopiesStrings) {
     expected_output_builder.AddRow("supersonic", "supersonic");
   }
   test.SetExpectedResult(expected_output_builder.Build());
-  ASSERT_EQ(NOT_UNIQUE, rhs_key_uniqueness_);
   Operation* operation = CreateOperation(INNER, column_0_selector(),
                                          column_0_selector(),
                                          all_columns_projector(),
+                                         NOT_UNIQUE,
                                          test.input_at(0), test.input_at(1));
   // The limit should be big enough for the index, but not enough for (kSize *
   // kSize) copies of the string "supersonic".
@@ -418,19 +413,55 @@ TEST_F(HashJoinTest, TransformTest) {
   Operation* lhs = builder_2b2b2c_.Build();
   Operation* rhs = builder_2b2b2c_.Build();
 
-  scoped_ptr<Operation> hash_join_operation(
+  std::unique_ptr<Operation> hash_join_operation(
       CreateOperation(INNER, column_0_selector(), column_0_selector(),
-                      all_columns_projector(),
-                      lhs, rhs));
+                      all_columns_projector(), NOT_UNIQUE, lhs, rhs));
 
-  scoped_ptr<Cursor> hash_join(
+  std::unique_ptr<Cursor> hash_join(
       SucceedOrDie(hash_join_operation->CreateCursor()));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   hash_join->ApplyToChildren(spy_transformer.get());
 
   EXPECT_EQ(2, spy_transformer->GetHistoryLength());
+}
+
+TEST_F(HashJoinTest, EmptyLhsSkipsRhs) {
+  Operation* lhs = TestDataBuilder<STRING>().Build();
+  Operation* rhs = TestDataBuilder<STRING>()
+                   .AddRow("foo")
+                   .ReturnException(ERROR_EVALUATION_ERROR).Build();
+  OperationTest test;
+  test.AddInput(lhs);
+  test.AddInput(rhs);
+  // Expect an empty result with no exception (since the rhs is not
+  // supposed to be read at all).
+  test.SetExpectedResult(TestDataBuilder<STRING, STRING>().Build());
+  Operation* operation =
+      CreateOperation(INNER, column_0_selector(), column_0_selector(),
+                      all_columns_projector(), NOT_UNIQUE,
+                      test.input_at(0), test.input_at(1));
+  test.Execute(operation);
+}
+
+TEST_F(HashJoinTest, EmptyRhsSkipsLhs) {
+  Operation* lhs = TestDataBuilder<STRING>()
+                   .AddRow("foo")
+                   .ReturnException(ERROR_EVALUATION_ERROR).Build();
+  Operation* rhs = TestDataBuilder<STRING>().Build();
+  OperationTest test;
+  test.AddInput(lhs);
+  test.AddInput(rhs);
+  // Expect an empty result with no exception (since the lhs is not
+  // supposed to be read beyond the first row).
+  test.SetExpectedResult(TestDataBuilder<STRING, STRING>().Build());
+  Operation* operation =
+      CreateOperation(INNER, column_0_selector(), column_0_selector(),
+                      all_columns_projector(), NOT_UNIQUE,
+                      test.input_at(0), test.input_at(1));
+  test.SetInputViewSizes(1);
+  test.Execute(operation);
 }
 
 }  // namespace supersonic

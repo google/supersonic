@@ -18,12 +18,8 @@
 #include <stddef.h>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -76,9 +72,10 @@ class FilterCursor : public BasicCursor {
       const BoundSingleSourceProjector* projector,
       Cursor* child_cursor,
       BufferAllocator* buffer_allocator) {
-    scoped_ptr<BoundExpressionTree> predicate_holder(predicate);
-    scoped_ptr<const BoundSingleSourceProjector> projector_holder(projector);
-    scoped_ptr<Cursor> child_holder(child_cursor);
+    std::unique_ptr<BoundExpressionTree> predicate_holder(predicate);
+    std::unique_ptr<const BoundSingleSourceProjector> projector_holder(
+        projector);
+    std::unique_ptr<Cursor> child_holder(child_cursor);
     const TupleSchema& predicate_schema = predicate->result_schema();
     if (predicate_schema.attribute_count() != 1 ||
         predicate_schema.attribute(0).type() != BOOL) {
@@ -88,10 +85,9 @@ class FilterCursor : public BasicCursor {
               ERROR_ATTRIBUTE_TYPE_MISMATCH,
           "Predicate has to return exactly one column of type BOOL"));
     }
-    scoped_ptr<FilterCursor> cursor(new FilterCursor(buffer_allocator,
-                                                     predicate_holder.release(),
-                                                     projector_holder.release(),
-                                                     child_holder.release()));
+    std::unique_ptr<FilterCursor> cursor(
+        new FilterCursor(buffer_allocator, predicate_holder.release(),
+                         projector_holder.release(), child_holder.release()));
     PROPAGATE_ON_FAILURE(cursor->Init(std::min(Cursor::kDefaultRowCount,
                                                predicate->row_capacity())));
     return Success(cursor.release());
@@ -249,7 +245,7 @@ class FilterCursor : public BasicCursor {
   }
 
   // Predicate to evaluate on the data.
-  scoped_ptr<BoundExpressionTree> predicate_;
+  std::unique_ptr<BoundExpressionTree> predicate_;
   // Cached capacity of the predicate, to avoid recalculation at each call to
   // Next().
   rowcount_t predicate_capacity_;
@@ -273,7 +269,7 @@ class FilterCursor : public BasicCursor {
   rowcount_t write_pointer_;
 
   // Not used, only to keep it around (and destroy properly).
-  scoped_ptr<const BoundSingleSourceProjector> projector_;
+  std::unique_ptr<const BoundSingleSourceProjector> projector_;
 };
 
 class FilterOperation : public BasicOperation {
@@ -306,8 +302,8 @@ class FilterOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const Expression> predicate_;
-  scoped_ptr<const SingleSourceProjector> projector_;
+  std::unique_ptr<const Expression> predicate_;
+  std::unique_ptr<const SingleSourceProjector> projector_;
 };
 
 }  // namespace

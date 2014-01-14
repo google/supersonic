@@ -17,11 +17,9 @@
 #define SUPERSONIC_TESTING_STREAMABLE_H_
 
 #include <iosfwd>
-using std::ostream;
 #include <ostream>
-using std::endl;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 namespace supersonic {
 
@@ -50,11 +48,11 @@ namespace supersonic {
 class Streamable {
  public:
   virtual ~Streamable() {}
-  virtual void AppendToStream(ostream* s) const = 0;
+  virtual void AppendToStream(std::ostream* s) const = 0;
 };
 
-ostream& operator<<(ostream& s, const Streamable& streamable);
-ostream& operator<<(ostream& s, const Streamable* streamable);
+std::ostream& operator<<(std::ostream& s, const Streamable& streamable);
+std::ostream& operator<<(std::ostream& s, const Streamable* streamable);
 
 string StreamableToString(const Streamable& streamable);
 

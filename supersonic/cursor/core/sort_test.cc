@@ -16,7 +16,8 @@
 #include "supersonic/cursor/core/sort.h"
 
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -35,7 +36,7 @@ namespace supersonic {
 
 class Operation;
 
-class SortTest : public testing::TestWithParam<size_t> {
+class SortTest : public testing::TestWithParam<int> {
  public:
   SortTest() {}
   Operation* CreateSortOperation(const SortOrder* sort_order,
@@ -92,7 +93,7 @@ class SortTest : public testing::TestWithParam<size_t> {
   TestDataBuilder<INT32, STRING> sample_output_;
 };
 
-class ExtendedSortTest : public testing::TestWithParam<size_t> {
+class ExtendedSortTest : public testing::TestWithParam<int> {
  public:
   ExtendedSortTest() {}
   Operation* CreateExtendedSortOperation(
@@ -110,12 +111,12 @@ class ExtendedSortTest : public testing::TestWithParam<size_t> {
 INSTANTIATE_TEST_CASE_P(soft_quota,
                         SortTest,
                         testing::Values(0, 1, 1<<12, 1<<16, 1<<20, 1<<24,
-                                        std::numeric_limits<size_t>::max()));
+                                        std::numeric_limits<int>::max()));
 
 INSTANTIATE_TEST_CASE_P(soft_quota,
                         ExtendedSortTest,
                         testing::Values(0, 1<<24,
-                                        std::numeric_limits<size_t>::max()));
+                                        std::numeric_limits<int>::max()));
 
 TEST_P(SortTest, OneIntegerColumnNoDuplicatesNoNulls) {
   OperationTest test;
@@ -157,25 +158,33 @@ TEST_P(SortTest, OneIntegerColumnNoDuplicatesWithNulls) {
 TEST_P(SortTest, OneIntegerColumnNoDuplicatesWithNullsAndSpyTransform) {
   CreateSampleData();
   Cursor* input = sample_input_.BuildCursor();
-  scoped_ptr<Cursor> expected_result(sample_output_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(sample_output_.BuildCursor());
 
-  scoped_ptr<SortOrder> order(new SortOrder);
+  std::unique_ptr<SortOrder> order(new SortOrder);
   order->add(ProjectNamedAttribute("col0"), ASCENDING);
 
-  scoped_ptr<const SingleSourceProjector> project_all(
+  std::unique_ptr<const SingleSourceProjector> project_all(
       ProjectAllAttributes());
 
-  scoped_ptr<Cursor> sort(
-      SucceedOrDie(CreateSortCursor(order.get(),
-                                    project_all.get(),
-                                    input)));
+  std::unique_ptr<Cursor> sort(
+      SucceedOrDie(CreateSortCursor(order.get(), project_all.get(), input)));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   sort->ApplyToChildren(spy_transformer.get());
   sort.reset(spy_transformer->Transform(sort.release()));
 
   EXPECT_CURSORS_EQUAL(expected_result.release(), sort.release());
+}
+
+TEST_P(SortTest, OneEmptyStringColumn) {
+  OperationTest test;
+  test.SetInput(TestDataBuilder<STRING>().Build());
+  test.SetExpectedResult(TestDataBuilder<STRING>().Build());
+  test.Execute(CreateSortOperation(
+      (new SortOrder())->add(ProjectNamedAttribute("col0"), ASCENDING),
+      NULL,
+      test.input()));
 }
 
 TEST_P(SortTest, OneStringColumnWithDuplicatesAndNulls) {
@@ -369,6 +378,16 @@ TEST_P(SortTest, Projections) {
           (new SortOrder())->add(ProjectAttributeAt(2), DESCENDING),
           ProjectAttributeAt(1),
           test.input()));
+}
+
+TEST_P(ExtendedSortTest, OneStringEmptyColumn) {
+  OperationTest test;
+  test.SetInput(TestDataBuilder<STRING>().Build());
+  test.SetExpectedResult(TestDataBuilder<STRING>().Build());
+  test.Execute(CreateExtendedSortOperation(
+      ExtendedSortSpecificationBuilder().Add("col0", ASCENDING, false)
+                                        ->Build(),
+      test.input()));
 }
 
 TEST_P(ExtendedSortTest, OneStringColumnWithNoDuplicatesAndCaseInsensitive) {
@@ -633,18 +652,16 @@ TEST_P(ExtendedSortTest, MultitypeKeys) {
 TEST_P(SortTest, TransformTest) {
   // Empty input cursor.
   Cursor* input = sample_input_.BuildCursor();
-  scoped_ptr<SortOrder> order(new SortOrder);
+  std::unique_ptr<SortOrder> order(new SortOrder);
   order->add(ProjectNamedAttribute("col0"), ASCENDING);
 
-  scoped_ptr<const SingleSourceProjector> project_all(
+  std::unique_ptr<const SingleSourceProjector> project_all(
       ProjectAllAttributes());
 
-  scoped_ptr<Cursor> sort(
-      SucceedOrDie(CreateSortCursor(order.get(),
-                                    project_all.get(),
-                                    input)));
+  std::unique_ptr<Cursor> sort(
+      SucceedOrDie(CreateSortCursor(order.get(), project_all.get(), input)));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   sort->ApplyToChildren(spy_transformer.get());
 

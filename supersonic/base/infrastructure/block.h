@@ -25,7 +25,7 @@
 #include <stddef.h>
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -396,7 +396,7 @@ class View {
   View& operator=(const View& other);
 
   const TupleSchema schema_;
-  scoped_array<Column> columns_;
+  scoped_ptr<Column[]> columns_;
   rowcount_t row_count_;
   // Views are copyable.
 };
@@ -483,7 +483,7 @@ class Block {
   }
 
   BufferAllocator* const allocator_;
-  scoped_array<OwnedColumn> columns_;
+  scoped_ptr<OwnedColumn[]> columns_;
   View view_;  // Full view on the entire block.
   DISALLOW_COPY_AND_ASSIGN(Block);
 };

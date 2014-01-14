@@ -16,7 +16,8 @@
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/template_util.h"
-#include "supersonic/utils/type_traits.h"
+#include <type_traits>
+#include "supersonic/utils/std_namespace.h"
 
 // Use implicit_cast as a safe version of static_cast or const_cast
 // for implicit conversions. For example:
@@ -124,7 +125,7 @@ inline To down_cast(From& f) {
 //
 // This is true for any cast syntax, either *(int*)&f or
 // *reinterpret_cast<int*>(&f).  And it is particularly true for
-// conversions betweeen integral lvalues and floating-point lvalues.
+// conversions between integral lvalues and floating-point lvalues.
 //
 // The purpose of 3.10 -15- is to allow optimizing compilers to assume
 // that expressions with different types refer to different memory.  gcc
@@ -164,7 +165,8 @@ template <class Dest, class Source>
 inline Dest bit_cast(const Source& source) {
   // Compile time assertion: sizeof(Dest) == sizeof(Source)
   // A compile error here means your Dest and Source have different sizes.
-  typedef char VerifySizesAreEqual [sizeof(Dest) == sizeof(Source) ? 1 : -1];
+  typedef char VerifySizesAreEqual[sizeof(Dest) == sizeof(Source) ? 1 : -1]
+    ATTRIBUTE_UNUSED;
 
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));
@@ -297,7 +299,7 @@ inline bool loose_enum_test(int e_val) {
   // Find the binary bounding negative of both e_min and e_max.
   b_min &= e_min;
 
-  // However, if e_min is postive, the result will be positive.
+  // However, if e_min is positive, the result will be positive.
   // Now clear all bits right of the most significant clear bit,
   // which is a negative saturation for negative numbers.
   // In the case of positive numbers, this is flush to zero.
@@ -313,13 +315,13 @@ inline bool loose_enum_test(int e_val) {
   // Find the unary bounding positive number of e_max.
   int b_max = e_max_sign ^ e_max;
 
-  // Find the binary bounding postive number of that
+  // Find the binary bounding positive number of that
   // and the unary bounding positive number of e_min.
   int e_min_sign = e_min >> (sizeof(e_val)*8 - 1);
   b_max |= e_min_sign ^ e_min;
 
   // Now set all bits right of the most significant set bit,
-  // which is a postive saturation for positive numbers.
+  // which is a positive saturation for positive numbers.
   b_max |= b_max >> 1;
   b_max |= b_max >> 2;
   b_max |= b_max >> 4;

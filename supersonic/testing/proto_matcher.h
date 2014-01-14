@@ -24,7 +24,7 @@
 namespace testing {
 
 MATCHER_P(EqualsProto, message, "") {
-  // TODO(tkaftal): This is a very simple matcher which works as serialisation
+  // TODO(tkaftal): This is a very simple matcher which works as serialization
   // is deterministic in practice. Still, this is not something that should be
   // relied on.
   std::string expected_serialized;

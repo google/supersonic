@@ -122,16 +122,24 @@ bool WallTime_Parse_Timezone(const char* time_spec,
   const char* parsed = strptime(time_spec, format, &split_time);
   if (parsed == NULL) return false;
 
-  // If format ends with "%S", match fractional seconds
   double fraction = 0.0;
-  char junk;
-  if ((*parsed == '.') &&
-     (strcmp(format + strlen(format) - 2, "%S") == 0) &&
-     (sscanf(parsed, "%lf%c",  // NOLINT(runtime/printf)
-             &fraction, &junk) == 1)) {
-     parsed = format + strlen(format);   // Parsed it all!
+  // On OSX I observed behavior where strptime upon successful execution
+  // (whole string parsed) returns a pointer to the last char of |format|
+  // instead of |time_spec|.
+  if (parsed >= time_spec && parsed < time_spec + strlen(time_spec)) {
+    // If format ends with "%S", match fractional seconds
+    char junk;
+    if ((*parsed == '.') &&
+       (strcmp(format + strlen(format) - 2, "%S") == 0) &&
+       (sscanf(parsed, "%lf%c",
+               &fraction, &junk) == 1)) {
+       parsed = format + strlen(format);   // Parsed it all!
+    }
+
+    if (*parsed != '\0') {
+       return false;
+    }
   }
-  if (*parsed != '\0') return false;
 
   // Convert into seconds since epoch.  Adjust so it is interpreted
   // w.r.t. the daylight-saving-state at the specified time.
@@ -151,9 +159,7 @@ bool WallTime_Parse_Timezone(const char* time_spec,
 }
 
 WallTime WallTime_Now() {
-  timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
-  return ts.tv_sec + ts.tv_nsec / static_cast<double>(1e9);
+  return GetCurrentTimeMicros() / static_cast<double>(1e9);
 }
 
 int32 GetDaysSinceEpoch(const char* date) {

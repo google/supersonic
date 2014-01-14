@@ -21,16 +21,10 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <unordered_map>
 #include <string>
-using std::string;
-
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
-using __gnu_cxx::hash_multiset;
+namespace supersonic {using std::string; }
+#include <unordered_set>
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/port.h"
@@ -90,59 +84,6 @@ inline size_t HashTo32(const char* s, size_t len) {
   return Hash32StringWithSeed(s, static_cast<uint32>(len),
                               hash_internal::kMix32);
 }
-
-// --------------- STL hashers -------------------------------------------------
-
-#include <ext/hash_set>
-namespace __gnu_cxx {
-
-
-// STLport and MSVC 10.0 above already define these.
-#if !defined(_STLP_LONG_LONG) && !(defined(_MSC_VER) && _MSC_VER >= 1600)
-
-#if defined(_MSC_VER)
-// MSVC's stl implementation with _MSC_VER less than 1600 doesn't have
-// this hash struct. STLport already defines this.
-template <typename T>
-struct hash {
-  size_t operator()(const T& t) const;
-};
-#endif  // defined(_MSC_VER)
-
-template<> struct hash<int64> {
-  size_t operator()(int64 x) const { return static_cast<size_t>(x); }
-};
-
-template<> struct hash<uint64> {
-  size_t operator()(uint64 x) const { return static_cast<size_t>(x); }
-};
-
-#endif  // !defined(_STLP_LONG_LONG) && !(defined(_MSC_VER) && _MSC_VER >= 1600)
-
-template<> struct hash<bool> {
-  size_t operator()(bool x) const { return static_cast<size_t>(x); }
-};
-
-#if defined(__GNUC__)
-// Use our nice hash function for strings
-template<class _CharT, class _Traits, class _Alloc>
-struct hash<std::basic_string<_CharT, _Traits, _Alloc> > {
-  size_t operator()(const std::basic_string<_CharT, _Traits, _Alloc>& k) const {
-    return HashTo32(k.data(), static_cast<uint32>(k.length()));
-  }
-};
-
-// they don't define a hash for const string at all
-template<> struct hash<const std::string> {
-  size_t operator()(const std::string& k) const {
-    return HashTo32(k.data(), static_cast<uint32>(k.length()));
-  }
-};
-#endif  // defined(__GNUC__)
-
-
-}  // namespace __gnu_cxx
-
 
 // --------------- Fingerprints ------------------------------------------------
 

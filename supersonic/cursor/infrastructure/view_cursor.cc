@@ -17,14 +17,10 @@
 #include "supersonic/cursor/infrastructure/view_cursor.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -85,9 +81,9 @@ class ViewCursorWithSelectionVector : public BasicCursor {
                                        const rowid_t* const selection_vector,
                                        BufferAllocator* buffer_allocator,
                                        const rowcount_t buffer_row_capacity) {
-    scoped_ptr<ViewCursorWithSelectionVector> cursor(
+    std::unique_ptr<ViewCursorWithSelectionVector> cursor(
         new ViewCursorWithSelectionVector(view, row_count, selection_vector,
-                                         buffer_allocator));
+                                          buffer_allocator));
     if (!cursor->Allocate(buffer_row_capacity)) {
       THROW(new Exception(ERROR_MEMORY_EXCEEDED,
                           "Failed to preallocate buffer"));

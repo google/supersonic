@@ -35,9 +35,7 @@
 #include <stddef.h>
 
 #include <iosfwd>
-using std::ostream;
 #include <ostream>
-using std::endl;
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/testing/comparable_view.h"
@@ -60,7 +58,7 @@ class Row : public Streamable {
     return !static_cast<bool>(*this == other);
   }
 
-  virtual void AppendToStream(ostream* s) const;
+  virtual void AppendToStream(std::ostream* s) const;
 
  private:
   // A view over a single row at row_id from view/block.

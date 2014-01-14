@@ -465,6 +465,11 @@ Result* SucceedOrDie(FailureOrOwned<Result, Exception> result) {
   return result.release();
 }
 
+// Like SuccceedOrDie(FailureOrVoid<Exception>), but no-op in opt mode.
+template<typename Exception>
+inline void DebugAssert(FailureOrVoid<Exception> result) {
+  DCHECK(result.is_success()) << result.exception().PrintStackTrace();
+}
 
 // Implementation details below.
 

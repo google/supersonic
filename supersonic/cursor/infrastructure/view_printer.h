@@ -22,11 +22,9 @@
 #include <stddef.h>
 
 #include <iosfwd>
-using std::ostream;
 #include <ostream>
-using std::endl;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 namespace supersonic {
 
@@ -54,14 +52,30 @@ class ViewPrinter {
         include_rows_in_representation_(include_rows_in_representation),
         min_column_length_(min_column_length) {}
 
-  void AppendSchemaToStream(const TupleSchema& typle_schema, ostream* s) const;
+  void AppendSchemaToStream(const TupleSchema& typle_schema,
+                            std::ostream* s) const;
 
-  void AppendViewToStream(const View& view, ostream* s) const;
-  void AppendResultViewToStream(const ResultView& view, ostream* s) const;
+  void AppendViewToStream(const View& view, std::ostream* s) const;
+  void AppendResultViewToStream(const ResultView& view, std::ostream* s) const;
 
   void AppendRowToStream(const View& view,
                          size_t row_id,
-                         ostream* s) const;
+                         std::ostream* s) const;
+
+  struct StreamResultViewAdapter {
+    StreamResultViewAdapter(const ViewPrinter &vp,
+                            const ResultView &rv)
+        : vp(vp), rv(rv) { }
+
+    friend std::ostream& operator<<(
+        std::ostream& os, const ViewPrinter::StreamResultViewAdapter &srva) {
+      srva.vp.AppendResultViewToStream(srva.rv, &os);
+      return os;
+    }
+
+    const ViewPrinter &vp;
+    const ResultView &rv;
+  };
 
  private:
   const string Expand(const string& value) const;

@@ -19,15 +19,12 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <ext/hash_set>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_set;
-using __gnu_cxx::hash_multiset;
+#include <unordered_set>
 #include <map>
 using std::map;
-using std::multimap;
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -52,8 +49,6 @@ using std::vector;
 
 namespace supersonic {
 namespace aggregations {
-
-using util::gtl::PointerVector;
 
 ColumnAggregator::ColumnAggregator() {}
 ColumnAggregator::~ColumnAggregator() {}
@@ -180,13 +175,13 @@ class ColumnAggregatorImpl : public ColumnAggregatorInternal {
 
   void FreeAllocatedBuffers() {
     // Free all buffers but do not change the size of allocated buffers vector.
-    for (PointerVector<Buffer>::iterator it = allocated_buffers_.begin();
-         it != allocated_buffers_.end(); ++it) {
+    for (vector<std::unique_ptr<Buffer>>::iterator it =
+        allocated_buffers_.begin(); it != allocated_buffers_.end(); ++it) {
       it->reset();
     }
   }
 
-  PointerVector<Buffer> allocated_buffers_;
+  vector<std::unique_ptr<Buffer>> allocated_buffers_;
   AssignmentOperator<InputType, OutputType> assignment_operator_;
   AggregationOperator<Aggregation, InputType,
                       OutputType>  aggregation_operator_;
@@ -288,7 +283,7 @@ struct HashSet {
   }
 
  private:
-  hash_set<T, operators::Hash> distinct_values_;
+  std::unordered_set<T, operators::Hash> distinct_values_;
 };
 
 template<>
@@ -306,7 +301,7 @@ struct HashSet<StringPiece> {
   }
 
  private:
-  hash_set<string> distinct_values_;
+  std::unordered_set<string> distinct_values_;
 };
 
 template<DataType InputType>
@@ -363,7 +358,7 @@ class DistinctAggregator : public ColumnAggregator {
   }
 
  private:
-  scoped_ptr<ColumnAggregatorInternal> aggregator_;
+  std::unique_ptr<ColumnAggregatorInternal> aggregator_;
 
   // Vector of sets holding distinct values for each unique key. Not initialized
   // to have as many elements as result_block to avoid possibly unnecessary

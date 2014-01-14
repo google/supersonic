@@ -25,7 +25,7 @@ namespace {
 
 TEST(AggregationOperatorsTest, TrivialAssignment) {
   AssignmentOperator<INT32, INT32> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   int32 result = 0;
   EXPECT_TRUE(assigner(1, &result, &buffer));
@@ -34,7 +34,7 @@ TEST(AggregationOperatorsTest, TrivialAssignment) {
 
 TEST(AggregationOperatorsTest, CrossTypeAssignment) {
   AssignmentOperator<INT32, INT64> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   int64 result = 1LL;
   EXPECT_TRUE(assigner(1, &result, &buffer));
@@ -43,7 +43,7 @@ TEST(AggregationOperatorsTest, CrossTypeAssignment) {
 
 TEST(AggregationOperatorsTest, StringAssignmentTrivial) {
   AssignmentOperator<STRING, STRING> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   EXPECT_TRUE(assigner("One", &result, &buffer));
@@ -52,7 +52,7 @@ TEST(AggregationOperatorsTest, StringAssignmentTrivial) {
 
 TEST(AggregationOperatorsTest, DeepCopyDeepCopies) {
   AssignmentOperator<STRING, STRING, true> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   char data[4] = "One";
@@ -65,7 +65,7 @@ TEST(AggregationOperatorsTest, DeepCopyDeepCopies) {
 TEST(AggregationOperatorsTest, ShallowCopyShallowCopies) {
   AssignmentOperator<STRING, STRING, false> assigner(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   char data[4] = "One";
@@ -77,7 +77,7 @@ TEST(AggregationOperatorsTest, ShallowCopyShallowCopies) {
 
 TEST(AggregationOperatorsTest, StringAssignmentDeepCopies) {
   AssignmentOperator<STRING, STRING> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
   char tab[5] = "One";
 
   StringPiece result;
@@ -90,7 +90,7 @@ TEST(AggregationOperatorsTest, StringAssignmentDeepCopies) {
 
 TEST(AggregationOperatorsTest, StringAssignmentSeveralAssignments) {
   AssignmentOperator<STRING, STRING> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   EXPECT_TRUE(assigner("One", &result, &buffer));
@@ -102,9 +102,9 @@ TEST(AggregationOperatorsTest, StringAssignmentSeveralAssignments) {
 }
 
 TEST(AggregationOperatorsTest, StringAssignmentDoesNotWasteMemory) {
-  scoped_ptr<BufferAllocator> allocator(new MemoryLimit(12));
+  std::unique_ptr<BufferAllocator> allocator(new MemoryLimit(12));
   AssignmentOperator<STRING, STRING> assigner(allocator.get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   char tab[11] = "ABCDEFGHIJ";
@@ -117,9 +117,9 @@ TEST(AggregationOperatorsTest, StringAssignmentDoesNotWasteMemory) {
 }
 
 TEST(AggregationOperatorsTest, StringAssignmentRespectsMemoryLimit) {
-  scoped_ptr<BufferAllocator> allocator(new MemoryLimit(10));
+  std::unique_ptr<BufferAllocator> allocator(new MemoryLimit(10));
   AssignmentOperator<STRING, STRING> assigner(allocator.get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   EXPECT_TRUE(assigner("Short", &result, &buffer));
@@ -128,8 +128,8 @@ TEST(AggregationOperatorsTest, StringAssignmentRespectsMemoryLimit) {
 
 TEST(AggregationOperatorsTest, StringAssignmentSurvivesBufferChange) {
   AssignmentOperator<STRING, STRING> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer_one;
-  scoped_ptr<Buffer> buffer_two;
+  std::unique_ptr<Buffer> buffer_one;
+  std::unique_ptr<Buffer> buffer_two;
 
   StringPiece result;
   EXPECT_TRUE(assigner("One", &result, &buffer_one));
@@ -142,7 +142,7 @@ TEST(AggregationOperatorsTest, StringAssignmentSurvivesBufferChange) {
 
 TEST(AggregationOperatorsTest, IntToStringAssignment) {
   AssignmentOperator<INT32, STRING> assigner(HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result;
   EXPECT_TRUE(assigner(2011, &result, &buffer));
@@ -152,7 +152,7 @@ TEST(AggregationOperatorsTest, IntToStringAssignment) {
 TEST(AggregationOperatorsTest, Sum) {
   AggregationOperator<SUM, UINT32, INT64> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   int64 result = -12LL;
   EXPECT_TRUE(aggregator(1, &result, &buffer));
@@ -164,7 +164,7 @@ TEST(AggregationOperatorsTest, Sum) {
 TEST(AggregationOperatorsTest, Max) {
   AggregationOperator<MAX, FLOAT, FLOAT> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   float result = 0.;
   EXPECT_TRUE(aggregator(1., &result, &buffer));
@@ -180,7 +180,7 @@ TEST(AggregationOperatorsTest, Max) {
 TEST(AggregationOperatorsTest, MaxCopyDepth) {
   AggregationOperator<MAX, STRING, STRING, true> deep_maxer(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
   AggregationOperator<MAX, STRING, STRING, false> shallow_maxer(
       HeapBufferAllocator::Get());
 
@@ -200,7 +200,7 @@ TEST(AggregationOperatorsTest, MaxCopyDepth) {
 TEST(AggregationOperatorsTest, MaxNoCastArguments) {
   AggregationOperator<MAX, INT32, UINT32> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   uint32 result = 0;
   EXPECT_TRUE(aggregator(1, &result, &buffer));
@@ -212,7 +212,7 @@ TEST(AggregationOperatorsTest, MaxNoCastArguments) {
 TEST(AggregationOperatorsTest, MinForStrings) {
   AggregationOperator<MIN, STRING, STRING> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   char tab[8] = "weasel";
   StringPiece result(tab);
@@ -229,7 +229,7 @@ TEST(AggregationOperatorsTest, MinForStrings) {
 TEST(AggregationOperatorsTest, MinCopyDepth) {
   AggregationOperator<MIN, STRING, STRING, true> deep_miner(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
   AggregationOperator<MIN, STRING, STRING, false> shallow_miner(
       HeapBufferAllocator::Get());
 
@@ -247,7 +247,7 @@ TEST(AggregationOperatorsTest, MinCopyDepth) {
 TEST(AggregationOperatorsTest, ConcatStrings) {
   AggregationOperator<CONCAT, STRING, STRING> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result("");
   EXPECT_TRUE(aggregator("G", &result, &buffer));
@@ -263,7 +263,7 @@ TEST(AggregationOperatorsTest, ConcatStrings) {
 TEST(AggregationOperatorsTest, ConcatInts) {
   AggregationOperator<CONCAT, INT32, STRING> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   StringPiece result("");
   EXPECT_TRUE(aggregator(-7, &result, &buffer));
@@ -275,7 +275,7 @@ TEST(AggregationOperatorsTest, ConcatInts) {
 TEST(AggregationOperatorsTest, First) {
   AggregationOperator<FIRST, INT32, INT32> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   int32 result = 7;
   EXPECT_TRUE(aggregator(1, &result, &buffer));
@@ -287,7 +287,7 @@ TEST(AggregationOperatorsTest, First) {
 TEST(AggregationOperatorsTest, Last) {
   AggregationOperator<LAST, INT32, INT32> aggregator(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
 
   int32 result = 7;
   EXPECT_TRUE(aggregator(1, &result, &buffer));
@@ -299,7 +299,7 @@ TEST(AggregationOperatorsTest, Last) {
 TEST(AggregationOperatorsTest, LastCopyDepth) {
   AggregationOperator<LAST, STRING, STRING, true> deep_laster(
       HeapBufferAllocator::Get());
-  scoped_ptr<Buffer> buffer;
+  std::unique_ptr<Buffer> buffer;
   AggregationOperator<LAST, STRING, STRING, false> shallow_laster(
       HeapBufferAllocator::Get());
 

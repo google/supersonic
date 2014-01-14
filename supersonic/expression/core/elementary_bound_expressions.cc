@@ -18,17 +18,11 @@
 #include <stddef.h>
 #include <string.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -220,9 +214,14 @@ class BoundIfNullExpression : public BoundBinaryExpression {
         my_block()->mutable_column(0)->template mutable_typed_data<type>();
     bool_ptr child_skip_iterator = child_skip_vector();
     for (rowid_t row = 0; row < row_count; ++row) {
-      *result_data = (*child_skip_iterator)
-          ? *expression_data
-          : *substitute_data;
+      // After compilation and optimization its assembler equivalent of:
+      // *result_data = (*child_skip_iterator) ? *expression_data
+      //                                       : *substitute_data;
+      // but doesn't suffer from lvalue-to-rvalue on uninitialized variable
+      // undefined behavior.
+      memcpy(result_data,
+             (*child_skip_iterator) ? expression_data : substitute_data,
+             sizeof(CppType));
       ++result_data;
       ++expression_data;
       ++substitute_data;

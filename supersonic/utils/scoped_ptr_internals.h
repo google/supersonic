@@ -8,15 +8,12 @@
 #define BASE_SCOPED_PTR_INTERNALS_H_
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;  // for std::swap
+#include "supersonic/utils/std_namespace.h"  // for std::swap
 
 namespace base {
 namespace internal {
+
+inline void ReportScopedPtrSelfReset() {}
 
 // Minimal implementation of the core logic of scoped_ptr, suitable for
 // reuse in both scoped_ptr and its specialization.
@@ -32,8 +29,9 @@ class scoped_ptr_impl {
   }
 
   void reset(C* p) {
-    // This self-reset check is deprecated.
-    if (p != data_.ptr) {
+    if (PREDICT_FALSE(p != NULL && p == data_.ptr)) {
+      ReportScopedPtrSelfReset();
+    } else {
       if (data_.ptr != NULL) {
         // Note that this can lead to undefined behavior and memory leaks
         // in the unlikely but possible case that get_deleter()(get())

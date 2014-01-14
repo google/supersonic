@@ -18,15 +18,10 @@
 
 #include <limits.h>
 #include <math.h>
-#include <mm_malloc.h>
 #include <stdlib.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/bit_pointers.h"
@@ -262,8 +257,8 @@ class VectorBinaryPrimitiveTest : public testing::Test, AbstractPrimitiveTest {
     FillWithDataLeft(left, size);
     FillWithDataRight(right, size);
 
-    scoped_array<index_t> left_ind(new index_t[size]);
-    scoped_array<index_t> right_ind(new index_t[size]);
+    std::unique_ptr<index_t[]> left_ind(new index_t[size]);
+    std::unique_ptr<index_t[]> right_ind(new index_t[size]);
     for (int i = 0; i < size; ++i) {
       left_ind[i] = size - i - 1;
       right_ind[i] = (i * 451) % size;
@@ -288,8 +283,8 @@ class VectorBinaryPrimitiveTest : public testing::Test, AbstractPrimitiveTest {
     FillWithDataLeft(left, size);
     FillWithDataRight(right, size);
 
-    scoped_array<index_t> left_ind(new index_t[size]);
-    scoped_array<index_t> right_ind(new index_t[size]);
+    std::unique_ptr<index_t[]> left_ind(new index_t[size]);
+    std::unique_ptr<index_t[]> right_ind(new index_t[size]);
     for (int i = 0; i < size; ++i) {
       left_ind[i] = size - i - 1;
       right_ind[i] = (i * 451) % size;
@@ -440,7 +435,7 @@ class VectorUnaryPrimitiveTest : public testing::Test, AbstractPrimitiveTest {
     ArgCppType*    arg    = MallocAlignedPlusOffset<ArgCppType>(size, 0);
     FillWithData(arg, size * sizeof(*arg), LEFT_PATTERN);
 
-    scoped_array<index_t> ind(new index_t[size]);
+    std::unique_ptr<index_t[]> ind(new index_t[size]);
     for (int i = 0; i < size; ++i) {
       ind[i] = size - i;
     }

@@ -18,8 +18,6 @@
 // It launches the Supersonic initialisation routine.
 
 #include <iostream>
-using std::cout;
-using std::endl;
 
 #include "supersonic/base/infrastructure/init.h"
 #include "gtest/gtest.h"

@@ -16,23 +16,21 @@
 #include "supersonic/testing/streamable.h"
 
 #include <sstream>
-using std::stringstream;
-using std::ostringstream;
 
 namespace supersonic {
 
-ostream& operator<<(ostream& s, const Streamable& streamable) {
+std::ostream& operator<<(std::ostream& s, const Streamable& streamable) {
   streamable.AppendToStream(&s);
   return s;
 }
 
-ostream& operator<<(ostream& s, const Streamable* streamable) {
+std::ostream& operator<<(std::ostream& s, const Streamable* streamable) {
   streamable->AppendToStream(&s);
   return s;
 }
 
 string StreamableToString(const Streamable& streamable) {
-  ostringstream s;
+  std::ostringstream s;
   streamable.AppendToStream(&s);
   return s.str();
 }

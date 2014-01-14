@@ -6,8 +6,7 @@
 
 #include <stddef.h>
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -15,6 +14,7 @@ using std::vector;
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
+#include "supersonic/utils/container_logging.h"
 
 namespace util {
 namespace gtl {
@@ -284,7 +284,7 @@ template<typename T>
 typename PointerVector<T>::iterator PointerVector<T>::erase(iterator first,
                                                             iterator last) {
   for (iterator it = first; it != last; ++it) {
-    it->reset(NULL);
+    it->reset();
   }
   return data_.erase(first.base_iterator_, last.base_iterator_);
 }
@@ -294,6 +294,14 @@ typename PointerVector<T>::iterator PointerVector<T>::erase(iterator first,
 template <typename T>
 inline void swap(PointerVector<T> &x, PointerVector<T> &y) {
   x.swap(y);
+}
+
+template <typename T>
+inline std::ostream& operator<<(std::ostream& out,
+                                const PointerVector<T>& seq) {
+  util::gtl::LogRangeToStream(out, seq.begin(), seq.end(),
+                              util::gtl::LogDefault());
+  return out;
 }
 
 }  // namespace gtl

@@ -20,8 +20,9 @@
 #ifndef SUPERSONIC_EXPRESSION_INFRASTRUCTURE_BASIC_EXPRESSIONS_H_
 #define SUPERSONIC_EXPRESSION_INFRASTRUCTURE_BASIC_EXPRESSIONS_H_
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -56,7 +57,7 @@ class UnaryExpression : public Expression {
   }
 
  protected:
-  scoped_ptr<const Expression> child_expression_;
+  std::unique_ptr<const Expression> child_expression_;
 
  private:
   // Should bind expression knowing that its child is already bound.
@@ -88,8 +89,8 @@ class BinaryExpression : public Expression {
         right_(right) {
   }
 
-  scoped_ptr<const Expression> left_;
-  scoped_ptr<const Expression> right_;
+  std::unique_ptr<const Expression> left_;
+  std::unique_ptr<const Expression> right_;
 
  private:
   // Should bind expression knowing that its childern are already bound.
@@ -124,9 +125,9 @@ class TernaryExpression : public Expression {
         middle_(middle),
         right_(right) {
   }
-  scoped_ptr<const Expression> left_;
-  scoped_ptr<const Expression> middle_;
-  scoped_ptr<const Expression> right_;
+  std::unique_ptr<const Expression> left_;
+  std::unique_ptr<const Expression> middle_;
+  std::unique_ptr<const Expression> right_;
 
  private:
   // Should bind expression knowing that its childern are already bound.

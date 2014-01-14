@@ -15,11 +15,8 @@
 
 #include "supersonic/base/infrastructure/types_infrastructure.h"
 
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/base/exception/result.h"
@@ -476,7 +473,7 @@ class HasherTest : public testing::Test {};
 TEST_F(HasherTest, ShouldHashIntegers) {
   const int32 data[] = { -5, 0, 4 };
   Hasher hasher = GetHasher(INT32, false);
-  hash<int32> reference;
+  std::hash<int32> reference;
   EXPECT_EQ(0xdeadbabe, hasher(NULL));
   EXPECT_EQ(reference(data[0]), hasher(&data[0]));
   EXPECT_EQ(reference(data[1]), hasher(&data[1]));
@@ -506,7 +503,7 @@ TEST_F(ColumnHasherTest, ShouldHashColumns) {
   ColumnHasher hasher = GetColumnHasher(INT32, false, false);
   size_t result[4];
   hasher(data, is_null.const_data(), 4, result);
-  hash<int32> reference;
+  std::hash<int32> reference;
   EXPECT_EQ(reference(data[0]), result[0]);
   EXPECT_EQ(reference(data[1]), result[1]);
   EXPECT_EQ(reference(data[2]), result[2]);
@@ -532,7 +529,7 @@ TEST_F(ColumnHasherTest, ShouldHashNotNullColumns) {
   ColumnHasher hasher = GetColumnHasher(INT32, false, true);
   size_t result[4];
   hasher(data, bool_ptr(NULL), 4, result);
-  hash<int32> reference;
+  std::hash<int32> reference;
   EXPECT_EQ(reference(data[0]), result[0]);
   EXPECT_EQ(reference(data[1]), result[1]);
   EXPECT_EQ(reference(data[2]), result[2]);

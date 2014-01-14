@@ -16,6 +16,8 @@
 
 #include "supersonic/benchmark/infrastructure/benchmark_listener.h"
 
+#include <memory>
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
@@ -24,7 +26,7 @@ namespace supersonic {
 namespace {
 
 TEST(BenchmarkListenerTest, BenchmarkValueInitTest) {
-  scoped_ptr<BenchmarkListener> listener(CreateBenchmarkListener());
+  std::unique_ptr<BenchmarkListener> listener(CreateBenchmarkListener());
   EXPECT_EQ(0, listener->TotalTimeUsec());
   EXPECT_EQ(0, listener->FirstNextTimeUsec());
   EXPECT_EQ(0, listener->NextCalls());

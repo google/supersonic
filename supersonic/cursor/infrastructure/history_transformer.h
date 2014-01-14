@@ -19,6 +19,8 @@
 #ifndef SUPERSONIC_CURSOR_INFRASTRUCTURE_HISTORY_TRANSFORMER_H_
 #define SUPERSONIC_CURSOR_INFRASTRUCTURE_HISTORY_TRANSFORMER_H_
 
+#include <memory>
+
 #include "supersonic/cursor/base/cursor_transformer.h"
 #include "supersonic/cursor/infrastructure/ownership_revoker.h"
 
@@ -72,13 +74,13 @@ class CursorTransformerWithVectorHistory : public CursorTransformer {
   // a new empty one.
   util::gtl::PointerVector<T>* ReleaseHistory() {
     using util::gtl::PointerVector;
-    scoped_ptr<PointerVector<T> > internal(new PointerVector<T>);
+    std::unique_ptr<PointerVector<T> > internal(new PointerVector<T>);
     internal.swap(run_history_);
     return internal.release();
   }
 
  protected:
-  scoped_ptr<util::gtl::PointerVector<T> > run_history_;
+  std::unique_ptr<util::gtl::PointerVector<T> > run_history_;
 };
 
 typedef OwnershipRevoker<Cursor> CursorOwnershipRevoker;

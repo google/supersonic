@@ -8,10 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
@@ -24,7 +23,7 @@ using std::numeric_limits;
 
 // Implementations for some of the Split2 API. Much of the Split2 API is
 // templated so it exists in header files, either strings/split.h or
-// strings/split_iternal.h.
+// strings/split_internal.h.
 namespace strings {
 namespace delimiter {
 
@@ -40,15 +39,16 @@ template <typename FindPolicy>
 StringPiece GenericFind(
     StringPiece text,
     StringPiece delimiter,
+    size_t pos,
     FindPolicy find_policy) {
   if (delimiter.empty() && text.length() > 0) {
     // Special case for empty string delimiters: always return a zero-length
-    // StringPiece referring to the item at position 1.
-    return StringPiece(text.begin() + 1, 0);
+    // StringPiece referring to the item at position 1 past pos.
+    return StringPiece(text.begin() + pos + 1, 0);
   }
-  int found_pos = StringPiece::npos;
+  size_t found_pos = StringPiece::npos;
   StringPiece found(text.end(), 0);  // By default, not found
-  found_pos = find_policy.Find(text, delimiter);
+  found_pos = find_policy.Find(text, delimiter, pos);
   if (found_pos != StringPiece::npos) {
     found.set(text.data() + found_pos, find_policy.Length(delimiter));
   }
@@ -58,10 +58,10 @@ StringPiece GenericFind(
 // Finds using StringPiece::find(), therefore the length of the found delimiter
 // is delimiter.length().
 struct LiteralPolicy {
-  int Find(StringPiece text, StringPiece delimiter) {
-    return text.find(delimiter);
+  size_t Find(StringPiece text, StringPiece delimiter, size_t pos) {
+    return text.find(delimiter, pos);
   }
-  int Length(StringPiece delimiter) {
+  size_t Length(StringPiece delimiter) {
     return delimiter.length();
   }
 };
@@ -69,10 +69,10 @@ struct LiteralPolicy {
 // Finds using StringPiece::find_first_of(), therefore the length of the found
 // delimiter is 1.
 struct AnyOfPolicy {
-  int Find(StringPiece text, StringPiece delimiter) {
-    return text.find_first_of(delimiter);
+  size_t Find(StringPiece text, StringPiece delimiter, size_t pos) {
+    return text.find_first_of(delimiter, pos);
   }
-  int Length(StringPiece delimiter) {
+  size_t Length(StringPiece delimiter) {
     return 1;
   }
 };
@@ -86,8 +86,8 @@ struct AnyOfPolicy {
 Literal::Literal(StringPiece sp) : delimiter_(sp.ToString()) {
 }
 
-StringPiece Literal::Find(StringPiece text) const {
-  return GenericFind(text, delimiter_, LiteralPolicy());
+StringPiece Literal::Find(StringPiece text, size_t pos) const {
+  return GenericFind(text, delimiter_, pos, LiteralPolicy());
 }
 
 //
@@ -97,8 +97,8 @@ StringPiece Literal::Find(StringPiece text) const {
 AnyOf::AnyOf(StringPiece sp) : delimiters_(sp.ToString()) {
 }
 
-StringPiece AnyOf::Find(StringPiece text) const {
-  return GenericFind(text, delimiters_, AnyOfPolicy());
+StringPiece AnyOf::Find(StringPiece text, size_t pos) const {
+  return GenericFind(text, delimiters_, pos, AnyOfPolicy());
 }
 
 //
@@ -108,13 +108,14 @@ FixedLength::FixedLength(int length) : length_(length) {
   CHECK_GT(length, 0);
 }
 
-StringPiece FixedLength::Find(StringPiece text) const {
+StringPiece FixedLength::Find(StringPiece text, size_t pos) const {
+  StringPiece substr(text, pos);
   // If the string is shorter than the chunk size we say we
   // "can't find the delimiter" so this will be the last chunk.
-  if (text.length() <= length_)
+  if (substr.length() <= length_)
     return StringPiece(text.end(), 0);
 
-  return StringPiece(text.begin() + length_, 0);
+  return StringPiece(substr.begin() + length_, 0);
 }
 
 }  // namespace delimiter
@@ -134,7 +135,7 @@ namespace {
 // the following overloads:
 // - vector<string>           - for better performance
 // - map<string, string>      - to change append semantics
-// - hash_map<string, string> - to change append semantics
+// - std::unordered_map<string, string> - to change append semantics
 template <typename Container, typename Splitter>
 void AppendToImpl(Container* container, Splitter splitter) {
   Container c = splitter;  // Calls implicit conversion operator.
@@ -154,7 +155,7 @@ void AppendToImpl(vector<string>* container, Splitter splitter) {
   }
 }
 
-// Here we define two AppendToImpl() overloads for map<> and hash_map<>. Both of
+// Here we define two AppendToImpl() overloads for map<> and std::unordered_map<>. Both of
 // these overloads call through to this AppendToMap() function. This is needed
 // because inserting a duplicate key into a map does NOT overwrite the previous
 // value, which was not the behavior of the split1 Split*() functions. Consider
@@ -188,7 +189,7 @@ void AppendToImpl(std::map<string, string>* map_container, Splitter splitter) {
 }
 
 template <typename Splitter>
-void AppendToImpl(hash_map<string, string>* map_container, Splitter splitter) {
+void AppendToImpl(std::unordered_map<string, string>* map_container, Splitter splitter) {
   AppendToMap(map_container, splitter);
 }
 
@@ -258,22 +259,6 @@ static int ClipStringHelper(const char* str, int max_len, bool use_ellipsis) {
 //    if this is possible. If the string is clipped, we append an
 //    ellipsis.
 // ----------------------------------------------------------------------
-
-void ClipString(char* str, int max_len) {
-  int cut_at = ClipStringHelper(str, max_len, true);
-  if (cut_at != -1) {
-    if (max_len > kCutStrSize) {
-      strcpy(str+cut_at, kCutStr);
-    } else {
-      strcpy(str+cut_at, "");
-    }
-  }
-}
-
-// ----------------------------------------------------------------------
-// ClipString
-//    Version of ClipString() that uses string instead of char*.
-// ----------------------------------------------------------------------
 void ClipString(string* full_str, int max_len) {
   int cut_at = ClipStringHelper(full_str->c_str(), max_len, true);
   if (cut_at != -1) {
@@ -319,7 +304,7 @@ void SplitStringUsing(const string& full,
 }
 
 void SplitStringToHashsetUsing(const string& full, const char* delim,
-                               hash_set<string>* result) {
+                               std::unordered_set<string>* result) {
   AppendTo(result, strings::Split(full, AnyOf(delim), strings::SkipEmpty()));
 }
 
@@ -329,7 +314,7 @@ void SplitStringToSetUsing(const string& full, const char* delim,
 }
 
 void SplitStringToHashmapUsing(const string& full, const char* delim,
-                               hash_map<string, string>* result) {
+                               std::unordered_map<string, string>* result) {
   AppendTo(result, strings::Split(full, AnyOf(delim), strings::SkipEmpty()));
 }
 
@@ -340,7 +325,7 @@ void SplitStringToHashmapUsing(const string& full, const char* delim,
 //    If omit empty strings is true, empty strings are omitted
 //    from the resulting vector.
 // ----------------------------------------------------------------------
-void SplitStringPieceToVector(const StringPiece& full,
+void SplitStringPieceToVector(StringPiece full,
                               const char* delim,
                               vector<StringPiece>* vec,
                               bool omit_empty_strings) {
@@ -349,18 +334,6 @@ void SplitStringPieceToVector(const StringPiece& full,
   } else {
     AppendTo(vec, strings::Split(full, AnyOf(delim)));
   }
-}
-
-// ----------------------------------------------------------------------
-// SplitUsing()
-//    Split a string using a string of delimiters, returning vector
-//    of strings. The original string is modified to insert nulls.
-// ----------------------------------------------------------------------
-
-vector<char*>* SplitUsing(char* full, const char* delim) {
-  vector<char*>* vec = new vector<char*>;
-  SplitToVector(full, delim, vec, true);        // Omit empty strings
-  return vec;
 }
 
 void SplitToVector(char* full, const char* delim, vector<char*>* vec,
@@ -421,70 +394,81 @@ string SplitOneStringToken(const char ** source, const char * delim) {
 //   Split the string using the specified delimiters, taking escaping into
 //   account. '\' is not allowed as a delimiter.
 // ----------------------------------------------------------------------
-template <typename ITR>
+template <bool allow_empty, typename IN_ITER, typename OUT_ITER>
 static inline
-void SplitStringWithEscapingToIterator(const string& src,
+void SplitStringWithEscapingToIterator(IN_ITER first, IN_ITER last,
                                        const strings::CharSet& delimiters,
-                                       const bool allow_empty,
-                                       ITR* result) {
+                                       OUT_ITER result) {
   CHECK(!delimiters.Test('\\')) << "\\ is not allowed as a delimiter.";
-  CHECK(result);
   string part;
 
-  for (uint32 i = 0; i < src.size(); ++i) {
-    char current_char = src[i];
+  for ( ; first != last; ++first) {
+    char current_char = *first;
     if (delimiters.Test(current_char)) {
       // Push substrings when we encounter delimiters.
       if (allow_empty || !part.empty()) {
-        *(*result)++ = part;
+        *result++ = part;
         part.clear();
       }
-    } else if (current_char == '\\' && ++i < src.size()) {
-      // If we see a backslash, the next delimiter or backslash is literal.
-      current_char = src[i];
-      if (current_char != '\\' && !delimiters.Test(current_char)) {
-        // Don't honour unknown escape sequences: emit \f for \f.
-        part.push_back('\\');
-      }
-      part.push_back(current_char);
-    } else {
-      // Otherwise, we have a normal character or trailing backslash.
-      part.push_back(current_char);
+      continue;
     }
+    if (current_char != '\\') {
+      // Just a normal character.
+      part.push_back(current_char);
+      continue;
+    }
+    // We have read a backslash: look ahead if possible.
+    if (++first == last) {
+      // Trailing backslash. Nothing to peek at, just push it and stop.
+      part.push_back('\\');
+      break;
+    }
+    current_char = *first;
+    // The next delimiter or backslash is literal.
+    if (current_char != '\\' && !delimiters.Test(current_char)) {
+      // Don't honor unknown escape sequences: emit \f for \f.
+      part.push_back('\\');
+    }
+    part.push_back(current_char);
   }
-
   // Push the trailing part.
   if (allow_empty || !part.empty()) {
-    *(*result)++ = part;
+    *result++ = part;
   }
 }
 
-void SplitStringWithEscaping(const string &full,
+template <bool allow_empty, typename IN_CONTAINER, typename OUT_CONTAINER>
+static inline
+void SplitStringWithEscapingToContainer(const IN_CONTAINER& src,
+                                        const strings::CharSet& delimiters,
+                                        OUT_CONTAINER *result) {
+  SplitStringWithEscapingToIterator<allow_empty>(
+      src.begin(), src.end(), delimiters,
+      std::inserter(*result, result->end()));
+}
+
+void SplitStringWithEscaping(StringPiece full,
                              const strings::CharSet& delimiters,
                              vector<string> *result) {
-  std::back_insert_iterator< vector<string> > it(*result);
-  SplitStringWithEscapingToIterator(full, delimiters, false, &it);
+  SplitStringWithEscapingToContainer<false>(full, delimiters, result);
 }
 
-void SplitStringWithEscapingAllowEmpty(const string &full,
+void SplitStringWithEscapingAllowEmpty(StringPiece full,
                                        const strings::CharSet& delimiters,
                                        vector<string> *result) {
-  std::back_insert_iterator< vector<string> > it(*result);
-  SplitStringWithEscapingToIterator(full, delimiters, true, &it);
+  SplitStringWithEscapingToContainer<true>(full, delimiters, result);
 }
 
-void SplitStringWithEscapingToSet(const string &full,
+void SplitStringWithEscapingToSet(StringPiece full,
                                   const strings::CharSet& delimiters,
                                   std::set<string> *result) {
-  std::insert_iterator< std::set<string> > it(*result, result->end());
-  SplitStringWithEscapingToIterator(full, delimiters, false, &it);
+  SplitStringWithEscapingToContainer<false>(full, delimiters, result);
 }
 
-void SplitStringWithEscapingToHashset(const string &full,
+void SplitStringWithEscapingToHashset(StringPiece full,
                                       const strings::CharSet& delimiters,
-                                      hash_set<string> *result) {
-  std::insert_iterator< hash_set<string> > it(*result, result->end());
-  SplitStringWithEscapingToIterator(full, delimiters, false, &it);
+                                      std::unordered_set<string> *result) {
+  SplitStringWithEscapingToContainer<false>(full, delimiters, result);
 }
 
 

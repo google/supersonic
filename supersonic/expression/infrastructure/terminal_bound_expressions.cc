@@ -17,11 +17,11 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -127,7 +127,7 @@ class BoundRandInt32Expression : public BasicBoundNoArgumentExpression {
   bool can_be_resolved() const { return false; }
 
  private:
-  scoped_ptr<RandomBase> random_generator_;
+  std::unique_ptr<RandomBase> random_generator_;
   DISALLOW_COPY_AND_ASSIGN(BoundRandInt32Expression);
 };
 

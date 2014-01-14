@@ -20,8 +20,9 @@
 #ifndef SUPERSONIC_BENCHMARK_DOT_DOT_DRAWER_H_
 #define SUPERSONIC_BENCHMARK_DOT_DOT_DRAWER_H_
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -92,7 +93,7 @@ class DOTDrawer {
 
   // Field representing the policy on sending the generated graph code to its
   // destination.
-  scoped_ptr<DOTOutputWriter> dot_writer_;
+  std::unique_ptr<DOTOutputWriter> dot_writer_;
 
   string benchmark_name_;
 

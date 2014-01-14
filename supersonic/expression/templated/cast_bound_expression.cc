@@ -17,11 +17,11 @@
 #include "supersonic/expression/templated/cast_bound_expression.h"
 
 #include <stddef.h>
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -83,7 +83,7 @@ class BoundProjectingCastExpression : public BoundExpression {
   }
 
  private:
-  const scoped_ptr<BoundExpression> child_;
+  const std::unique_ptr<BoundExpression> child_;
 
   static TupleSchema CreateCastSchema(BoundExpression* child) {
     string name = StringPrintf("CAST_%s_TO_%s(%s)",
@@ -97,7 +97,7 @@ class BoundProjectingCastExpression : public BoundExpression {
 // A creator for ProjectingCast expressions.
 template<DataType from_type, DataType to_type>
 FailureOrOwned<BoundExpression> BoundProjectingCast(BoundExpression* child) {
-  scoped_ptr<BoundExpression> child_ptr(child);
+  std::unique_ptr<BoundExpression> child_ptr(child);
   FailureOrVoid check = CheckAttributeCount(string("Cast"),
                                             child_ptr->result_schema(),
                                             1);
@@ -317,7 +317,7 @@ struct BoundCastCreator {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<INT32>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   switch (to_type_) {
     case INT32: return Success(child_.release());
     case UINT32: return BoundProjectingCast<INT32, UINT32>(child_.release());
@@ -344,7 +344,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<INT32>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<UINT32>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   switch (to_type_) {
     case INT32: return BoundProjectingCast<UINT32, INT32>(child_.release());
     case UINT32: return Success(child_.release());
@@ -371,7 +371,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<UINT32>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<INT64>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == INT64) return Success(child_.release());
   if (to_type_ == UINT64) return BoundProjectingCast<INT64, UINT64>(
       child_.release());
@@ -393,7 +393,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<INT64>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<UINT64>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == UINT64) return Success(child_.release());
   if (to_type_ == INT64) return BoundProjectingCast<UINT64, INT64>(
       child_.release());
@@ -417,7 +417,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<UINT64>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<FLOAT>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   // Casts to floating point types.
   if (to_type_ == FLOAT) return Success(child_.release());
   if (to_type_ == DOUBLE)
@@ -432,7 +432,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<FLOAT>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<DOUBLE>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   // Casts to floating point types.
   if (to_type_ == DOUBLE) return Success(child_.release());
   if (to_type_ == FLOAT) {
@@ -452,7 +452,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<DOUBLE>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<STRING>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == STRING) return Success(child_.release());
   if (to_type_ == BINARY) return BoundProjectingCast<STRING, BINARY>(
       child_.release());
@@ -461,7 +461,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<STRING>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<BINARY>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == BINARY) return Success(child_.release());
   if (to_type_ == STRING) return BoundProjectingCast<BINARY, STRING>(
       child_.release());
@@ -470,7 +470,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<BINARY>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<DATE>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == DATE) return Success(child_.release());
   if (to_type_ == DATETIME) return BoundDateToDatetime(
       child_.release(), allocator_, row_capacity_);
@@ -479,14 +479,14 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<DATE>() const {
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<DATETIME>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == DATETIME) return Success(child_.release());
   THROW(IllicitCastFromDateType(DATE, to_type_, description_));
 }
 
 template<>
 FailureOrOwned<BoundExpression> BoundCastCreator::operator()<BOOL>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == BOOL) return Success(child_.release());
   THROW(IllicitCastFromBool(to_type_, description_));
 }
@@ -500,7 +500,7 @@ FailureOrOwned<BoundExpression> BoundCastCreator::operator()<ENUM>() const {
 template<>
 FailureOrOwned<BoundExpression>
     BoundCastCreator::operator()<DATA_TYPE>() const {
-  scoped_ptr<BoundExpression> child_(child_ptr);
+  std::unique_ptr<BoundExpression> child_(child_ptr);
   if (to_type_ == DATA_TYPE) return Success(child_.release());
   THROW(IllicitCast(DATA_TYPE, to_type_, description_));
 }
@@ -514,7 +514,7 @@ FailureOrOwned<BoundExpression> BoundInternalCast(
     BoundExpression* child_ptr,
     DataType to_type,
     bool is_implicit) {
-  scoped_ptr<BoundExpression> child(child_ptr);
+  std::unique_ptr<BoundExpression> child(child_ptr);
   FailureOrVoid check = CheckAttributeCount(string("Cast"),
                                             child->result_schema(),
                                             1);

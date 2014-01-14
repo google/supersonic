@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/compute.h"
 
+#include <memory>
+
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/exception/failureor.h"
@@ -59,7 +61,7 @@ class ComputeCursor : public BasicCursor {
 
  private:
   const int row_capacity_;
-  scoped_ptr<BoundExpressionTree> computation_;
+  std::unique_ptr<BoundExpressionTree> computation_;
   DISALLOW_COPY_AND_ASSIGN(ComputeCursor);
 };
 
@@ -82,7 +84,7 @@ class ComputeOperation : public BasicOperation {
   }
 
  private:
-  const scoped_ptr<const Expression> computation_;
+  const std::unique_ptr<const Expression> computation_;
 };
 
 }  // namespace

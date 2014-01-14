@@ -21,6 +21,8 @@
 #ifndef SUPERSONIC_BENCHMARK_MANAGER_BENCHMARK_MANAGER_H_
 #define SUPERSONIC_BENCHMARK_MANAGER_BENCHMARK_MANAGER_H_
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/benchmark_listener.h"
 #include "supersonic/benchmark/infrastructure/cursor_statistics.h"
 #include "supersonic/benchmark/infrastructure/node.h"
@@ -74,9 +76,9 @@ class BenchmarkDataWrapper {
   BenchmarkTreeNode* node() { return node_.get(); }
 
  private:
-  scoped_ptr<Cursor> cursor_;
-  scoped_ptr<BenchmarkTreeBuilder> tree_builder_;
-  scoped_ptr<BenchmarkTreeNode> node_;
+  std::unique_ptr<Cursor> cursor_;
+  std::unique_ptr<BenchmarkTreeBuilder> tree_builder_;
+  std::unique_ptr<BenchmarkTreeNode> node_;
 };
 
 // Transforms the cursor tree, whose root is passed as the argument, by

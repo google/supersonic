@@ -18,6 +18,8 @@
 
 #include "supersonic/benchmark/infrastructure/benchmark_transformer.h"
 
+#include <memory>
+
 #include "supersonic/benchmark/infrastructure/benchmark_listener.h"
 #include "supersonic/cursor/base/cursor.h"
 
@@ -43,7 +45,7 @@ class SpyCursorBenchmarkTransformer
   virtual Cursor* Transform(Cursor* cursor) {
     string id;
     cursor->AppendDebugDescription(&id);
-    scoped_ptr<BenchmarkListener> listener(CreateBenchmarkListener());
+    std::unique_ptr<BenchmarkListener> listener(CreateBenchmarkListener());
     BenchmarkListener* ptr_to_listener = listener.get();
     run_history_->push_back(
         new CursorWithBenchmarkListener(cursor, listener.release()));

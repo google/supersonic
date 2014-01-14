@@ -17,7 +17,7 @@
 #include "supersonic/expression/core/date_expressions.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/walltime.h"
@@ -281,7 +281,7 @@ const Expression* SecondLocal(const Expression* const datetime) {
 }
 
 const Expression* MicrosecondLocal(const Expression* const datetime) {
-  return MicrosecondLocal(datetime);
+  return Microsecond(datetime);
 }
 
 const Expression* DateFormat(const Expression* const datetime,

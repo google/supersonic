@@ -15,8 +15,9 @@
 
 #include "supersonic/expression/infrastructure/basic_bound_expression.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/casts.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -57,7 +58,7 @@ FailureOrOwned<BoundExpression> InitBasicExpression(
     rowcount_t row_capacity,
     BasicBoundExpression* expression,
     BufferAllocator* allocator) {
-  scoped_ptr<BasicBoundExpression> expression_ptr(expression);
+  std::unique_ptr<BasicBoundExpression> expression_ptr(expression);
   if (expression_ptr->can_be_resolved()) {
     // This expression has only constant children, meaning we can precalculate
     // it now, and replace it with the appropriate constant. Thus we will
@@ -286,7 +287,7 @@ FailureOrOwned<const Expression> ResolveToConstant(
     BoundExpression* expression_ptr) {
   small_bool_array skip_array;
   *(skip_array.mutable_data()) = false;
-  scoped_ptr<BoundExpression> expression(expression_ptr);
+  std::unique_ptr<BoundExpression> expression(expression_ptr);
   // We evaluate the expression with an empty schema. This way we will get an
   // error (instead of random results) if the expression demands any input.
   TupleSchema schema;

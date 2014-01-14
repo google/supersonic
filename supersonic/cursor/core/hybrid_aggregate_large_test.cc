@@ -15,10 +15,9 @@
 
 #include <map>
 using std::map;
-using std::multimap;
+#include <memory>
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -50,7 +49,7 @@ FailureOrOwned<Cursor> CreateHybridGroupAggregate(
     const SingleSourceProjector& group_by,
     const AggregationSpecification& aggregation,
     Cursor* input) {
-  scoped_ptr<Cursor> input_owner(input);
+  std::unique_ptr<Cursor> input_owner(input);
   return BoundHybridGroupAggregate(
       group_by.Clone(),
       aggregation,
@@ -91,9 +90,9 @@ TEST_F(HybridAggregateLargeTest, LargeInputWithManyDistinctKeys) {
   test.SetInput(input_builder.Build());
   test.SetExpectedResult(expected_result_builder.Build());
   test.SetIgnoreRowOrder(true);
-  scoped_ptr<const SingleSourceProjector> group_by_columns(
+  std::unique_ptr<const SingleSourceProjector> group_by_columns(
       ProjectNamedAttribute("col0"));
-  scoped_ptr<AggregationSpecification> aggregation(
+  std::unique_ptr<AggregationSpecification> aggregation(
       new AggregationSpecification);
   aggregation->AddAggregation(SUM, "col1", "sum");
   aggregation->AddDistinctAggregation(COUNT, "col1", "cnt");
@@ -134,9 +133,9 @@ TEST_F(HybridAggregateLargeTest, NonDistinctAndDistinctAggregationsLargeInput) {
                          .AddRow(2, 4, 1, 4 * reps, 1 * reps, 1 * reps)
                          .AddRow(3, -6, 3, -6 * reps, 3 * reps, 3 * reps)
                          .Build());
-  scoped_ptr<const SingleSourceProjector> group_by_columns(
+  std::unique_ptr<const SingleSourceProjector> group_by_columns(
       ProjectNamedAttribute("col0"));
-  scoped_ptr<AggregationSpecification> aggregation(
+  std::unique_ptr<AggregationSpecification> aggregation(
       new AggregationSpecification);
   aggregation->AddDistinctAggregation(SUM, "col1", "sum");
   aggregation->AddDistinctAggregation(COUNT, "col1", "cnt");

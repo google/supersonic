@@ -19,9 +19,9 @@
 
 #include <cmath>
 #include <limits>
-using std::numeric_limits;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/integral_types.h"
 #include "supersonic/utils/stringprintf.h"
@@ -65,23 +65,21 @@ template<> void PrintTyped<UINT64>(const uint64& value, string* const target) {
 }
 
 template<> void PrintTyped<FLOAT>(const float& value, string* const target) {
-  char buffer[kFastToBufferSize];
-  target->append(FloatToBuffer(value, buffer));
+  target->append(SimpleFtoa(value));
 }
 
 template<> void PrintTyped<DOUBLE>(const double& value, string* const target) {
-  char buffer[kFastToBufferSize];
-  target->append(DoubleToBuffer(value, buffer));
+  target->append(SimpleDtoa(value));
 }
 
 template<> void PrintTyped<BOOL>(const bool& value, string* const target) {
   target->append((value) ? "TRUE" : "FALSE");
 }
 
-template<> void PrintTyped<ENUM>(const int64& value, string* const target) {
+template<> void PrintTyped<ENUM>(const int32& value, string* const target) {
   // NOTE: usually, this default won't be used; the higher-level function
   // (e.g. ViewPrinter) will handle ENUMs in a special way.
-  return PrintTyped<INT64>(value, target);
+  return PrintTyped<INT32>(value, target);
 }
 
 template<> void PrintTyped<STRING>(const StringPiece& value,

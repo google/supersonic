@@ -16,7 +16,7 @@
 #include "supersonic/utils/exception/failureor.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "gtest/gtest.h"

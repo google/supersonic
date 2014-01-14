@@ -15,20 +15,16 @@
 
 #include "supersonic/base/infrastructure/types.h"
 
-#include <ext/new_allocator.h>
+#include <unordered_map>
+
 #include <cstddef>
-#include <ext/hash_map>
-using __gnu_cxx::hash;
-using __gnu_cxx::hash_map;
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/bits.h"
 #include "supersonic/utils/linked_ptr.h"
-#include "supersonic/utils/singleton.h"
 
 namespace supersonic {
 
@@ -57,6 +53,11 @@ class TypeInfoResolver {
     return *type_info;
   }
 
+  static TypeInfoResolver* GetSingleton() {
+    static TypeInfoResolver resolver;
+    return &resolver;
+  }
+
  private:
   TypeInfoResolver() {
     AddMapping<INT32>();
@@ -78,13 +79,13 @@ class TypeInfoResolver {
     mapping_.insert(make_pair(type, make_linked_ptr(new TypeInfo(traits))));
   }
 
-  hash_map<DataType, linked_ptr<const TypeInfo>, hash<size_t> > mapping_;
-  friend class Singleton<TypeInfoResolver>;
+  std::unordered_map<DataType, linked_ptr<const TypeInfo>, std::hash<size_t> >
+      mapping_;
   DISALLOW_COPY_AND_ASSIGN(TypeInfoResolver);
 };
 
 const TypeInfo& GetTypeInfo(DataType type) {
-  return Singleton<TypeInfoResolver>::get()->GetTypeInfo(type);
+  return TypeInfoResolver::GetSingleton()->GetTypeInfo(type);
 }
 
 }  // namespace supersonic

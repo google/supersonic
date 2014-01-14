@@ -15,22 +15,34 @@
 
 #include "supersonic/cursor/infrastructure/basic_operation.h"
 
+#include <memory>
+
 #include "gtest/gtest.h"
 
 namespace supersonic {
+
+class BasicOperationForTest : public BasicOperation {
+ public:
+  BasicOperationForTest() {}
+  BasicOperationForTest(Operation* child1, Operation* child2)
+     : BasicOperation(child1, child2) {}
+
+  using BasicOperation::SetBufferAllocator;
+  using BasicOperation::buffer_allocator;
+};
 
 TEST(BasicOperationTest, SetBufferAllocatorTest) {
   BufferAllocator* default_allocator(
       HeapBufferAllocator::Get());
   MemoryLimit allocator1;
   MemoryLimit allocator2;
-  BasicOperation* operation_left(new BasicOperation);
-  BasicOperation* operation_right_left(new BasicOperation);
-  BasicOperation* operation_right_right(new BasicOperation);
-  BasicOperation* operation_right(new BasicOperation(
+  BasicOperationForTest* operation_left(new BasicOperationForTest);
+  BasicOperationForTest* operation_right_left(new BasicOperationForTest);
+  BasicOperationForTest* operation_right_right(new BasicOperationForTest);
+  BasicOperationForTest* operation_right(new BasicOperationForTest(
       operation_right_left, operation_right_right));
-  scoped_ptr<BasicOperation> operation(
-      new BasicOperation(operation_left, operation_right));
+  std::unique_ptr<BasicOperationForTest> operation(
+      new BasicOperationForTest(operation_left, operation_right));
   EXPECT_TRUE(default_allocator == operation->buffer_allocator());
   EXPECT_TRUE(default_allocator == operation_left->buffer_allocator());
   EXPECT_TRUE(default_allocator == operation_right->buffer_allocator());

@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/project.h"
 
+#include <memory>
+
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/result.h"
 #include "supersonic/base/infrastructure/projector.h"
@@ -75,10 +77,10 @@ TEST_F(ProjectCursorTest, ExceptionFromInputPropagated) {
 }
 
 TEST_F(ProjectCursorTest, InvalidProjectorSpecification) {
-  scoped_ptr<Operation> input(TestDataBuilder<INT32, STRING>()
-                              .AddRow(1, "foo")
-                              .AddRow(3, "bar")
-                              .Build());
+  std::unique_ptr<Operation> input(TestDataBuilder<INT32, STRING>()
+                                       .AddRow(1, "foo")
+                                       .AddRow(3, "bar")
+                                       .Build());
   FailureOrOwned<Cursor> projector(TurnIntoCursor(
       Project(ProjectNamedAttribute("incorrect_name"), input.release())));
   EXPECT_TRUE(projector.is_failure());

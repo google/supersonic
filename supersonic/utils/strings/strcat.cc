@@ -55,10 +55,6 @@ static char *Append4(char *out,
   return out + x4.size();
 }
 
-string StrCat(const AlphaNum &a) {
-  return string(a.data(), a.size());
-}
-
 string StrCat(const AlphaNum &a, const AlphaNum &b) {
   string result;
   STLStringResizeUninitialized(&result, a.size() + b.size());

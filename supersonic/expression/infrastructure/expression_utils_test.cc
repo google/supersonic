@@ -16,6 +16,8 @@
 
 #include "supersonic/expression/infrastructure/expression_utils.h"
 
+#include <memory>
+
 #include "supersonic/utils/integral_types.h"
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -70,7 +72,7 @@ class ExpressionUtilsTest : public ::testing::Test {
   BoundExpressionList* BuildExpressionList(BoundExpression* expression1,
                                            BoundExpression* expression2,
                                            BoundExpression* expression3) {
-    scoped_ptr<BoundExpressionList> scoped_expression_list(
+    std::unique_ptr<BoundExpressionList> scoped_expression_list(
         new BoundExpressionList());
     scoped_expression_list->add(expression1);
     scoped_expression_list->add(expression2);
@@ -102,14 +104,14 @@ TEST_F(ExpressionUtilsTest, CheckAttributeCountFails) {
 
 TEST_F(ExpressionUtilsTest, GetExpressionType) {
   for (int i = 0; i < kNumberOfTypes; ++i) {
-    scoped_ptr<BoundExpression> expr(GetNull(kTypes[i]));
+    std::unique_ptr<BoundExpression> expr(GetNull(kTypes[i]));
     EXPECT_EQ(kTypes[i], GetExpressionType(expr.get()));
   }
 }
 
 TEST_F(ExpressionUtilsTest, CheckExpressionType) {
   for (int i = 0; i < kNumberOfTypes; ++i) {
-    scoped_ptr<const BoundExpression> expr(GetNull(kTypes[i]));
+    std::unique_ptr<const BoundExpression> expr(GetNull(kTypes[i]));
     for (int j = 0; j < kNumberOfTypes; ++j) {
       EXPECT_EQ(i == j,
                 CheckExpressionType(kTypes[j], expr.get()).is_success());
@@ -121,7 +123,7 @@ TEST_F(ExpressionUtilsTest, CheckExpressionListMembersType) {
   int member_count[] = {0, 1, 5};
   for (int i = 0; i < kNumberOfTypes; ++i) {
     for (int j = 0; j < 3; ++j) {
-      scoped_ptr<BoundExpressionList> expression_list(
+      std::unique_ptr<BoundExpressionList> expression_list(
           new BoundExpressionList);
       for (int k = 0; k < member_count[j]; ++k) {
         expression_list->add(GetNull(kTypes[i]));
@@ -145,16 +147,16 @@ TEST_F(ExpressionUtilsTest, CheckAttributeCountFailureMessage) {
 }
 
 TEST_F(ExpressionUtilsTest, GetExpressionNullability) {
-  scoped_ptr<BoundExpression> nullable_expression(GetNull(BOOL));
-  scoped_ptr<BoundExpression> not_nullable_expression(GetTrue());
+  std::unique_ptr<BoundExpression> nullable_expression(GetNull(BOOL));
+  std::unique_ptr<BoundExpression> not_nullable_expression(GetTrue());
   EXPECT_EQ(GetExpressionNullability(nullable_expression.get()), NULLABLE);
   EXPECT_EQ(GetExpressionNullability(not_nullable_expression.get()),
             NOT_NULLABLE);
 }
 
 TEST_F(ExpressionUtilsTest, GetExpressionListNullability) {
-  scoped_ptr<BoundExpressionList> test_list(BuildExpressionList(
-      GetNull(BOOL), GetNull(BOOL), GetNull(BOOL)));
+  std::unique_ptr<BoundExpressionList> test_list(
+      BuildExpressionList(GetNull(BOOL), GetNull(BOOL), GetNull(BOOL)));
   EXPECT_EQ(GetExpressionListNullability(test_list.get()), NULLABLE);
   test_list.reset(BuildExpressionList(GetNull(BOOL), GetTrue(), GetFalse()));
   EXPECT_EQ(GetExpressionListNullability(test_list.get()), NULLABLE);

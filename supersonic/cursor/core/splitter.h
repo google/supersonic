@@ -19,11 +19,11 @@
 #include <stddef.h>
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 #include <list>
-using std::list;
+#include "supersonic/utils/std_namespace.h"
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -35,7 +35,7 @@ using std::list;
 #include "supersonic/cursor/infrastructure/iterators.h"
 #include "supersonic/cursor/infrastructure/row.h"
 #include "supersonic/utils/pointer_vector.h"
-#include "supersonic/utils/shared_ptr.h"
+#include <memory>
 
 namespace supersonic {
 

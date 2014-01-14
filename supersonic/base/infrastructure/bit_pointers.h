@@ -337,7 +337,7 @@ class bit_const_ptr {
 // (that is arrays of boolean values stored bit-by-bit).
 class bit_array {
  public:
-  bit_array() : data_buffer_(NULL) {}
+  bit_array() {}
 
   // Reallocates to a given size. Allocates a number of _bits_ no smaller than
   // row_capacity, and guarantees that the number of _bits_ allocated is
@@ -367,7 +367,7 @@ class bit_array {
 // Same as above, only the data is represented by booleans, and not by bits.
 class boolean_array {
  public:
-  boolean_array() : data_buffer_(NULL) {}
+  boolean_array() {}
 
   // Again, same as above.
   bool Reallocate(size_t bytes_capacity, BufferAllocator* allocator);
@@ -576,7 +576,7 @@ class BoolView {
   }
 
  private:
-  scoped_array<bool_ptr> columns_;
+  scoped_ptr<bool_ptr[]> columns_;
   int column_count_;
   rowcount_t row_count_;
 };
@@ -619,7 +619,7 @@ class BoolBlock {
  private:
   BufferAllocator* allocator_;
   int column_count_;
-  scoped_array<bool_array> columns_;
+  scoped_ptr<bool_array[]> columns_;
   BoolView view_;
 
   DISALLOW_COPY_AND_ASSIGN(BoolBlock);

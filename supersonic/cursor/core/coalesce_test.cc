@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/coalesce.h"
 
+#include <memory>
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/scoped_ptr.h"
@@ -64,7 +66,7 @@ class BoundCoalesceCursorTest : public ::testing::Test {
                            int row_count);
 
  private:
-  scoped_ptr<TestData> test_data_;
+  std::unique_ptr<TestData> test_data_;
 };
 
 class BoundCoalesceCursorSpyTest : public BoundCoalesceCursorTest,
@@ -83,7 +85,8 @@ Cursor* BoundCoalesceCursorTest::CreateTestCursor(int attribute_offset,
   FailureOrOwned<Cursor> cursor = test_data_->CreateCursor();
   DCHECK(cursor.is_success());
 
-  scoped_ptr<Cursor> limit_cursor(BoundLimit(0, row_count, cursor.release()));
+  std::unique_ptr<Cursor> limit_cursor(
+      BoundLimit(0, row_count, cursor.release()));
 
   CompoundSingleSourceProjector projector;
   for (int i = attribute_offset;
@@ -119,24 +122,24 @@ TEST_F(BoundCoalesceCursorTest, EmptyVector) {
 }
 
 TEST_F(BoundCoalesceCursorTest, OneCursor) {
-  scoped_ptr<Cursor> cursor(CreateTestCursor());
+  std::unique_ptr<Cursor> cursor(CreateTestCursor());
 
   vector<Cursor*> children;
   children.push_back(cursor.release());
   FailureOrOwned<Cursor> coalesced_cursor = BoundCoalesce(children);
   EXPECT_TRUE(coalesced_cursor.is_success());
 
-  scoped_ptr<ComparableCursor> coalesce_result(
+  std::unique_ptr<ComparableCursor> coalesce_result(
       new ComparableCursor(coalesced_cursor.release()));
 
-  scoped_ptr<ComparableCursor> expected_result(
+  std::unique_ptr<ComparableCursor> expected_result(
       new ComparableCursor(CreateTestCursor()));
 
   EXPECT_TRUE(*coalesce_result == *expected_result);
 }
 
 TEST_F(BoundCoalesceCursorTest, SameCursor) {
-  scoped_ptr<Cursor> cursor(CreateTestCursor());
+  std::unique_ptr<Cursor> cursor(CreateTestCursor());
 
   vector<Cursor*> children;
   children.push_back(cursor.get());
@@ -147,8 +150,8 @@ TEST_F(BoundCoalesceCursorTest, SameCursor) {
 }
 
 TEST_F(BoundCoalesceCursorTest, SameAttributeName) {
-  scoped_ptr<Cursor> cursor1(CreateTestCursor(0, kAttributeCount - 1));
-  scoped_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 2, 2));
+  std::unique_ptr<Cursor> cursor1(CreateTestCursor(0, kAttributeCount - 1));
+  std::unique_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 2, 2));
 
   vector<Cursor*> children;
   children.push_back(cursor1.get());
@@ -160,23 +163,24 @@ TEST_F(BoundCoalesceCursorTest, SameAttributeName) {
 INSTANTIATE_TEST_CASE_P(SpyUse, BoundCoalesceCursorSpyTest, ::testing::Bool());
 
 TEST_P(BoundCoalesceCursorSpyTest, SimpleCoalesce) {
-  scoped_ptr<Cursor> cursor1(CreateTestCursor(0, kAttributeCount - 1));
-  scoped_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 1, 1));
+  std::unique_ptr<Cursor> cursor1(CreateTestCursor(0, kAttributeCount - 1));
+  std::unique_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 1, 1));
 
   vector<Cursor*> children;
   children.push_back(cursor1.release());
   children.push_back(cursor2.release());
-  scoped_ptr<Cursor> coalesced_cursor(SucceedOrDie(BoundCoalesce(children)));
+  std::unique_ptr<Cursor> coalesced_cursor(
+      SucceedOrDie(BoundCoalesce(children)));
 
   if (GetParam()) {
-    scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+    std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
         PrintingSpyTransformer());
     coalesced_cursor->ApplyToChildren(spy_transformer.get());
     coalesced_cursor.reset(
         spy_transformer->Transform(coalesced_cursor.release()));
   }
 
-  scoped_ptr<Cursor> expected_cursor(CreateTestCursor());
+  std::unique_ptr<Cursor> expected_cursor(CreateTestCursor());
 
   ComparableCursor coalesced_result(coalesced_cursor.release());
   ComparableCursor expected_result(expected_cursor.release());
@@ -187,13 +191,13 @@ TEST_F(BoundCoalesceCursorTest, ManyCursors) {
   DCHECK_GE(kRowCount, kAttributeCount);
   vector<Cursor*> children;
   for (int i = 0; i < kAttributeCount; i++) {
-    scoped_ptr<Cursor> cursor(CreateTestCursor(i, 1, kRowCount - i));
+    std::unique_ptr<Cursor> cursor(CreateTestCursor(i, 1, kRowCount - i));
     children.push_back(cursor.release());
   }
   FailureOrOwned<Cursor> coalesced_cursor = BoundCoalesce(children);
   EXPECT_TRUE(coalesced_cursor.is_success());
 
-  scoped_ptr<Cursor> expected_cursor(
+  std::unique_ptr<Cursor> expected_cursor(
       CreateTestCursor(0, kAttributeCount, kRowCount - kAttributeCount + 1));
 
   ComparableCursor coalesced_result(coalesced_cursor.release());
@@ -202,8 +206,8 @@ TEST_F(BoundCoalesceCursorTest, ManyCursors) {
 }
 
 TEST_F(BoundCoalesceCursorTest, EmptyCursor) {
-  scoped_ptr<Cursor> cursor1(CreateTestCursor());
-  scoped_ptr<Cursor> cursor2(CreateTestCursor(0, 0));
+  std::unique_ptr<Cursor> cursor1(CreateTestCursor());
+  std::unique_ptr<Cursor> cursor2(CreateTestCursor(0, 0));
 
   vector<Cursor*> children;
   children.push_back(cursor1.release());
@@ -211,7 +215,7 @@ TEST_F(BoundCoalesceCursorTest, EmptyCursor) {
   FailureOrOwned<Cursor> coalesced_cursor = BoundCoalesce(children);
   EXPECT_TRUE(coalesced_cursor.is_success());
 
-  scoped_ptr<Cursor> expected_cursor(CreateTestCursor());
+  std::unique_ptr<Cursor> expected_cursor(CreateTestCursor());
 
   ComparableCursor coalesced_result(coalesced_cursor.release());
   ComparableCursor expected_result(expected_cursor.release());
@@ -219,9 +223,9 @@ TEST_F(BoundCoalesceCursorTest, EmptyCursor) {
 }
 
 TEST_F(BoundCoalesceCursorTest, RowCount) {
-  scoped_ptr<Cursor> cursor1(
+  std::unique_ptr<Cursor> cursor1(
       CreateTestCursor(0, kAttributeCount - 1, kRowCount - 1));
-  scoped_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 1, 1));
+  std::unique_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 1, 1));
 
   vector<Cursor*> children;
   children.push_back(cursor1.release());
@@ -229,7 +233,7 @@ TEST_F(BoundCoalesceCursorTest, RowCount) {
   FailureOrOwned<Cursor> coalesced_cursor = BoundCoalesce(children);
   EXPECT_TRUE(coalesced_cursor.is_success());
 
-  scoped_ptr<Cursor> expected_cursor(
+  std::unique_ptr<Cursor> expected_cursor(
       CreateTestCursor(0, kAttributeCount, kRowCount - 1));
 
   ComparableCursor coalesced_result(coalesced_cursor.release());
@@ -238,8 +242,8 @@ TEST_F(BoundCoalesceCursorTest, RowCount) {
 }
 
 TEST_F(BoundCoalesceCursorTest, TransformTest) {
-  scoped_ptr<Cursor> cursor1(CreateTestCursor(0, kAttributeCount - 1));
-  scoped_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 1, 1));
+  std::unique_ptr<Cursor> cursor1(CreateTestCursor(0, kAttributeCount - 1));
+  std::unique_ptr<Cursor> cursor2(CreateTestCursor(kAttributeCount - 1, 1));
 
   vector<Cursor*> children;
   children.push_back(cursor1.release());
@@ -247,7 +251,7 @@ TEST_F(BoundCoalesceCursorTest, TransformTest) {
   FailureOrOwned<Cursor> coalesced_cursor = BoundCoalesce(children);
   EXPECT_TRUE(coalesced_cursor.is_success());
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   coalesced_cursor->ApplyToChildren(spy_transformer.get());
 
@@ -266,7 +270,7 @@ TEST(CoalesceOperationTests, FailsOnDuplicatedColumnName) {
   TestDataBuilder<INT32, STRING> builder_2;
   builder_2.AddRow(1, "bar");
   child_ops.push_back(builder_2.Build());
-  scoped_ptr<Operation> op(CHECK_NOTNULL(Coalesce(child_ops)));
+  std::unique_ptr<Operation> op(CHECK_NOTNULL(Coalesce(child_ops)));
   FailureOrOwned<Cursor> cursor(op->CreateCursor());
   EXPECT_TRUE(cursor.is_failure());
 }
@@ -274,18 +278,16 @@ TEST(CoalesceOperationTests, FailsOnDuplicatedColumnName) {
 TEST(CoalesceOperationTests, Succeeds) {
   TestDataBuilder<INT32, STRING> builder_1;
   builder_1.AddRow(0, "foo");
-  scoped_ptr<Operation> op_1(Project(
-      ProjectRename(Container("left_1", "left_2"),
-                    ProjectAllAttributes()),
+  std::unique_ptr<Operation> op_1(Project(
+      ProjectRename(Container("left_1", "left_2"), ProjectAllAttributes()),
       builder_1.Build()));
   TestDataBuilder<INT32, STRING> builder_2;
   builder_2.AddRow(1, "bar");
-  scoped_ptr<Operation> op_2(Project(
-      ProjectRename(Container("right_1", "right_2"),
-                    ProjectAllAttributes()),
+  std::unique_ptr<Operation> op_2(Project(
+      ProjectRename(Container("right_1", "right_2"), ProjectAllAttributes()),
       builder_2.Build()));
-  scoped_ptr<Operation> op(CHECK_NOTNULL(Coalesce(Container(op_1.release(),
-                                                            op_2.release()))));
+  std::unique_ptr<Operation> op(
+      CHECK_NOTNULL(Coalesce(Container(op_1.release(), op_2.release()))));
   FailureOrOwned<Cursor> cursor(op->CreateCursor());
   EXPECT_TRUE(cursor.is_success());
 }

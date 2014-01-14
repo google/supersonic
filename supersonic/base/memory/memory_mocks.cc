@@ -43,12 +43,12 @@ Buffer* MockBufferAllocator::AllocateInternal(
     }
     // Will never be called.
     LOG(FATAL);
-    return NULL;
+    return nullptr;
   } else {
     // We have at least one item in the list.
     int granted = *predescribed_sizes_granted_.begin();
     predescribed_sizes_granted_.pop_front();
-    if (granted < minimal) return NULL;
+    if (granted < minimal) return nullptr;
     if (requested < granted) granted = requested;
     return Grant(granted, originator);
   }
@@ -83,7 +83,7 @@ bool MockBufferAllocator::ReallocateInternal(
     }
     // Will never be called.
     LOG(FATAL);
-    return NULL;
+    return false;
   } else {
     // We have at least one item in the list.
     size_t granted = *predescribed_sizes_granted_.begin();

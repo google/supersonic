@@ -29,6 +29,10 @@ class View;
 
 // An abstraction of a 'data sink' that can be written to. Implementations
 // may write data to tables, sockets, files, etc.
+// TODO(user): formalize schema contract of the sink - can views have
+// different schemas? If not, perhaps the sink should have a new method for
+// initialization, so that it can know the schema even if there is zero rows
+// or data written to it.
 class Sink {
  public:
   virtual ~Sink() {}

@@ -1,5 +1,7 @@
 // The implementation is based on the Mersenne Twister available at:
 //
+// http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html .
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,23 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html .
-//
 #include "supersonic/utils/random.h"
 
-#include <ieee754.h>
 #include <sys/time.h>
 
 #include <string.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;  // For max.
+#include "supersonic/utils/std_namespace.h"  // For max.
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -96,28 +90,7 @@ static inline uint32 mix30(uint32 a) {
 }
 
 double RandomBase::RandDouble() {
-#ifdef OS_CYGWIN
-  __ieee_double_shape_type v;
-  v.number.sign = 0;
-  v.number.fraction0 = Rand32();  // Lower 20 bits
-  v.number.fraction1 = Rand32();  // 32 bits
-#ifdef __SMALL_BITFIELDS
-  // Previous two were actually 4 and 16 respectively; these are the last 32.
-  v.number.fraction2 = Rand16();
-  v.number.fraction3 = Rand16();
-#endif
-  // Exponent is 11 bits wide, using an excess 1023 representation.
-  v.number.exponent = 1023;
-  return v.value - static_cast<double>(1.0);
-#else
-  union ieee754_double v;
-  v.ieee.negative = 0;
-  v.ieee.mantissa0 = Rand32();  // lower 20 bits
-  v.ieee.mantissa1 = Rand32();  // 32 bits
-  // Exponent is 11 bits wide, using an excess 1023 representation.
-  v.ieee.exponent = 1023;
-  return v.d - static_cast<double>(1.0);
-#endif
+  return static_cast<double>(Rand32()) / std::numeric_limits<uint32>::max();
 }
 
 // Implements all of step 2 and step 3.
@@ -183,7 +156,7 @@ void MTRandom::InitArray(const uint32* seed, const int seed_length) {
 
   // Mix and incorporate seed array.
   int i = 1;
-  for (int j = 0, k = max(kMTNumWords, seed_length) ; k > 0; k--) {
+  for (int j = 0, k = std::max(kMTNumWords, seed_length) ; k > 0; k--) {
     mt[i] = (mt[i] ^ (mix30(mt[i-1]) * 1664525UL)) + seed[j] + j;
     j = (j + 1) % seed_length;
     if (++i >= kMTNumWords) {

@@ -19,10 +19,9 @@
 #define SUPERSONIC_EXPRESSION_BASE_EXPRESSION_H_
 
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 

@@ -17,7 +17,7 @@
 #include "supersonic/expression/core/projecting_expressions.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 

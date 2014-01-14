@@ -29,14 +29,9 @@
 #include <ctime>
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/strings/join.h"
 #include "supersonic/utils/strings/stringpiece.h"
@@ -90,7 +85,7 @@ template<> struct TypedParseString<ENUM> {
       : enum_definition(attribute.enum_definition()) {}
 
   void operator()(StringPiece input, OutputCppType* output, bool_ptr failure) {
-    FailureOr<int64> result = enum_definition.NameToNumber(input);
+    FailureOr<int32> result = enum_definition.NameToNumber(input);
     if (result.is_success()) {
       *output = result.get();
     } else {

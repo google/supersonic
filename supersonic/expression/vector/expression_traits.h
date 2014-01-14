@@ -21,7 +21,7 @@
 #define SUPERSONIC_EXPRESSION_VECTOR_EXPRESSION_TRAITS_H_
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -1829,6 +1829,9 @@ template<OperatorId op, typename DataType> struct SimdTraits {
   static const bool simd_supported = false;
 };
 
+// Define SIMD traits if we are building for targets supporting SSE2.
+#ifdef __SSE2__
+
 // Defines SimdTraits<operation, dataType> that supports SIMD and delegates
 // SIMD evaluation to 'simdOperator' functor.
 #define SIMD_TRAITS_FOR(op_type, DataType, SimdOperator)                       \
@@ -1895,6 +1898,7 @@ SIMD_TRAITS_FOR(OPERATOR_BITWISE_ANDNOT, int64,  simd_operators::SimdAndNot);
 SIMD_TRAITS_FOR(OPERATOR_BITWISE_ANDNOT, uint32, simd_operators::SimdAndNot);
 SIMD_TRAITS_FOR(OPERATOR_BITWISE_ANDNOT, uint64, simd_operators::SimdAndNot);
 
+#endif  // __SSE2__
 
 }  // namespace supersonic
 

@@ -16,7 +16,7 @@
 #include "supersonic/testing/row.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -43,7 +43,7 @@ testing::AssertionResult Row::operator==(const Row& other) const {
   }
 }
 
-void Row::AppendToStream(ostream* s) const {
+void Row::AppendToStream(std::ostream* s) const {
   comparable_view_.AppendRowToStream(0, s);
 }
 

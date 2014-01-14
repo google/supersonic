@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/rowid_merge_join.h"
 
+#include <memory>
+
 #include "supersonic/base/infrastructure/projector.h"
 #include "supersonic/base/infrastructure/types.h"
 #include "supersonic/cursor/base/cursor.h"
@@ -126,21 +128,19 @@ TEST_F(RowidMergeJoinTest, OneToZeroOrOneWithSpyTransform) {
   CreateSampleData();
   Cursor* input1 = sample_input_1_.BuildCursor();
   Cursor* input2 = sample_input_2_.BuildCursor();
-  scoped_ptr<Cursor> expected_result(sample_output_.BuildCursor());
+  std::unique_ptr<Cursor> expected_result(sample_output_.BuildCursor());
 
-  scoped_ptr<const SingleSourceProjector> left_project(ProjectAttributeAt(0));
-  scoped_ptr<CompoundMultiSourceProjector> right_project(
+  std::unique_ptr<const SingleSourceProjector> left_project(
+      ProjectAttributeAt(0));
+  std::unique_ptr<CompoundMultiSourceProjector> right_project(
       new CompoundMultiSourceProjector);
   right_project->add(0, ProjectAttributeAtAs(1, "col0"));
   right_project->add(1, ProjectAttributeAtAs(0, "col1"));
 
-  scoped_ptr<Cursor> rowid_merge(CreateRowidMergeJoin(
-      *left_project,
-      *right_project,
-      input1,
-      input2));
+  std::unique_ptr<Cursor> rowid_merge(
+      CreateRowidMergeJoin(*left_project, *right_project, input1, input2));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   rowid_merge->ApplyToChildren(spy_transformer.get());
   rowid_merge.reset(spy_transformer->Transform(rowid_merge.release()));
@@ -295,19 +295,17 @@ TEST_F(RowidMergeJoinTest, TransformTest) {
   Cursor* input1 = sample_input_1_.BuildCursor();
   Cursor* input2 = sample_input_2_.BuildCursor();
 
-  scoped_ptr<const SingleSourceProjector> left_project(ProjectAttributeAt(0));
-  scoped_ptr<CompoundMultiSourceProjector> right_project(
+  std::unique_ptr<const SingleSourceProjector> left_project(
+      ProjectAttributeAt(0));
+  std::unique_ptr<CompoundMultiSourceProjector> right_project(
       new CompoundMultiSourceProjector);
   right_project->add(0, ProjectAttributeAtAs(1, "col0"));
   right_project->add(1, ProjectAttributeAtAs(0, "col1"));
 
-  scoped_ptr<Cursor> rowid_merge(CreateRowidMergeJoin(
-      *left_project,
-      *right_project,
-      input1,
-      input2));
+  std::unique_ptr<Cursor> rowid_merge(
+      CreateRowidMergeJoin(*left_project, *right_project, input1, input2));
 
-  scoped_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
+  std::unique_ptr<CursorTransformerWithSimpleHistory> spy_transformer(
       PrintingSpyTransformer());
   rowid_merge->ApplyToChildren(spy_transformer.get());
 

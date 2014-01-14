@@ -78,6 +78,3 @@ uint64 FingerprintReferenceImplementation(const char *s, uint32 len) {
 uint64 Fingerprint(const char *s, uint32 len) {
   return FingerprintReferenceImplementation(s, len);
 }
-
-
-

@@ -16,17 +16,12 @@
 #include "supersonic/cursor/core/rowid_merge_join.h"
 
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 #include <vector>
 using std::vector;
 
@@ -176,9 +171,9 @@ class RowidMergeJoinCursor : public BasicCursor {
   virtual CursorId GetCursorId() const { return ROWID_MERGE_JOIN; }
 
  private:
-  scoped_ptr<const BoundSingleSourceProjector> left_key_;
-  scoped_ptr<const BoundSingleSourceProjector> canonical_right_projector_;
-  scoped_ptr<const BoundMultiSourceProjector> result_projector_;
+  std::unique_ptr<const BoundSingleSourceProjector> left_key_;
+  std::unique_ptr<const BoundSingleSourceProjector> canonical_right_projector_;
+  std::unique_ptr<const BoundMultiSourceProjector> result_projector_;
   SelectiveViewCopier right_flattener_;
   CursorIterator left_;
   CursorIterator right_;
@@ -249,8 +244,8 @@ class RowidMergeJoinOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const SingleSourceProjector> left_key_selector_;
-  scoped_ptr<const MultiSourceProjector> result_projector_;
+  std::unique_ptr<const SingleSourceProjector> left_key_selector_;
+  std::unique_ptr<const MultiSourceProjector> result_projector_;
   DISALLOW_COPY_AND_ASSIGN(RowidMergeJoinOperation);
 };
 
@@ -271,7 +266,7 @@ Cursor* BoundRowidMergeJoin(
     Cursor* right,
     BufferAllocator* allocator) {
   CHECK_LE(result_projector->source_count(), 2);
-  scoped_ptr<const BoundMultiSourceProjector> result_projector_deleter(
+  std::unique_ptr<const BoundMultiSourceProjector> result_projector_deleter(
       result_projector);
   pair<BoundMultiSourceProjector*, BoundSingleSourceProjector*> decomposed =
       DecomposeNth(1, *result_projector);

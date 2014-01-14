@@ -19,6 +19,8 @@
 #ifndef SUPERSONIC_CURSOR_CORE_COLUMN_AGGREGATOR_H_
 #define SUPERSONIC_CURSOR_CORE_COLUMN_AGGREGATOR_H_
 
+#include <memory>
+
 #include "supersonic/utils/macros.h"
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/exception/result.h"
@@ -134,7 +136,7 @@ class ColumnAggregatorFactory {
       int result_column_index);
 
  private:
-  scoped_ptr<ColumnAggregatorFactoryImpl> pimpl_;
+  std::unique_ptr<ColumnAggregatorFactoryImpl> pimpl_;
 
   DISALLOW_COPY_AND_ASSIGN(ColumnAggregatorFactory);
 };

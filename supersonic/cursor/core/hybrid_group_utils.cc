@@ -16,7 +16,8 @@
 #include "supersonic/cursor/core/hybrid_group_utils.h"
 
 #include <list>
-using std::list;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -100,7 +101,7 @@ class HybridGroupTransformCursor : public BasicCursor {
   // input. They all have the same output schema. The difference is that some
   // take some columns from the second input, which is nulls_block_, which
   // basically puts NULLs in the given output column.
-  scoped_ptr<ProjectorVector> transformation_projectors_;
+  std::unique_ptr<ProjectorVector> transformation_projectors_;
 
   // Points to the next transformation projector to be used. When it gets to
   // .end(), read new block from the child and rewind to the first projector.
@@ -125,7 +126,7 @@ FailureOrOwned<Cursor> HybridGroupTransformCursor::Create(
     const PointerVector<const SingleSourceProjector>& column_group_projectors,
     BufferAllocator* allocator,
     Cursor* input) {
-  scoped_ptr<Cursor> input_owned(input);
+  std::unique_ptr<Cursor> input_owned(input);
   // Prepare the schema for nulls_block. It is the same as input schema, but
   // with all columns NULLABLE (because we want to put NULLs in them).
   TupleSchema nulls_block_schema;
@@ -153,7 +154,7 @@ FailureOrOwned<Cursor> HybridGroupTransformCursor::Create(
   }
   // Prepare multi-source projectors implementing the transformation - one for
   // each column group.
-  scoped_ptr<PointerVector<const BoundMultiSourceProjector> >
+  std::unique_ptr<PointerVector<const BoundMultiSourceProjector> >
       transformation_projectors(
           new PointerVector<const BoundMultiSourceProjector>);
 
@@ -295,8 +296,8 @@ FailureOrOwned<Cursor> BoundHybridGroupTransform(
         column_group_projectors,
     BufferAllocator* allocator,
     Cursor* child) {
-  scoped_ptr<Cursor> child_owner(child);
-  scoped_ptr<const SingleSourceProjector> group_by_columns_owned(
+  std::unique_ptr<Cursor> child_owner(child);
+  std::unique_ptr<const SingleSourceProjector> group_by_columns_owned(
       group_by_columns);
   FailureOrOwned<Cursor> transform_cursor(
       HybridGroupTransformCursor::Create(*group_by_columns_owned,
@@ -312,9 +313,9 @@ FailureOrOwned<Cursor> MakeSelectedColumnsNotNullable(
     BufferAllocator* allocator,
     Cursor* input) {
   const rowcount_t max_row_count = Cursor::kDefaultRowCount;
-  scoped_ptr<const SingleSourceProjector> selection_projector_owned(
+  std::unique_ptr<const SingleSourceProjector> selection_projector_owned(
       selection_projector);
-  scoped_ptr<Cursor> input_owner(input);
+  std::unique_ptr<Cursor> input_owner(input);
   FailureOrOwned<const BoundSingleSourceProjector> bound_selection_projector(
       selection_projector_owned->Bind(input_owner->schema()));
   PROPAGATE_ON_FAILURE(bound_selection_projector);
@@ -322,10 +323,10 @@ FailureOrOwned<Cursor> MakeSelectedColumnsNotNullable(
   // BoundRenameCompoundExpression. name[i] defines an alias for
   // expression_list.GetAt(i).
   vector<string> names;
-  scoped_ptr<BoundExpressionList> expression_list(new BoundExpressionList);
+  std::unique_ptr<BoundExpressionList> expression_list(new BoundExpressionList);
   for (int i = 0; i < input_owner->schema().attribute_count(); ++i) {
     const Attribute& attribute = input_owner->schema().attribute(i);
-    scoped_ptr<BoundExpression> column_expression;
+    std::unique_ptr<BoundExpression> column_expression;
     {
       FailureOrOwned<BoundExpression> projection_expression(
           BoundAttributeAt(input_owner->schema(), i));
@@ -372,10 +373,10 @@ FailureOrOwned<Cursor> ExtendByConstantColumn(
     const string& new_column_name,
     BufferAllocator* allocator,
     Cursor* input) {
-  scoped_ptr<Cursor> input_owner(input);
+  std::unique_ptr<Cursor> input_owner(input);
   const rowcount_t max_row_count = Cursor::kDefaultRowCount;
   vector<string> names;
-  scoped_ptr<BoundExpressionList> expression_list(new BoundExpressionList);
+  std::unique_ptr<BoundExpressionList> expression_list(new BoundExpressionList);
   // Add all original columns.
   for (int i = 0; i < input_owner->schema().attribute_count(); ++i) {
     FailureOrOwned<BoundExpression> projection_expression(

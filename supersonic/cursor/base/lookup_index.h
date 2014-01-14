@@ -55,6 +55,10 @@ class LookupIndex {
   // Creates a projector from schema() to non-key columns. The default
   // implementation does so by complementing key_selector().
   virtual BoundSingleSourceProjector value_selector() const;
+
+  // Returns true if the index has no items, thus MultiLookup is guaranteed
+  // to always return an empty cursor.
+  virtual bool empty() const = 0;
 };
 
 class LookupIndexBuilder {

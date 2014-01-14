@@ -15,8 +15,9 @@
 
 #include "supersonic/cursor/infrastructure/ordering.h"
 
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/utils/stringprintf.h"
@@ -29,7 +30,7 @@ namespace supersonic {
 
 FailureOrOwned<const BoundSortOrder> SortOrder::Bind(
     const TupleSchema& source_schema) const {
-  scoped_ptr<BoundSingleSourceProjector> projector(
+  std::unique_ptr<BoundSingleSourceProjector> projector(
       new BoundSingleSourceProjector(source_schema));
   vector<ColumnOrder> column_order;
   for (size_t i = 0; i < projectors_.size(); ++i) {

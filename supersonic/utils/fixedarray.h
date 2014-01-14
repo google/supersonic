@@ -11,24 +11,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-// ---
-//
 
-#ifndef UTIL_GTL_FIXEDARRAY_H__
-#define UTIL_GTL_FIXEDARRAY_H__
+#ifndef UTIL_GTL_FIXEDARRAY_H_
+#define UTIL_GTL_FIXEDARRAY_H_
 
 #include <stddef.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
+#include <memory>
+#include <new>
 
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
@@ -62,7 +55,6 @@ using std::iterator_traits;
 //
 // Non-POD types will be default-initialized just like regular vectors or
 // arrays.
-
 template <typename T, ssize_t inline_elements = -1>
 class FixedArray {
  public:
@@ -73,136 +65,228 @@ class FixedArray {
   typedef T& reference;
   typedef T const& const_reference;
   typedef T* pointer;
-  typedef std::ptrdiff_t difference_type;
+  typedef T const* const_pointer;
+  typedef ptrdiff_t difference_type;
   typedef size_t size_type;
 
-  // REQUIRES: n >= 0
   // Creates an array object that can store "n" elements.
   //
   // FixedArray<T> will not zero-initialiaze POD (simple) types like int,
   // double, bool, etc.
   // Non-POD types will be default-initialized just like regular vectors or
   // arrays.
-  explicit FixedArray(size_type n);
+  explicit FixedArray(size_type n) : rep_(MakeRep(n)) { }
 
   // Creates an array initialized with the elements from the input
   // range. The size will always be "std::distance(first, last)".
-  template <typename ForwardIterator>
-  FixedArray(ForwardIterator first, ForwardIterator last);
+  // REQUIRES: Iter must be a forward_iterator or better.
+  template <typename Iter>
+  FixedArray(Iter first, Iter last) : rep_(MakeRep(first, last)) { }
 
-  // Releases any resources.
-  ~FixedArray();
+  ~FixedArray() {
+    CleanUpRep(&rep_);
+  }
 
   // Returns the length of the array.
-  inline size_type size() const { return size_; }
+  size_type size() const { return rep_.size(); }
 
   // Returns the memory size of the array in bytes.
-  inline size_t memsize() const { return size_ * sizeof(T); }
+  size_t memsize() const { return size() * sizeof(value_type); }
 
   // Returns a pointer to the underlying element array.
-  inline const T* get() const { return reinterpret_cast<T *>(array_); }
-  inline T* get() { return reinterpret_cast<T *>(array_); }
+  const_pointer get() const { return AsValue(rep_.begin()); }
+  pointer get() { return AsValue(rep_.begin()); }
 
   // REQUIRES: 0 <= i < size()
   // Returns a reference to the "i"th element.
-  inline T& operator[](size_type i) {
+  reference operator[](size_type i) {
     DCHECK_GE(i, 0);
-    DCHECK_LT(i, size_);
-    return array_[i].element;
+    DCHECK_LT(i, size());
+    return get()[i];
   }
 
   // REQUIRES: 0 <= i < size()
   // Returns a reference to the "i"th element.
-  inline const T& operator[](size_type i) const {
+  const_reference operator[](size_type i) const {
     DCHECK_GE(i, 0);
-    DCHECK_LT(i, size_);
-    return array_[i].element;
+    DCHECK_LT(i, size());
+    return get()[i];
   }
 
-  inline iterator begin() { return get(); }
-  inline iterator end() { return get() + size_; }
+  iterator begin() { return get(); }
+  iterator end() { return get() + size(); }
 
-  inline const_iterator begin() const { return get(); }
-  inline const_iterator end() const { return get() + size_; }
+  const_iterator begin() const { return get(); }
+  const_iterator end() const { return get() + size(); }
 
  private:
-  // Container to hold elements of type T.  This is necessary to handle
-  // the case where T is a a (C-style) array.  The size of InnerContainer
-  // and T must be the same, otherwise callers' assumptions about use
-  // of this code will be broken.
-  struct InnerContainer {
-    T element;
-  };
-  COMPILE_ASSERT(sizeof(InnerContainer) == sizeof(T),
-                 fixedarray_inner_container_size_mismatch);
+  // ----------------------------------------
+  // HolderTraits:
+  // Wrapper to hold elements of type T for the case where T is an array type.
+  // If 'T' is an array type, HolderTraits::type is a struct with a 'T v;'.
+  // Otherwise, HolderTraits::type is simply 'T'.
+  //
+  // Maintainer's Note: The simpler solution would be to simply wrap T in a
+  // struct whether it's an array or not: 'struct Holder { T v; };', but
+  // that causes some paranoid diagnostics to misfire about uses of get(),
+  // believing that 'get()' (aka '&rep_.begin().v') is a pointer to a single
+  // element, rather than the packed array that it really is.
+  // e.g.:
+  //
+  //     FixedArray<char> buf(1);
+  //     sprintf(buf.get(), "foo");
+  //
+  //     error: call to int __builtin___sprintf_chk(etc...)
+  //     will always overflow destination buffer [-Werror]
+  //
+  class HolderTraits {
+    template <typename U>
+    struct SelectImpl {
+      typedef U type;
+      static pointer AsValue(type* p) { return p; }
+    };
 
+    // Partial specialization for elements of array type.
+    template <typename U, size_t N>
+    struct SelectImpl<U[N]> {
+      struct Holder { U v[N]; };
+      typedef Holder type;
+      static pointer AsValue(type* p) { return &p->v; }
+    };
+    typedef SelectImpl<value_type> Impl;
+
+   public:
+    typedef typename Impl::type type;
+
+    static pointer AsValue(type *p) { return Impl::AsValue(p); }
+
+    static_assert(sizeof(type) == sizeof(value_type),
+                  "Holder must be same size as value_type");
+  };
+
+  typedef typename HolderTraits::type Holder;
+  static pointer AsValue(Holder *p) { return HolderTraits::AsValue(p); }
+
+  // ----------------------------------------
+  // InlineSpace:
+  // Allocate some space, not an array of elements of type T, so that we can
+  // skip calling the T constructors and destructors for space we never use.
   // How many elements should we store inline?
   //   a. If not specified, use a default of 256 bytes (256 bytes
   //      seems small enough to not cause stack overflow or unnecessary
   //      stack pollution, while still allowing stack allocation for
   //      reasonably long character arrays.
   //   b. Never use 0 length arrays (not ISO C++)
-  static const size_type S1 = ((inline_elements < 0)
-                               ? (256/sizeof(T)) : inline_elements);
-  static const size_type S2 = (S1 <= 0) ? 1 : S1;
-  static const size_type kInlineElements = S2;
+  //
+  class InlineSpace {
+    typedef base::ManualConstructor<Holder> Buffer;
+    static const size_type kDefaultBytes = 256;
 
-  size_type const       size_;
-  InnerContainer* const array_;
+    template <ssize_t N, typename Ignored>
+    struct Impl {
+      static const size_type kSize = N;
+      Buffer* get() { return space_; }
+     private:
+      static_assert(kSize > 0, "kSize must be positive");
+      Buffer space_[kSize];
+    };
 
-  // Allocate some space, not an array of elements of type T, so that we can
-  // skip calling the T constructors and destructors for space we never use.
-  base::ManualConstructor<InnerContainer>
-      inline_space_[kInlineElements];
+    // specialize for 0-element case: no 'space_' array.
+    template <typename Ignored>
+    struct Impl<0, Ignored> {
+      static const size_type kSize = 0;
+      Buffer* get() { return NULL; }
+    };
 
-  DISALLOW_EVIL_CONSTRUCTORS(FixedArray);
+    // specialize for default (-1) case. Use up to kDefaultBytes.
+    template <typename Ignored>
+    struct Impl<-1, Ignored> :
+        Impl<kDefaultBytes / sizeof(value_type), Ignored> {
+    };
+
+    typedef Impl<inline_elements, void> ImplType;
+
+    ImplType space_;
+
+   public:
+    static const size_type kSize = ImplType::kSize;
+
+    Holder* get() { return space_.get()[0].get(); }
+    void Init(size_type i) { space_.get()[i].Init(); }
+    void Destroy(size_type i) { space_.get()[i].Destroy(); }
+  };
+
+  static const size_type kInlineElements = InlineSpace::kSize;
+
+  Holder* inline_space() { return inline_space_.get(); }
+
+  // ----------------------------------------
+  // Rep:
+  // A const Rep object holds FixedArray's size and data pointer.
+  //
+  class Rep {
+   public:
+    Rep(size_type n, Holder* p) : n_(n), p_(p) { }
+    Holder* begin() const { return p_; }
+    Holder* end() const { return p_ + n_; }
+    size_type size() const { return n_; }
+   private:
+    size_type n_;
+    Holder* p_;
+  };
+
+  void CleanUpRep(const Rep* rep) {
+    if (rep->begin() == inline_space()) {
+      // Destruction must be in reverse order.
+      for (size_type i = rep->size(); i-- > 0; ) {
+        inline_space_.Destroy(i);
+      }
+    } else {
+      delete[] rep->begin();
+    }
+  }
+
+  Rep MakeRep(size_type n) {
+    Holder *pa;
+    if (n <= kInlineElements) {
+      for (size_type i = 0; i < n; ++i) {
+        inline_space_.Init(i);
+      }
+      pa = inline_space();
+    } else {
+      pa = new Holder[n];
+    }
+    return Rep(n, pa);
+  }
+
+  template <typename Iter>
+  Rep MakeRep(Iter first, Iter last, std::forward_iterator_tag) {
+    size_type n = std::distance(first, last);
+    Holder *pa;
+    if (n <= kInlineElements) {
+      pa = inline_space();
+    } else {
+      // Allocate uninitialized space, but don't initialize the elements.
+      // We're about to overwrite them with copies of [first, last).
+      pa = static_cast<Holder*>(::operator new[] (n * sizeof(Holder)));
+    }
+    std::uninitialized_copy(first, last, AsValue(pa));
+    return Rep(n, pa);
+  }
+
+  template <typename Iter>
+  Rep MakeRep(Iter first, Iter last) {
+    typedef typename std::iterator_traits<Iter> IterTraits;
+    return MakeRep(first, last, typename IterTraits::iterator_category());
+  }
+
+  // ----------------------------------------
+  // Data members
+  //
+  Rep const rep_;
+  InlineSpace inline_space_;
+
+  DISALLOW_COPY_AND_ASSIGN(FixedArray);
 };
 
-// Implementation details follow
-
-template <class T, ssize_t S>
-inline FixedArray<T, S>::FixedArray(typename FixedArray<T, S>::size_type n)
-    : size_(n),
-      array_((n <= kInlineElements
-              ? reinterpret_cast<InnerContainer*>(inline_space_)
-              : new InnerContainer[n])) {
-  DCHECK_GE(n, 0);
-
-  // Construct only the elements actually used.
-  if (array_ == reinterpret_cast<InnerContainer*>(inline_space_)) {
-    for (int i = 0; i != size_; ++i) {
-      inline_space_[i].Init();
-    }
-  }
-}
-
-template <class T, ssize_t S>
-template <typename ForwardIterator>
-inline FixedArray<T, S>::FixedArray(ForwardIterator first, ForwardIterator last)
-    : size_(std::distance(first, last)),
-      array_((size_ <= kInlineElements
-              ? reinterpret_cast<InnerContainer*>(inline_space_)
-              : new InnerContainer[size_])) {
-  // Construct only the elements actually used.
-  if (array_ == reinterpret_cast<InnerContainer*>(inline_space_)) {
-    for (size_type i = 0; i < size_; ++i) {
-      inline_space_[i].Init();
-    }
-  }
-
-  std::copy(first, last, begin());
-}
-
-
-template <class T, ssize_t S>
-inline FixedArray<T, S>::~FixedArray() {
-  if (array_ != reinterpret_cast<InnerContainer*>(inline_space_)) {
-    delete[] array_;
-  } else {
-    for (int i = 0; i != size_; ++i) {
-      inline_space_[i].Destroy();
-    }
-  }
-}
-
-#endif  // UTIL_GTL_FIXEDARRAY_H__
+#endif  // UTIL_GTL_FIXEDARRAY_H_

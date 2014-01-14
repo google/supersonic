@@ -24,21 +24,12 @@
 
 #include <stddef.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <functional>
-using std::binary_function;
-using std::less;
 #include <iterator>
-using std::back_insert_iterator;
-using std::iterator_traits;
+#include "supersonic/utils/std_namespace.h"
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 
 namespace util {
 namespace gtl {
@@ -436,10 +427,9 @@ bool gtl_is_binary_heap(RandomAccessIterator begin,
 #if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus > 199711L \
   || defined(LIBCXX) || _MSC_VER >= 1600 /* Visual Studio 2010 */
 using std::is_heap;
-#elif defined __GNUC__
-/* using __gnu_cxx::is_heap; */
-#elif defined _MSC_VER
-// For old versions of MSVC++, we know by inspection that make_heap()
+#elif defined(_MSC_VER)  || defined(__ANDROID__) || defined(__LSB_VERSION__) \
+  || defined(__QNX__) || defined(__APPLE__)
+// For the platforms listed above, we know by inspection that make_heap()
 // traffics in binary max heaps, so gtl_is_binary_heap is an acceptable
 // implementation for is_heap.
 template <typename RandomAccessIterator>
@@ -453,6 +443,8 @@ bool is_heap(RandomAccessIterator begin,
              StrictWeakOrdering comp) {
   return gtl_is_binary_heap(begin, end, comp);
 }
+#elif defined __GNUC__
+/* using __gnu_cxx::is_heap; */
 #else
 // We need an implementation of is_heap that matches the library's
 // implementation of make_heap() and friends.  gtl_is_binary_heap will

@@ -129,11 +129,11 @@ template<typename T> struct MathLimits {
         sizeof(Type) == 8 ? 19 : -1))))
 
 #define DECL_INT_LIMIT_FUNCS \
-  static bool IsFinite(const Type x) { return true; } \
-  static bool IsNaN(const Type x) { return false; } \
-  static bool IsInf(const Type x) { return false; } \
-  static bool IsPosInf(const Type x) { return false; } \
-  static bool IsNegInf(const Type x) { return false; }
+  static bool IsFinite(const Type /*x*/) { return true; } \
+  static bool IsNaN(const Type /*x*/) { return false; } \
+  static bool IsInf(const Type /*x*/) { return false; } \
+  static bool IsPosInf(const Type /*x*/) { return false; } \
+  static bool IsNegInf(const Type /*x*/) { return false; }
 
 #define DECL_SIGNED_INT_LIMITS(IntType, UnsignedIntType) \
 template<> \

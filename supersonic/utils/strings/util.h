@@ -35,10 +35,8 @@
 #endif
 
 #include <functional>
-using std::binary_function;
-using std::less;
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -168,14 +166,14 @@ inline const char* GetPrintableString(const char* const in) {
 }
 
 // Returns whether str begins with prefix.
-inline bool HasPrefixString(const StringPiece& str,
-                            const StringPiece& prefix) {
+inline bool HasPrefixString(StringPiece str,
+                            StringPiece prefix) {
   return str.starts_with(prefix);
 }
 
 // Returns whether str ends with suffix.
-inline bool HasSuffixString(const StringPiece& str,
-                            const StringPiece& suffix) {
+inline bool HasSuffixString(StringPiece str,
+                            StringPiece suffix) {
   return str.ends_with(suffix);
 }
 
@@ -258,7 +256,7 @@ char* AdjustedLastPos(const char* str, char separator, int n);
 
 // Compares two char* strings for equality. (Works with NULL, which compares
 // equal only to another NULL). Useful in hash tables:
-//    hash_map<const char*, Value, hash<const char*>, streq> ht;
+//    std::unordered_map<const char*, Value, std::hash<const char*>, streq> ht;
 struct streq : public std::binary_function<const char*, const char*, bool> {
   bool operator()(const char* s1, const char* s2) const {
     return ((s1 == 0 && s2 == 0) ||
@@ -278,7 +276,7 @@ struct strlt : public std::binary_function<const char*, const char*, bool> {
 // Returns whether str has only Ascii characters (as defined by ascii_isascii()
 // in strings/ascii_ctype.h).
 bool IsAscii(const char* str, int len);
-inline bool IsAscii(const StringPiece& str) {
+inline bool IsAscii(StringPiece str) {
   return IsAscii(str.data(), str.size());
 }
 
@@ -290,7 +288,7 @@ inline bool IsAscii(const StringPiece& str) {
 //
 // Examples:
 // "a" -> "b", "aaa" -> "aab", "aa\xff" -> "ab", "\xff" -> "", "" -> ""
-string PrefixSuccessor(const StringPiece& prefix);
+string PrefixSuccessor(StringPiece prefix);
 
 // Returns the immediate lexicographically-following string. This is useful to
 // turn an inclusive range into something that can be used with Bigtable's
@@ -309,7 +307,7 @@ string PrefixSuccessor(const StringPiece& prefix);
 //
 // WARNING: Transforms "" -> "\0"; this doesn't account for Bigtable's special
 // treatment of "" as infinity.
-string ImmediateSuccessor(const StringPiece& s);
+string ImmediateSuccessor(StringPiece s);
 
 // Fills in *separator with a short string less than limit but greater than or
 // equal to start. If limit is greater than start, *separator is the common
@@ -318,7 +316,7 @@ string ImmediateSuccessor(const StringPiece& s);
 // FindShortestSeparator("foobar", "foxhunt", &sep) => sep == "fop"
 // FindShortestSeparator("abracadabra", "bacradabra", &sep) => sep == "b"
 // If limit is less than or equal to start, fills in *separator with start.
-void FindShortestSeparator(const StringPiece& start, const StringPiece& limit,
+void FindShortestSeparator(StringPiece start, StringPiece limit,
                            string* separator);
 
 // Copies at most n-1 bytes from src to dest, and returns dest. If n >=1, null
@@ -340,18 +338,18 @@ inline char* safestrncpy(char* dest, const char* src, size_t n) {
 // Replaces the first occurrence (if replace_all is false) or all occurrences
 // (if replace_all is true) of oldsub in s with newsub. In the second version,
 // *res must be distinct from all the other arguments.
-string StringReplace(const StringPiece& s, const StringPiece& oldsub,
-                     const StringPiece& newsub, bool replace_all);
-void StringReplace(const StringPiece& s, const StringPiece& oldsub,
-                   const StringPiece& newsub, bool replace_all,
+string StringReplace(StringPiece s, StringPiece oldsub,
+                     StringPiece newsub, bool replace_all);
+void StringReplace(StringPiece s, StringPiece oldsub,
+                   StringPiece newsub, bool replace_all,
                    string* res);
 
 // Replaces all occurrences of substring in s with replacement. Returns the
 // number of instances replaced. s must be distinct from the other arguments.
 //
 // Less flexible, but faster, than RE::GlobalReplace().
-int GlobalReplaceSubstring(const StringPiece& substring,
-                           const StringPiece& replacement,
+int GlobalReplaceSubstring(StringPiece substring,
+                           StringPiece replacement,
                            string* s);
 
 // Removes v[i] for every element i in indices. Does *not* preserve the order of
@@ -366,7 +364,6 @@ char* gstrcasestr(const char* haystack, const char* needle);
 // Finds (case insensitively) the first occurrence of (null terminated) needle
 // in at most the first len bytes of haystack. Returns a pointer into haystack,
 // or NULL if needle wasn't found.
-// WARNING: Removes const-ness of haystack!
 const char* gstrncasestr(const char* haystack, const char* needle, size_t len);
 char* gstrncasestr(char* haystack, const char* needle, size_t len);
 
@@ -442,20 +439,6 @@ inline char* AdvanceIdentifier(char* str) {
 // Returns whether str is an "identifier" (see above).
 bool IsIdentifier(const char* str);
 
-// Finds the first tag and value in a string of tag/value pairs.
-//
-// The first pair begins after the first occurrence of attribute_separator (or
-// string_terminal, if not '\0'); tag_value_separator separates the tag and
-// value; and the value ends before the following occurrence of
-// attribute_separator (or string_terminal, if not '\0').
-//
-// Returns true (and populates tag, tag_len, value, and value_len) if a
-// tag/value pair is founds; returns false otherwise.
-bool FindTagValuePair(const char* in_str, char tag_value_separator,
-                      char attribute_separator, char string_terminal,
-                      char** tag, int* tag_len,
-                      char** value, int* value_len);
-
 // Inserts separator after every interval characters in *s (but never appends to
 // the end of the original *s).
 void UniformInsertString(string* s, int interval, const char* separator);
@@ -465,7 +448,7 @@ void UniformInsertString(string* s, int interval, const char* separator);
 void InsertString(
     string* s, const vector<uint32>& indices, char const* separator);
 
-// Finds the nth occurrence of c in n; returns the index in s of that
+// Finds the nth occurrence of c in s; returns the index in s of that
 // occurrence, or string::npos if fewer than n occurrences.
 int FindNth(StringPiece s, char c, int n);
 
@@ -475,7 +458,7 @@ int ReverseFindNth(StringPiece s, char c, int n);
 
 // Returns whether s contains only whitespace characters (including the case
 // where s is empty).
-bool OnlyWhitespace(const StringPiece& s);
+bool OnlyWhitespace(StringPiece s);
 
 // Formats a string in the same fashion as snprintf(), but returns either the
 // number of characters written, or zero if not enough space was available.

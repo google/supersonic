@@ -16,7 +16,7 @@
 #include "supersonic/cursor/infrastructure/basic_cursor.h"
 
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <typeinfo>
 #include <vector>
 using std::vector;

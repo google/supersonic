@@ -15,6 +15,8 @@
 
 #include "supersonic/cursor/core/project.h"
 
+#include <memory>
+
 #include <glog/logging.h>
 #include "supersonic/utils/logging-inl.h"
 #include "supersonic/utils/macros.h"
@@ -61,7 +63,7 @@ class ProjectCursor : public BasicCursor {
   virtual CursorId GetCursorId() const { return PROJECT; }
 
  private:
-  scoped_ptr<const BoundSingleSourceProjector> projector_;
+  std::unique_ptr<const BoundSingleSourceProjector> projector_;
   View result_view_;
 
   DISALLOW_COPY_AND_ASSIGN(ProjectCursor);
@@ -88,7 +90,7 @@ class ProjectOperation : public BasicOperation {
   }
 
  private:
-  scoped_ptr<const SingleSourceProjector> projector_;
+  std::unique_ptr<const SingleSourceProjector> projector_;
 
   DISALLOW_COPY_AND_ASSIGN(ProjectOperation);
 };

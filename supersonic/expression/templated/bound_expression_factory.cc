@@ -18,12 +18,11 @@
 
 #include <map>
 using std::map;
-using std::multimap;
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <utility>
-using std::make_pair;
-using std::pair;
+#include "supersonic/utils/std_namespace.h"
 
 #include "supersonic/utils/stringprintf.h"
 #include "supersonic/utils/exception/failureor.h"
@@ -32,7 +31,6 @@ using std::pair;
 #include "supersonic/expression/infrastructure/expression_utils.h"
 #include "supersonic/expression/templated/cast_bound_expression.h"
 #include "supersonic/utils/strings/join.h"
-#include "supersonic/utils/singleton.h"
 
 namespace supersonic {
 
@@ -48,7 +46,7 @@ FailureOrOwned<BoundExpression> ResolveTypePromotion(BoundExpression* child_ptr,
                                                      BufferAllocator* allocator,
                                                      rowcount_t row_capacity,
                                                      bool promote) {
-  scoped_ptr<BoundExpression> child(child_ptr);
+  std::unique_ptr<BoundExpression> child(child_ptr);
   PROPAGATE_ON_FAILURE(CheckAttributeCount("Implicit cast attempt",
                                            child->result_schema(), 1));
   if (GetExpressionType(child.get()) == result_type)
@@ -111,7 +109,8 @@ class CommonTypeCalculator {
 // TODO(onufry): Likely all instances of this could be replaced with the
 // Expression version, check and replace.
 FailureOr<DataType> CalculateCommonType(DataType t1, DataType t2) {
-  return Singleton<CommonTypeCalculator>::get()->CalculateCommonType(t1, t2);
+  static CommonTypeCalculator type_calculator;
+  return type_calculator.CalculateCommonType(t1, t2);
 }
 
 FailureOr<DataType> CalculateCommonExpressionType(BoundExpression* left,
@@ -129,7 +128,7 @@ FailureOrOwned<BoundExpression> RunUnaryFactory(
     rowcount_t row_capacity,
     BoundExpression* child_ptr,
     const string& operation_name) {
-  scoped_ptr<BoundExpression> child(child_ptr);
+  std::unique_ptr<BoundExpression> child(child_ptr);
   // Factory creation functions signalize a type mismatch with a NULL
   // return pointer.
   // TODO(onufry): factory functions should return a FailureOr<Factory> instead
@@ -141,7 +140,7 @@ FailureOrOwned<BoundExpression> RunUnaryFactory(
         StrCat("Factory creation of operation ", operation_name,
                " failed due to type mismatch.")));
   }
-  scoped_ptr<UnaryExpressionFactory> factory(factory_ptr);
+  std::unique_ptr<UnaryExpressionFactory> factory(factory_ptr);
   return factory->create_expression(allocator, row_capacity, child.release());
 }
 
@@ -152,15 +151,15 @@ FailureOrOwned<BoundExpression> RunBinaryFactory(
     BoundExpression* left_ptr,
     BoundExpression* right_ptr,
     const string& operation_name) {
-  scoped_ptr<BoundExpression> left(left_ptr);
-  scoped_ptr<BoundExpression> right(right_ptr);
+  std::unique_ptr<BoundExpression> left(left_ptr);
+  std::unique_ptr<BoundExpression> right(right_ptr);
   if (factory_ptr == NULL) {
     THROW(new Exception(
         ERROR_ATTRIBUTE_TYPE_MISMATCH,
         StrCat("Factory creation of operation ", operation_name,
                " failed due to type mismatch.")));
   }
-  scoped_ptr<BinaryExpressionFactory> factory(factory_ptr);
+  std::unique_ptr<BinaryExpressionFactory> factory(factory_ptr);
   return factory->create_expression(allocator, row_capacity, left.release(),
                                     right.release());
 }

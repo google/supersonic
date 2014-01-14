@@ -15,18 +15,13 @@
 
 #include "supersonic/cursor/infrastructure/row_hash_set.h"
 
-#include <ext/new_allocator.h>
 #include <string.h>
 #include <algorithm>
-using std::copy;
-using std::max;
-using std::min;
-using std::reverse;
-using std::sort;
-using std::swap;
+#include "supersonic/utils/std_namespace.h"
 #include <cstddef>
+#include <memory>
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 #include <vector>
 using std::vector;
 
@@ -78,6 +73,11 @@ struct ValueComparatorInterface {
 template <DataType type>
 class ValueComparator : public ValueComparatorInterface {
  public:
+  ValueComparator()
+      : any_column_nullable_(false),
+        left_column_(NULL),
+        right_column_(NULL) {}
+
   bool Equal(rowid_t row_id_a, rowid_t row_id_b) const {
     if (any_column_nullable_) {
       const bool is_null_a = (left_column_->is_null() != NULL) &&
@@ -144,7 +144,8 @@ class RowComparator {
  public:
   explicit RowComparator(const TupleSchema& key_schema) :
     left_view_(NULL),
-    right_view_(NULL) {
+    right_view_(NULL),
+    hash_comparison_only_(false) {
     for (int i = 0; i < key_schema.attribute_count(); i++) {
       comparators_.push_back(
           CreateValueComparator(key_schema.attribute(i).type()));
@@ -207,7 +208,8 @@ class RowComparator {
 // from schema.
 const BoundSingleSourceProjector* CreateAllAttributeSelector(
     const TupleSchema& schema) {
-  scoped_ptr<const SingleSourceProjector> projector(ProjectAllAttributes());
+  std::unique_ptr<const SingleSourceProjector> projector(
+      ProjectAllAttributes());
   return SucceedOrDie(projector->Bind(schema));
 }
 
@@ -232,7 +234,8 @@ class RowHashSetImpl {
       const TupleSchema& block_schema,
       BufferAllocator* const allocator,
       const BoundSingleSourceProjector* key_selector,
-      bool is_multiset);
+      bool is_multiset,
+      const int64 max_unique_keys_in_result);
 
   bool ReserveRowCapacity(rowcount_t block_capacity);
 
@@ -272,7 +275,7 @@ class RowHashSetImpl {
   static void HashQuery(const View& key, rowcount_t row_count, size_t* hash);
 
   // Selects key columns from index_ and from queries to Insert.
-  scoped_ptr<const BoundSingleSourceProjector> key_selector_;
+  std::unique_ptr<const BoundSingleSourceProjector> key_selector_;
 
   // Contains all inserted rows; Find and Insert match against these rows
   // using last_row_id_ and prev_row_id_.
@@ -307,13 +310,13 @@ class RowHashSetImpl {
   // Value of last_row_id_[hash_index] denotes position of last row in
   // indexed_block_ having same value of hash_index =
   // (query_hash_[query_row_id] & hash_mask_).
-  scoped_array<int> last_row_id_;
+  std::unique_ptr<int[]> last_row_id_;
 
   // Index of a previous row having the same hash_index = (row.hash &
   // hash_mask_) but a different key. (For multisets, there may be many rows
   // with the same key (and thus hash); only the first instance is actually
   // written to this array).
-  scoped_array<int> prev_row_id_;
+  std::unique_ptr<int[]> prev_row_id_;
 
   // Structure used for comparing rows.
   mutable RowComparator comparator_;
@@ -327,6 +330,8 @@ class RowHashSetImpl {
 
   const bool is_multiset_;
 
+  const int64 max_unique_keys_in_result_;
+
   friend class RowIdSetIterator;
 };
 
@@ -335,7 +340,8 @@ RowHashSetImpl::RowHashSetImpl(
     const TupleSchema& block_schema,
     BufferAllocator* const allocator,
     const BoundSingleSourceProjector* key_selector,
-    bool is_multiset)
+    bool is_multiset,
+    const int64 max_unique_keys_in_result)
     : key_selector_(
           key_selector
               ? key_selector
@@ -347,7 +353,8 @@ RowHashSetImpl::RowHashSetImpl(
       last_row_id_size_(0),
       comparator_(query_key_.schema()),
       hash_mask_(0),
-      is_multiset_(is_multiset) {
+      is_multiset_(is_multiset),
+      max_unique_keys_in_result_(max_unique_keys_in_result) {
   // FindUnique and FindMany compute hash index % hash_mask_, which results
   // in a non-negative integer, used to index the indirection tables.
   // To make sure that the newly created instance adheres to the implicit
@@ -491,12 +498,16 @@ size_t RowHashSetImpl::InsertUnique(
       }
 
       if (index_row_id == -1) {
-        index_row_id = index_.row_count();
-        if (index_row_id  == index_.row_capacity() ||
-            !index_appender_.AppendRow(iterator)) break;
-        hash_.push_back(query_hash_[query_row_id]);
-        prev_row_id_[index_row_id] = last_row_id_[hash_index];
-        last_row_id_[hash_index] = index_row_id;
+        if (index_.row_count() <= max_unique_keys_in_result_) {
+          index_row_id = index_.row_count();
+          if (index_row_id  == index_.row_capacity() ||
+              !index_appender_.AppendRow(iterator)) break;
+          hash_.push_back(query_hash_[query_row_id]);
+          prev_row_id_[index_row_id] = last_row_id_[hash_index];
+          last_row_id_[hash_index] = index_row_id;
+        } else {
+          index_row_id = index_.row_count() - 1;
+        }
       }
       if (result_row_id)
         *result_row_id = index_row_id;
@@ -642,13 +653,29 @@ void RowIdSetIterator::Next() {
 
 RowHashSet::RowHashSet(const TupleSchema& block_schema,
                        BufferAllocator* const allocator)
-    : impl_(new RowHashSetImpl(block_schema, allocator, NULL, false)) {}
+    : impl_(new RowHashSetImpl(block_schema, allocator, NULL, false,
+                               kint64max)) {}
 
 RowHashSet::RowHashSet(
     const TupleSchema& block_schema,
     BufferAllocator* const allocator,
     const BoundSingleSourceProjector* key_selector)
-    : impl_(new RowHashSetImpl(block_schema, allocator, key_selector, false)) {}
+    : impl_(new RowHashSetImpl(block_schema, allocator, key_selector, false,
+                               kint64max)) {}
+
+RowHashSet::RowHashSet(const TupleSchema& block_schema,
+                       BufferAllocator* const allocator,
+                       const int64 max_unique_keys_in_result)
+    : impl_(new RowHashSetImpl(block_schema, allocator, NULL, false,
+                               max_unique_keys_in_result)) {}
+
+RowHashSet::RowHashSet(
+    const TupleSchema& block_schema,
+    BufferAllocator* const allocator,
+    const BoundSingleSourceProjector* key_selector,
+    const int64 max_unique_keys_in_result)
+    : impl_(new RowHashSetImpl(block_schema, allocator, key_selector, false,
+                               max_unique_keys_in_result)) {}
 
 RowHashSet::~RowHashSet() {
   delete impl_;
@@ -700,13 +727,15 @@ rowcount_t RowHashSet::size() const { return indexed_view().row_count(); }
 
 RowHashMultiSet::RowHashMultiSet(const TupleSchema& block_schema,
                                  BufferAllocator* const allocator)
-    : impl_(new RowHashSetImpl(block_schema, allocator, NULL, true)) {}
+    : impl_(new RowHashSetImpl(block_schema, allocator, NULL, true,
+                               kint64max)) {}
 
 RowHashMultiSet::RowHashMultiSet(
     const TupleSchema& block_schema,
     BufferAllocator* const allocator,
     const BoundSingleSourceProjector* key_selector) :
-    impl_(new RowHashSetImpl(block_schema, allocator, key_selector, true)) {}
+    impl_(new RowHashSetImpl(block_schema, allocator, key_selector, true,
+                             kint64max)) {}
 
 RowHashMultiSet::~RowHashMultiSet() {
   delete impl_;

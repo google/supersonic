@@ -21,10 +21,9 @@
 #include "supersonic/expression/core/projecting_bound_expressions.h"
 
 #include <set>
-using std::multiset;
-using std::set;
+#include "supersonic/utils/std_namespace.h"
 #include <string>
-using std::string;
+namespace supersonic {using std::string; }
 
 #include "supersonic/utils/scoped_ptr.h"
 #include "supersonic/base/infrastructure/block.h"
