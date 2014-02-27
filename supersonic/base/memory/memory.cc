@@ -47,16 +47,16 @@ void BufferAllocator::LogAllocation(size_t requested,
                                     size_t minimal,
                                     Buffer* buffer) {
   if (buffer == NULL) {
-    LOG(WARNING) << "Memory allocation failed in Supersonic. "
-                 << "Number of bytes requested: " << requested
-                 << ", minimal: " << minimal;
+    VLOG(0) << "Memory allocation failed in Supersonic. "
+            << "Number of bytes requested: " << requested
+            << ", minimal: " << minimal;
     return;
   }
   if (buffer->size() < requested) {
-    LOG(WARNING) << "Memory allocation warning in Supersonic. "
-                 << "Number of bytes requested to allocate: " << requested
-                 << ", minimal: " << minimal
-                 << ", and actually allocated: " << buffer->size();
+    VLOG(0) << "Memory allocation warning in Supersonic. "
+            << "Number of bytes requested to allocate: " << requested
+            << ", minimal: " << minimal
+            << ", and actually allocated: " << buffer->size();
   }
 }
 
