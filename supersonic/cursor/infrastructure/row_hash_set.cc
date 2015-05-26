@@ -270,6 +270,10 @@ class RowHashSetImpl {
       const View& query, const bool_const_ptr selection_vector,
       rowid_t* result_row_ids) const;
 
+  template <bool HASH_COMP_ONLY>
+  void InsertUniqueFromIterator(ViewRowIterator& iterator,
+      const bool_const_ptr selection_vector, FindResult* result);
+
   // Computes the column of hashes for the 'key' view, given the row count.
   // TODO(user): perhaps make the row_count part of the view?
   static void HashQuery(const View& key, rowcount_t row_count, size_t* hash);
@@ -455,6 +459,78 @@ void RowHashSetImpl::FindInternal(
   }
 }
 
+template <bool HASH_COMP_ONLY>
+void RowHashSetImpl::InsertUniqueFromIterator(ViewRowIterator& iterator,
+   const bool_const_ptr selection_vector, FindResult* result) {
+
+
+    while (iterator.next()) {
+      const int64 query_row_id = iterator.current_row_index();
+
+      rowid_t* const result_row_id = (result) ? result->mutable_row_ids() + query_row_id : NULL;
+
+      if (selection_vector != NULL && !selection_vector[query_row_id]) {
+        if (result_row_id) {
+          *result_row_id = kInvalidRowId;
+        }
+      } else {
+        // TODO(user): The following 12 lines are identical to the piece
+        // of code in FindInternal. Needs refactoring (but be careful about a
+        // performance regression).
+        int hash_index = (hash_mask_ & query_hash_[query_row_id]);
+        int index_row_id = last_row_id_[hash_index];
+
+        int *prev = &last_row_id_[hash_index];
+
+        do {
+          if (index_row_id == -1) {
+            if (index_.row_count() <= max_unique_keys_in_result_) {
+              index_row_id = index_.row_count();
+
+              if (index_row_id  == index_.row_capacity() ||
+                  !index_appender_.AppendRow(iterator))
+              {
+                return;
+              }
+
+              hash_.push_back(query_hash_[query_row_id]);
+              prev_row_id_[index_row_id] = last_row_id_[hash_index];
+              last_row_id_[hash_index] = index_row_id;
+            } else {
+              index_row_id = index_.row_count() - 1;
+            }
+
+            break;
+          } 
+
+          if (query_hash_[query_row_id] == hash_[index_row_id]) {
+              if (HASH_COMP_ONLY) {
+                  break;
+              } else if (comparator_.Equal(query_row_id, index_row_id)) {
+                  // Put most recently access element first (vs. last inserted).
+                  // only when we don't have a cheap HASH_COMP
+                  // only when the hash gets large (regresses on small hashes)
+                  if (hash_.size() > Cursor::kDefaultRowCount) {
+                      *prev = prev_row_id_[index_row_id]; 
+                      prev_row_id_[index_row_id] = last_row_id_[hash_index];
+                      last_row_id_[hash_index] = index_row_id;
+                  }
+
+                  break;
+              }
+          }
+
+          prev = &prev_row_id_[index_row_id];
+          index_row_id = prev_row_id_[index_row_id];
+        } while (1);
+
+        if (result_row_id) {
+          *result_row_id = index_row_id;
+        }
+      }
+    }
+}
+
 size_t RowHashSetImpl::InsertUnique(
     const View& query, const bool_const_ptr selection_vector,
     FindResult* result) {
@@ -469,51 +545,15 @@ size_t RowHashSetImpl::InsertUnique(
   HashQuery(query_key_, query.row_count(), query_hash_);
   comparator_.set_left_view(&query_key_);
 
+
   ViewRowIterator iterator(query);
-  while (iterator.next()) {
-    const int64 query_row_id = iterator.current_row_index();
-    rowid_t* const result_row_id =
-        result ? (result->mutable_row_ids() + query_row_id) : NULL;
-    if (selection_vector != NULL && !selection_vector[query_row_id]) {
-      if (result_row_id)
-          *result_row_id = kInvalidRowId;
-    } else {
-      // TODO(user): The following 12 lines are identical to the piece
-      // of code in FindInternal. Needs refactoring (but be careful about a
-      // performance regression).
-      int hash_index = (hash_mask_ & query_hash_[query_row_id]);
-      int index_row_id = last_row_id_[hash_index];
-
-      if (comparator_.hash_comparison_only()) {
-        while (index_row_id != -1 &&
-               (query_hash_[query_row_id] != hash_[index_row_id])) {
-          index_row_id = prev_row_id_[index_row_id];
-        }
-      } else {
-        while (index_row_id != -1 &&
-               (query_hash_[query_row_id] != hash_[index_row_id]
-                || !comparator_.Equal(query_row_id, index_row_id))) {
-          index_row_id = prev_row_id_[index_row_id];
-        }
-      }
-
-      if (index_row_id == -1) {
-        if (index_.row_count() <= max_unique_keys_in_result_) {
-          index_row_id = index_.row_count();
-          if (index_row_id  == index_.row_capacity() ||
-              !index_appender_.AppendRow(iterator)) break;
-          hash_.push_back(query_hash_[query_row_id]);
-          prev_row_id_[index_row_id] = last_row_id_[hash_index];
-          last_row_id_[hash_index] = index_row_id;
-        } else {
-          index_row_id = index_.row_count() - 1;
-        }
-      }
-      if (result_row_id)
-        *result_row_id = index_row_id;
-    }
+  if (comparator_.hash_comparison_only()) {
+      InsertUniqueFromIterator<true>(iterator, selection_vector, result);
+  } else {
+      InsertUniqueFromIterator<false>(iterator, selection_vector, result);
   }
 
+done:
   return iterator.current_row_index();
 }
 
