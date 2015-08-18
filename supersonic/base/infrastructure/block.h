@@ -130,9 +130,15 @@ class Column {
   // Ownership of data and is_null stays with the callee.
   void Reset(VariantConstPointer data, bool_const_ptr is_null) {
     CheckInitialized();
-    DCHECK(is_null == NULL || attribute().is_nullable())
-        << "Attempt to use is_null vector for a non-nullable attribute "
-        << "'" << attribute().name() << "'";
+    if (is_null != NULL) {
+      DCHECK(attribute().is_nullable())
+          << "Attempt to use is_null vector for a non-nullable attribute "
+          << "'" << attribute().name() << "'";
+    } else {
+      DCHECK(!attribute().is_nullable())
+          << "Attempt to forgo is_null vector for a nullable attribute "
+          << "'" << attribute().name() << "'";
+    }
     data_ = data;
     is_null_ = is_null;
   }
