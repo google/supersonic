@@ -447,7 +447,7 @@ FailureOrVoid AggregateClustersCursor::ProcessInput() {
   }
 
   // Input is processed until the result block has at least
-  // result_block_half_capacity_ rows or eos was reached or error occured.
+  // result_block_half_capacity_ rows or eos was reached or error occurred.
   while (true) {
     bool all_equal = false;
     if (view_to_process_.row_count() == 0) {
