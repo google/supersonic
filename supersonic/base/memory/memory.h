@@ -867,14 +867,15 @@ size_t Quota<thread_safe>::Allocate(const size_t requested,
     } else {
       allocation = 0;
     }
-    LOG(WARNING) << "Out of quota. Requested: " << requested
-                 << " bytes, or at least minimal: " << minimal
-                 << ". Current quota value is: " << quota
-                 << " while current usage is: " << usage_
-                 << ". The quota is " << (enforced() ? "" : "not ")
-                 << "enforced. "
-                 << ((allocation == 0) ? "Did not allocate any memory."
-                 : "Allocated the minimal value requested.");
+
+    VLOG(0) << "Out of quota. Requested: " << requested
+            << " bytes, or at least minimal: " << minimal
+            << ". Current quota value is: " << quota
+            << " while current usage is: " << usage_
+            << ". The quota is " << (enforced() ? "" : "not ")
+            << "enforced. "
+            << ((allocation == 0) ? "Did not allocate any memory."
+                                  : "Allocated the minimal value requested.");
   } else {
     allocation = min(requested, quota - usage_);
   }
