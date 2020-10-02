@@ -112,7 +112,7 @@ class RowHashSet {
   // happens only if the row's key is not NULL and is not already present in
   // the block. Returns the number of rows successfully inserted. Can be
   // lower than query.row_count() if data being inserted is of variable-
-  // length type and the storage block's arena can't accomodate a copy of
+  // length type and the storage block's arena can't accommodate a copy of
   // a variable-length data buffer.
   size_t Insert(const View& query, FindResult* result);
 
@@ -185,7 +185,7 @@ class RowHashMultiSet {
   // an insertion of the n-th query row. The insertion happens for each query
   // row with non-NULL key. Returns the number of rows successfully inserted.
   // Can be lower than query.row_count() if data being inserted is of
-  // variable-length type and the storage block's arena can't accomodate a copy
+  // variable-length type and the storage block's arena can't accommodate a copy
   // of a variable-length data buffer.
   size_t Insert(const View& query, FindMultiResult* result);
 
