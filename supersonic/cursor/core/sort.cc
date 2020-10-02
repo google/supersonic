@@ -349,8 +349,10 @@ class BasicMerger : public Merger {
         THROW(new Exception(ERROR_NOT_IMPLEMENTED,
                             "BasicMerger doesn't handle WAITING_ON_BARRIER."));
       }
+      // Make sure to finalize the file sink before propagating write_all_result
+      FailureOrVoid file_sink_finalize_result = file_sink->Finalize();
       PROPAGATE_ON_FAILURE(write_all_result);
-      PROPAGATE_ON_FAILURE(file_sink->Finalize());
+      PROPAGATE_ON_FAILURE(file_sink_finalize_result);
     }
     // TODO(user): Don't just ignore the util::Status object!
     // We didn't opensource util::task::Status.
